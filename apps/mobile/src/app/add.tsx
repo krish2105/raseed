@@ -17,7 +17,7 @@ import { splitEvenly } from '@raseed/engines'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { insertTransaction, listAccounts, listCategories, notifyChanged, useQuery } from '@/db'
+import { commitAfterDismiss, insertTransaction, listAccounts, listCategories, useQuery } from '@/db'
 
 /** INR per AED, frozen onto the row at write time. Session 15 replaces this with a rate cache. */
 const AED_TO_INR = 23.45
@@ -71,19 +71,21 @@ export default function AddScreen() {
       setError('Who did you pay?')
       return
     }
-    insertTransaction({
+    const draft = {
       amount: split ? split.yourShare : parsed,
       accountId,
       categoryId,
       merchantText: merchant.trim(),
-      occurredAt: Date.now(),
       fxRate: currency === 'AED' ? AED_TO_INR : 1,
       note: split
         ? `Your share, 1 of ${ways}. Paid ${format(parsed)}, ${format(split.owedToYou)} owed to you.`
         : undefined,
-    })
-    notifyChanged()
+    }
+
+    // Dismiss first, commit second. See `commitAfterDismiss` — writing while this modal is
+    // still up leaves the screen underneath one write behind, permanently.
     router.back()
+    commitAfterDismiss(() => insertTransaction(draft))
   }
 
   return (

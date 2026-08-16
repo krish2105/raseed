@@ -64,7 +64,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - **Backend is optional and not deployed** — nothing in the app needs one. Render/Supabase
   steps are in `docs/RUNBOOK_BACKEND.md`; both need Krishna's credentials.
 - **Editing an added expense** is still delete-and-re-add on web; the phone has the same gap.
-- 🐞 **Mobile reads lag exactly one write** until the app restarts — see DECISIONS.md, "the read that lags one write". Predates this session; blocks the S19 ship gate.
+- ✅ **Mobile stale-read fixed** — it was React Compiler memoisation, and the earlier disproof of that theory was invalid. See DECISIONS.md.
 
 ## Deferred decisions
 

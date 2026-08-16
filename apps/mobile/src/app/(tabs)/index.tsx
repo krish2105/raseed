@@ -23,6 +23,17 @@ const DAY = 86_400_000
  * real `safeToSpend` engine reading real rows out of SQLite.
  */
 export default function TodayScreen() {
+  /**
+   * The React Compiler memoises this component's reads, and the store version is not
+   * something it can see as an input. Without this the screen shows the state before the
+   * most recent write — for ever, until the process restarts.
+   *
+   * Confirmed by measurement, after four wrong theories: one connection, one module
+   * instance, an INSERT visible to a SELECT on the very next statement, and a screen that
+   * genuinely re-rendered. The read was cached, not stale.
+   */
+  'use no memo'
+
   const { colors } = useTheme()
   const s = styles(colors)
 

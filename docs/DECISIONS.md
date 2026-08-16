@@ -934,3 +934,38 @@ uncapped version would only fire mid-tap and make the surface feel unstable unde
 
 If the brand later wants a true globe, this is the component to replace and `CorridorFlow` is
 the data shape to keep. It is the right size for the job, not a placeholder for a bigger one.
+
+---
+
+## The read that lagged one write: it was the compiler, and my disproof was worthless (2026-08-16)
+
+Fixed. The React Compiler was memoising the ledger reads, and the store version was not
+something it could see as an input, so every screen served the state from before the most
+recent write — for ever, until the process restarted.
+
+**I had already ruled this out, and the way I ruled it out was invalid.** The test was
+"call `spendBetween(...)` directly in the render body, bypassing `useQuery`" — and it
+returned the same stale count, which looked conclusive. It was not: a direct call in a
+component body, keyed on a `startOfToday` that does not change within a day, is *precisely*
+what the compiler caches. The test bypassed the hook and not the compiler, which was the
+thing under suspicion.
+
+Three other theories were also wrong, each disproved properly:
+
+| Theory | How it died |
+|---|---|
+| Two connections | A module-level id, written into the row's own note and rendered on screen: `f7e1g3` on both sides |
+| The write is not committed | A `SELECT` immediately after the `INSERT`, on the same connection: `self=1` |
+| Prepared-statement cache | A unique SQL comment per call changed nothing. The earlier "inline the parameters" test was also invalid — the bounds are identical within a day, so the SQL string never varied and the cache key never changed |
+| Frozen subtree under the modal | Dismissing first and committing the write afterwards, on a provably live tree, changed nothing |
+
+The fix is `'use no memo'` on the three screens that read the ledger — the documented escape
+hatch — plus threading `version` and the focus tick through `useMemo` in `useQuery` as the
+belt to that pair of braces. `exhaustive-deps` objects to those dependencies because `read`
+does not close over them, and the rule is right that it cannot see them being used. **That
+blindness is the bug**: the store drives this query through the database, not through the
+closure. The disable carries that sentence.
+
+The lesson worth keeping: a negative result is only as good as the mechanism it actually
+excluded. Two of the five experiments here excluded nothing, and both of them read as
+conclusive at the time.
