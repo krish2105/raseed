@@ -11,6 +11,12 @@ dist/
 .expo/
 apps/mobile/ios/
 apps/mobile/android/
+# A prebuild run from the repo ROOT (rather than apps/mobile) drops these here, where the
+# pattern above cannot reach them. It happened once, and the committed project carried a
+# different bundle identifier than CLAUDE.md mandates.
+/ios/
+/android/
+/app.json
 *.jks
 *.p8
 *.p12
