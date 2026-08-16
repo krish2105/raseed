@@ -22,8 +22,17 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+      className={`no-js ${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
     >
+      <head>
+        {/* Removed synchronously before paint, so there is no flash. If this never runs,
+            .no-js stays and the reveal wrappers are forced visible by CSS. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.documentElement.classList.remove('no-js')`,
+          }}
+        />
+      </head>
       <body className="min-h-full font-sans">
         <ThemeProvider>
           <NuqsAdapter>{children}</NuqsAdapter>

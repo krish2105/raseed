@@ -339,3 +339,31 @@ changing home currency must not rewrite history. Soft delete only.
 **Known, not a bug:** the dev client shows an "Open in RASEED?" prompt on each launch. That
 is `expo start` handing over a deep link, not app behaviour — it does not appear in a
 release build.
+
+---
+
+## Landing route — motion pass (2026-08-16)
+
+**Lenis on `/` only.** The dashboard keeps native scroll: hijacked scroll fights dense data,
+and a chart you are trying to read should not glide past you. Reduced motion gets no Lenis
+at all rather than a slower Lenis.
+
+**The hero animates the variable font's width axis**, not just position — Bricolage
+Grotesque narrows as it scrolls away. That is the one showy moment; everything else is a
+120ms fade-and-rise.
+
+**`viewport={{ amount: 0.05 }}`, never a negative margin.** The first attempt used
+`margin: '-80px'`, which means an element that never sits 80px inside the viewport never
+fires — and since the initial state is `opacity: 0`, that content is then invisible forever.
+Short viewports hit this. Above-the-fold blocks now animate on mount instead of waiting for
+a scroll that will not come.
+
+**A `.no-js` fallback forces every reveal visible.** Content whose only path to visibility is
+JavaScript is a portfolio page that renders as a headline over empty space if a chunk fails
+to load. An inline script strips the class before paint; if it never runs, CSS wins.
+
+**Measurement note for future sessions:** the browser pane reports
+`document.visibilityState === 'hidden'` when backgrounded, which pauses `requestAnimationFrame`
+and therefore all Motion animations. Evaluating JS against it will show elements frozen at
+their `initial` state and look exactly like a broken animation. Screenshots foreground the
+pane and are the reliable check. This cost a detour; it is not a product bug.

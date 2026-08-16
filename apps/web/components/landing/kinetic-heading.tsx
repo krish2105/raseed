@@ -50,25 +50,55 @@ export function KineticHeading({ children }: { children: ReactNode }) {
   )
 }
 
-/** Scroll-triggered reveal. Pooled IntersectionObserver via whileInView, fires once. */
+/**
+ * Reveal-on-enter.
+ *
+ * `amount: 0.05` and no negative margin, deliberately: a viewport margin of -80px means an
+ * element that never sits 80px inside the viewport never fires at all, and since the
+ * initial state is `opacity: 0` that content is then invisible forever. Short pages and
+ * short viewports hit this. Anything even slightly on screen must resolve.
+ *
+ * Above-the-fold content should pass `onMount` rather than wait for a scroll it will never
+ * receive.
+ */
 export function Reveal({
   children,
   delay = 0,
   className,
+  onMount = false,
 }: {
   children: ReactNode
   delay?: number
   className?: string
+  onMount?: boolean
 }) {
   const reduceMotion = useReducedMotion()
+  const transition = { duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] as const }
+
+  if (reduceMotion) return <div className={className}>{children}</div>
+
+  if (onMount) {
+    return (
+      <motion.div
+        data-reveal
+        className={className}
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={transition}
+      >
+        {children}
+      </motion.div>
+    )
+  }
 
   return (
     <motion.div
+      data-reveal
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
+      viewport={{ once: true, amount: 0.05 }}
+      transition={transition}
     >
       {children}
     </motion.div>
@@ -90,7 +120,7 @@ export function SplitLine({ text, className }: { text: string; className?: strin
             className="inline-block"
             initial={{ y: '110%' }}
             whileInView={{ y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.05 }}
             transition={{ duration: 0.6, delay: i * 0.035, ease: [0.16, 1, 0.3, 1] }}
           >
             {word}

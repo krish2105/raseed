@@ -31,3 +31,11 @@ body {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Reveal animations start at opacity:0, which means the copy is invisible until JS runs.
+   If JS never arrives, the landing page would be a headline over empty space. This forces
+   every animated wrapper visible in that case — the content matters more than the entrance. */
+.no-js [data-reveal] {
+  opacity: 1 !important;
+  transform: none !important;
+}

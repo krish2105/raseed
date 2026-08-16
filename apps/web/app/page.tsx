@@ -81,7 +81,7 @@ export default function Landing() {
             <span className="text-aed">the UAE</span>.
           </KineticHeading>
 
-          <Reveal delay={0.15}>
+          <Reveal delay={0.15} onMount>
             <p className="mt-7 max-w-xl text-[15px] leading-relaxed text-text-lo">
               A dual-currency expense tracker and analytical dashboard. Every amount is stored
               in integer minor units with its FX rate frozen at transaction date, so changing
@@ -89,7 +89,7 @@ export default function Landing() {
             </p>
           </Reveal>
 
-          <Reveal delay={0.25}>
+          <Reveal delay={0.25} onMount>
             <dl className="mt-12 flex flex-wrap gap-x-12 gap-y-6">
               {[
                 { label: 'Demo ledger', value: `${vSpend.length.toLocaleString('en-IN')} rows` },
