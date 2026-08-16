@@ -161,6 +161,19 @@ export const splitParticipants = pgTable('split_participants', {
   deleted: boolean('deleted').notNull(),
 })
 
+export const goals = pgTable('goals', {
+  id: text('id').notNull().primaryKey(),
+  name: text('name').notNull(),
+  targetMinor: bigint('target_minor', { mode: 'number' }).notNull(),
+  savedMinor: bigint('saved_minor', { mode: 'number' }).notNull(),
+  currency: text('currency').notNull(),
+  targetAt: bigint('target_at', { mode: 'number' }),
+  reachedAt: bigint('reached_at', { mode: 'number' }),
+  userId: uuid('user_id').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  deleted: boolean('deleted').notNull(),
+})
+
 export const budgets = pgTable('budgets', {
   id: text('id').notNull().primaryKey(),
   categoryId: text('category_id'),

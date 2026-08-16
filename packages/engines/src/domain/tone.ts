@@ -163,7 +163,7 @@ function matched(patterns: readonly RegExp[], text: string): boolean {
 export function checkTone(
   text: string,
   context: ToneContext,
-  { requireAgency = true, requireSpecific = true } = {},
+  { requireAgency = true, requireSpecific = true, solicited = false } = {},
 ): ToneVerdict {
   const broke: ToneRule[] = []
   const reasons: string[] = []
@@ -186,7 +186,11 @@ export function checkTone(
     fail('specificity', 'contains no amount, merchant or date — generic encouragement')
   }
 
-  if (context.hour >= QUIET_START || context.hour < QUIET_END) {
+  // Quiet hours stop the app from *starting* a conversation at 2am. They are not a reason
+  // to blank a screen someone deliberately opened at 2am — a person checking their goals at
+  // that hour asked for the number, and withholding it is not restraint, it is a bug that
+  // looks like restraint. `solicited` marks copy that only renders because of a navigation.
+  if (!solicited && (context.hour >= QUIET_START || context.hour < QUIET_END)) {
     fail('quiet-hours', `${context.hour}:00 is inside quiet hours`)
   }
 
@@ -208,7 +212,7 @@ export function checkTone(
 export function gate<T extends { readonly text: string }>(
   message: T,
   context: ToneContext,
-  options?: { requireAgency?: boolean; requireSpecific?: boolean },
+  options?: { requireAgency?: boolean; requireSpecific?: boolean; solicited?: boolean },
 ): { readonly shown: T | null; readonly verdict: ToneVerdict } {
   const verdict = checkTone(message.text, context, options)
   return { shown: verdict.allowed ? message : null, verdict }

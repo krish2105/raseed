@@ -1241,3 +1241,59 @@ device returned, copied off the screen.
 After the fix the same photograph reads: subtotal AED 117.00, tax 6.44, service 11.70, total
 135.14, butter chicken 90.00 — and the reconciliation check against the printed total passes,
 which is the signal that says the whole read can be trusted.
+
+## Mobile — trip planner and goals
+
+**A new `goals` table rather than reusing `budgets`.** A budget caps a category per period; a
+goal is a target with a date and a running balance. Conflating them makes both worse. Added to
+`contract.ts`, derived into `sqlite.ts`/`pg.ts`, and — because the RLS test refuses to let a
+synced table exist without it — RLS enabled with `auth.uid() = user_id` in the same migration
+that creates it. The mobile DDL is generated from the contract, so the device picked the table
+up on next launch with no separate migration. 412 schema tests green including the PGlite RLS
+run.
+
+**Destination price ratios are published data, not invented multipliers.** `planTrip` needs a
+`DestinationIndex`, and typing plausible decimals into a table would have been fabrication
+dressed as precision. `destinations.ts` carries Numbeo country indices (2026 mid-year, NYC =
+100) and derives the multiplier at runtime as `destination / home`, so travelling to where you
+already live returns exactly 1 — asserted, along with reciprocity and strict positivity.
+
+Numbeo also publishes a Rent Index, and it is **deliberately unused**. It measures residential
+rent, whose cross-country ratios are far wilder than hotel ratios: India 3.8 against Singapore
+68.3 is an 18× multiplier that no booking has ever reflected. The Cost of Living Index gives
+~5×, which is roughly what an equivalent room costs. A number being published does not make it
+the right number.
+
+**The trip screen shows the unconstrained plan.** `planTrip` trims flexible lines to fit a
+budget — correct engine behaviour, wrong thing to render unexamined. Five nights in Thailand
+against a budget that flights and a hotel had nearly consumed produced a food line 96% smaller
+than a real one, presented in green as fitting, buying "about 0 meals". A plan crushed until
+the arithmetic closes is not a plan; it is a budget with the trip removed from it. The screen
+now computes both, shows the honest cost, and asks the budget question separately and out loud.
+
+**A typical night is an input, not a result.** There is no accommodation category in the
+ledger, so it cannot be derived at all. It is a field with a starting value rather than a
+fabricated number hidden inside a total that looks computed.
+
+**`solicited` added to the tone gate.** Quiet hours (21:00–08:00) blanked the only informative
+line on a goal card, because the screen was opened at 01:19. Quiet hours exist to stop the app
+*starting* a conversation at night; they are not a reason to withhold a number from someone who
+navigated to it. The flag defaults to false, so a caller that forgets it still fails closed.
+`requireAgency` is off on that one line for the same reason — a status line asks nothing, so
+there is nothing to decline. Every other rule still applies.
+
+**Contributions cap against the remaining balance, not the shortfall.** Capping both steps
+against the shortfall made every button read the same figure — two controls that look different
+and do the same thing. And because `perMonth` is always `remaining / months`, paying it
+repeatedly is Zeno's paradox: the balance converges on the target and never arrives, making the
+reached state unreachable and `reached_at` dead code. A third "the rest" step fixes it; the set
+is deduped so they collapse into one button near the end.
+
+**`Date.now()` in render is a lint error, correctly.** The clock is now read through `useQuery`
+and threaded down as a value, so it is sampled at the same moments the ledger is — on focus and
+on write — rather than mid-render where two renders could disagree about what "six months away"
+means. Same discipline the engines have.
+
+Verified on the simulator end to end: plan over and under budget, goal created, contributed
+against, driven to reached (green, full bar, buttons gone), and removed. `turbo typecheck lint
+test` 24/24, 342 engine tests.

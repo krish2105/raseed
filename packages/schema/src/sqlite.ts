@@ -158,6 +158,19 @@ export const splitParticipants = sqliteTable('split_participants', {
   deleted: integer('deleted', { mode: 'boolean' }).notNull(),
 })
 
+export const goals = sqliteTable('goals', {
+  id: text('id').notNull().primaryKey(),
+  name: text('name').notNull(),
+  targetMinor: integer('target_minor').notNull(),
+  savedMinor: integer('saved_minor').notNull(),
+  currency: text('currency').notNull(),
+  targetAt: integer('target_at'),
+  reachedAt: integer('reached_at'),
+  userId: text('user_id').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  deleted: integer('deleted', { mode: 'boolean' }).notNull(),
+})
+
 export const budgets = sqliteTable('budgets', {
   id: text('id').notNull().primaryKey(),
   categoryId: text('category_id'),

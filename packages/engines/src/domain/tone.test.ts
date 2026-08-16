@@ -181,3 +181,29 @@ describe('lifestyleMaySpeak', () => {
     )
   })
 })
+
+describe('solicited copy and quiet hours', () => {
+  const midnight = { hour: 1 }
+  const text = 'You have put aside ₹4,000 of ₹20,000.'
+
+  it('holds back an unprompted message at 1am', () => {
+    expect(checkTone(text, midnight).broke).toContain('quiet-hours')
+  })
+
+  /**
+   * The screen the user just navigated to is not the app starting a conversation. Blanking
+   * it because of the hour withholds the number they opened the app to see.
+   */
+  it('lets the same message through when the reader asked for it', () => {
+    expect(checkTone(text, midnight, { solicited: true }).broke).not.toContain('quiet-hours')
+  })
+
+  it('still applies every other rule to solicited copy', () => {
+    const shaming = 'You wasted ₹4,000 again this month.'
+    expect(checkTone(shaming, midnight, { solicited: true }).allowed).toBe(false)
+  })
+
+  it('defaults to withholding, so a caller that forgets the flag fails closed', () => {
+    expect(checkTone(text, midnight).allowed).toBe(false)
+  })
+})

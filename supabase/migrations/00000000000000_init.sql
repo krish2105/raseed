@@ -160,6 +160,19 @@ create table if not exists public.split_participants (
   deleted boolean not null default false
 );
 
+create table if not exists public.goals (
+  id text not null primary key,
+  name text not null,
+  target_minor bigint not null,
+  saved_minor bigint not null,
+  currency text not null check (currency in ('INR', 'AED')),
+  target_at bigint,
+  reached_at bigint,
+  user_id uuid not null,
+  updated_at timestamptz not null default now(),
+  deleted boolean not null default false
+);
+
 create table if not exists public.budgets (
   id text not null primary key,
   category_id text,
@@ -306,6 +319,12 @@ create policy "own rows" on public.splits
 
 alter table public.split_participants enable row level security;
 create policy "own rows" on public.split_participants
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+alter table public.goals enable row level security;
+create policy "own rows" on public.goals
   for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);

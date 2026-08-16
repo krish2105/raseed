@@ -26,7 +26,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [x] **S12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`
 - [x] **S13** Mobile P4 — merchant resolver, alias learning, reversal pairing
 - [~] **S14** Web P4 — treemap, variance, ledger, currency done; net-worth timeline + calendar heatmap remain
-- [~] **S15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips); the mobile envelope and Live Activity remain
+- [~] **S15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips) and **mobile** (`/trip`: `planTrip` over habits read from the ledger, Numbeo price ratios, unconstrained plan with the budget asked separately). Goals ship alongside it (`/goals`: new `goals` table, `savingsPlan` against real monthly surplus, copy through the tone gate). The Live Activity remains
 - [x] **S16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
 - [~] **S17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
 - [x] **S18** Web P6 — Comlink worker; Arrow encoding moved off the main thread (837ms → 16ms longest block, measured)
@@ -34,7 +34,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [~] **S20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
 - [ ] **S21** Web P8 — landing route, Lenis, Lighthouse ≥95
 - [ ] **S22** Web P9 — Vercel deploy, nuqs share links, a11y sweep
-- [ ] **S23** Mobile P8 — voice capture, receipt OCR
+- [~] **S23** Mobile P8 — receipt OCR is live (`/receipt`, Apple Vision, column-major blocks handled); voice capture remains
 - [ ] **S24** Both — buffer, eval regression, hardening
 
 ---

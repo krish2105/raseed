@@ -55,6 +55,30 @@ export default function YouScreen() {
           </Pressable>
         </Link>
 
+        <Link href="/trip" asChild>
+          <Pressable accessibilityRole="button" style={s.entry}>
+            <View style={s.entryText}>
+              <Text style={s.entryTitle}>Plan a trip</Text>
+              <Text style={s.entryHint}>
+                What it would cost you, built from your own habits
+              </Text>
+            </View>
+            <Text style={s.entryChevron}>›</Text>
+          </Pressable>
+        </Link>
+
+        <Link href="/goals" asChild>
+          <Pressable accessibilityRole="button" style={s.entry}>
+            <View style={s.entryText}>
+              <Text style={s.entryTitle}>Goals</Text>
+              <Text style={s.entryHint}>
+                Targets measured against what is actually left over
+              </Text>
+            </View>
+            <Text style={s.entryChevron}>›</Text>
+          </Pressable>
+        </Link>
+
         <Text style={s.section}>Accounts</Text>
         <View style={s.card}>
           {accounts.map((a, i) => (

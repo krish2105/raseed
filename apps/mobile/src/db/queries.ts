@@ -464,3 +464,195 @@ export function settleUp(personId: string): void {
     [Date.now(), personId],
   )
 }
+
+// ---------------------------------------------------------------------------
+// Trips and goals
+// ---------------------------------------------------------------------------
+
+/**
+ * Your own travel habits, read out of what you actually did.
+ *
+ * "Away" is AED spend, which is the same definition the web trip detector uses — a trip is
+ * a fact about where you were, and the two surfaces must not disagree about which days
+ * those were.
+ *
+ * One habit is deliberately absent: **there is no accommodation category**, so a typical
+ * night cannot be derived from these rows at all. Rather than invent a plausible number and
+ * let it hide inside a total, `nightTypical` is asked for on the screen. A figure the ledger
+ * cannot support should look like an input, not like a result.
+ */
+export function travelHabitsRaw(): {
+  mealTypicalMinor: number
+  transportDailyMinor: number
+  shoppingDailyMinor: number
+  mealsPerDay: number
+  tripsObserved: number
+  tripDays: number
+} {
+  const db = getConnection()
+
+  // Days with any AED spend, and the boundaries between separate trips.
+  const days = db.executeSync(
+    `SELECT CAST(occurred_at / 86400000 AS INTEGER) AS epoch_day,
+            SUM(CASE WHEN currency = 'AED' THEN home_amount_minor ELSE 0 END) AS away_minor
+       FROM v_spend
+      GROUP BY 1
+     HAVING away_minor > 0
+      ORDER BY 1;`,
+  ).rows as unknown as { epoch_day: number; away_minor: number }[]
+
+  if (days.length === 0) {
+    return {
+      mealTypicalMinor: 0,
+      transportDailyMinor: 0,
+      shoppingDailyMinor: 0,
+      mealsPerDay: 0,
+      tripsObserved: 0,
+      tripDays: 0,
+    }
+  }
+
+  // A gap of more than two days starts a new trip — the same tolerance the web detector uses.
+  let trips = 1
+  for (let i = 1; i < days.length; i++) {
+    if (days[i]!.epoch_day - days[i - 1]!.epoch_day > 3) trips++
+  }
+  const tripDays = days.length
+  const from = days[0]!.epoch_day * 86400000
+  const to = (days[days.length - 1]!.epoch_day + 1) * 86400000
+
+  const rows = db.executeSync(
+    `SELECT category_id,
+            COUNT(*)                 AS n,
+            SUM(home_amount_minor)   AS total_minor
+       FROM v_spend
+      WHERE currency = 'AED' AND occurred_at >= ? AND occurred_at < ?
+      GROUP BY category_id;`,
+    [from, to],
+  ).rows as unknown as { category_id: string | null; n: number; total_minor: number }[]
+
+  const by = (id: string) => rows.find((r) => r.category_id === id)
+  const food = by('cat-food')
+  const transport = by('cat-transport')
+  const shopping = by('cat-shopping')
+
+  return {
+    // Per meal, not per day — a typical meal is the unit the planner multiplies.
+    mealTypicalMinor: food && food.n > 0 ? Math.round(food.total_minor / food.n) : 0,
+    transportDailyMinor: transport ? Math.round(transport.total_minor / tripDays) : 0,
+    shoppingDailyMinor: shopping ? Math.round(shopping.total_minor / tripDays) : 0,
+    mealsPerDay: food ? food.n / tripDays : 0,
+    tripsObserved: trips,
+    tripDays,
+  }
+}
+
+/**
+ * Genuine monthly room: what was actually left over, averaged across the months on record.
+ *
+ * Not a budget and not an aspiration. `savingsPlan` compares its required contribution
+ * against this, and the comparison is only worth making if this number is the real one.
+ * Months with no rows are excluded rather than counted as months of perfect saving.
+ */
+export function monthlyCapacityMinor(): { capacityMinor: number; months: number } {
+  const rows = getConnection().executeSync(
+    `SELECT strftime('%Y-%m', occurred_at / 1000, 'unixepoch') AS ym,
+            SUM(CASE WHEN direction = 'in'  THEN home_amount_minor ELSE 0 END) AS in_minor,
+            SUM(CASE WHEN direction = 'out' THEN home_amount_minor ELSE 0 END) AS out_minor
+       FROM transactions
+      WHERE deleted = 0 AND status != 'void'
+      GROUP BY 1;`,
+  ).rows as unknown as { ym: string; in_minor: number; out_minor: number }[]
+
+  if (rows.length === 0) return { capacityMinor: 0, months: 0 }
+  const total = rows.reduce((s, r) => s + (r.in_minor - r.out_minor), 0)
+  return { capacityMinor: Math.max(0, Math.round(total / rows.length)), months: rows.length }
+}
+
+export interface GoalRow {
+  id: string
+  name: string
+  target: Money
+  saved: Money
+  targetAt: number | null
+  reachedAt: number | null
+}
+
+export function listGoals(): GoalRow[] {
+  const rows = getConnection().executeSync(
+    `SELECT id, name, target_minor, saved_minor, currency, target_at, reached_at
+       FROM goals WHERE deleted = 0
+      ORDER BY reached_at IS NOT NULL, target_at IS NULL, target_at;`,
+  ).rows as unknown as {
+    id: string
+    name: string
+    target_minor: number
+    saved_minor: number
+    currency: Currency
+    target_at: number | null
+    reached_at: number | null
+  }[]
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    target: money(r.target_minor, r.currency),
+    saved: money(r.saved_minor, r.currency),
+    targetAt: r.target_at,
+    reachedAt: r.reached_at,
+  }))
+}
+
+export function addGoal(input: {
+  name: string
+  target: Money
+  targetAt: number | null
+}): string {
+  const id = `goal-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  getConnection().executeSync(
+    `INSERT INTO goals
+       (id, name, target_minor, saved_minor, currency, target_at, reached_at, user_id, updated_at, deleted)
+     VALUES (?, ?, ?, 0, ?, ?, NULL, ?, ?, 0);`,
+    [
+      id,
+      input.name.trim(),
+      input.target.minor,
+      input.target.currency,
+      input.targetAt,
+      USER,
+      Date.now(),
+    ],
+  )
+  return id
+}
+
+/**
+ * Put money aside, or take it back out.
+ *
+ * Contributions clamp at zero rather than going negative — a goal you have withdrawn more
+ * from than you put in is a data error, not a state worth modelling. Reaching the target
+ * stamps `reached_at` instead of deleting the row, so a finished goal stays visible.
+ */
+export function contributeToGoal(id: string, deltaMinor: number): void {
+  const db = getConnection()
+  const row = (
+    db.executeSync('SELECT saved_minor, target_minor FROM goals WHERE id = ?;', [id]).rows as
+      unknown as { saved_minor: number; target_minor: number }[]
+  )[0]
+  if (!row) return
+
+  const saved = Math.max(0, row.saved_minor + deltaMinor)
+  const reached = saved >= row.target_minor ? Date.now() : null
+  db.executeSync(
+    'UPDATE goals SET saved_minor = ?, reached_at = ?, updated_at = ? WHERE id = ?;',
+    [saved, reached, Date.now(), id],
+  )
+}
+
+/** Soft delete only. */
+export function removeGoal(id: string): void {
+  getConnection().executeSync('UPDATE goals SET deleted = 1, updated_at = ? WHERE id = ?;', [
+    Date.now(),
+    id,
+  ])
+}

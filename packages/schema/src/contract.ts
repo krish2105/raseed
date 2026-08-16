@@ -212,6 +212,27 @@ const base: Readonly<Record<string, TableSpec>> = {
     },
   },
 
+  /**
+   * A savings goal: a named target, a date, and what has been put aside so far.
+   *
+   * Separate from `budgets`, which caps a category per period. A budget is a ceiling on
+   * spending; a goal is a floor under saving, and conflating them makes both worse.
+   */
+  goals: {
+    synced: true,
+    columns: {
+      id,
+      name: { type: 'text', nullable: false },
+      target_minor: { type: 'integer', nullable: false },
+      saved_minor: { type: 'integer', nullable: false },
+      currency: { type: 'text', nullable: false, enumValues: CURRENCIES },
+      /** Null means "no deadline" — a goal without a date is still a goal. */
+      target_at: { type: 'integer', nullable: true },
+      /** Set when reached, so a finished goal keeps its history instead of being deleted. */
+      reached_at: { type: 'integer', nullable: true },
+    },
+  },
+
   budgets: {
     synced: true,
     columns: {
