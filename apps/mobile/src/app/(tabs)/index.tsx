@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link } from 'expo-router'
 import { Plus } from 'lucide-react-native'
 
-import { safeToSpend } from '@raseed/engines'
+import { safeToSpend, type Fact } from '@raseed/engines'
 import { format, fromMajor } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
@@ -11,6 +12,7 @@ import { font, useTheme } from '@/theme'
 import { spendBetween, spendTotal, useQuery } from '@/db'
 import { useNow } from '@/hooks/useNow'
 import { DayDial } from '@/components/DayDial'
+import { Companion } from '@/components/Companion'
 
 const DAY = 86_400_000
 
@@ -45,35 +47,106 @@ export default function TodayScreen() {
   const allowance = Math.max(1, sts.baseDaily.minor + sts.carryover.minor)
   const usedPct = Math.min(100, Math.max(0, (spentToday.minor / allowance) * 100))
   const accent = sts.overspent ? colors.warn : colors.inr
+  const [showNumbers, setShowNumbers] = useState(false)
+
+  const hour = new Date(now).getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+
+  /**
+   * Facts are computed here and formatted here; the narrator receives strings only, so it
+   * cannot round, restate or invent a figure. Weight is how much each deserves the single
+   * slot the companion allows.
+   */
+  const facts: Fact[] = []
+  if (entries.length >= 2) {
+    // Two charges from the same merchant on the same day is the most actionable thing a
+    // ledger can surface, so it outranks everything else when it happens.
+    const byMerchant = new Map<string, typeof entries>()
+    for (const e of entries) {
+      byMerchant.set(e.merchant, [...(byMerchant.get(e.merchant) ?? []), e])
+    }
+    for (const [merchant, group] of byMerchant) {
+      const pair = group.find((a, i) => group.some((b, j) => j > i && b.amount.minor === a.amount.minor))
+      if (pair) {
+        facts.push({
+          theme: 'duplicate',
+          weight: 0.95,
+          values: {
+            merchant,
+            first: 'today',
+            second: 'today',
+            amount: format(pair.amount),
+          },
+        })
+        break
+      }
+    }
+  }
+  facts.push({
+    theme: 'steady',
+    weight: 0.3,
+    values: {
+      days: String(sts.daysUntilIncome),
+      room: format(sts.amount, { compactZeroFraction: true }),
+    },
+  })
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.eyebrow}>Today</Text>
+        {/* Words first. The figures are one tap below, never removed — a sentence answers
+            "should I care", which is the question being asked in a queue. */}
+        <Companion
+          greeting={greeting}
+          amount={sts.amount}
+          daysToIncome={sts.daysUntilIncome}
+          spentToday={spentToday}
+          facts={facts}
+          hour={new Date(now).getHours()}
+          signals={{
+            roomMinor: sts.amount.minor,
+            spendMinor: spentToday.minor,
+            incomeMinor: 0,
+            consecutiveNegativeDays: 0,
+          }}
+        />
 
-        <View style={s.hero}>
-          <View style={s.dialWrap}>
-            <DayDial progress={usedPct / 100} overspent={sts.overspent}>
-              <Text style={s.heroLabel}>You&apos;ve got</Text>
-              <Text
-                style={[s.heroAmount, { color: accent }]}
-                adjustsFontSizeToFit
-                numberOfLines={1}
-                accessibilityLabel={`${format(sts.amount)} left for today`}
-              >
-                {format(sts.amount, { compactZeroFraction: true })}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showNumbers }}
+          onPress={() => setShowNumbers((v) => !v)}
+          style={s.disclosure}
+        >
+          <Text style={s.disclosureText}>
+            {showNumbers ? 'Hide the numbers' : 'Show me the numbers'}
+          </Text>
+        </Pressable>
+
+        {showNumbers && (
+          <View style={s.hero}>
+            <View style={s.dialWrap}>
+              <DayDial progress={usedPct / 100} overspent={sts.overspent}>
+                <Text style={s.heroLabel}>You&apos;ve got</Text>
+                <Text
+                  style={[s.heroAmount, { color: accent }]}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                  accessibilityLabel={`${format(sts.amount)} left for today`}
+                >
+                  {format(sts.amount, { compactZeroFraction: true })}
+                </Text>
+                <Text style={s.heroHint}>{sts.daysUntilIncome} days to payday</Text>
+              </DayDial>
+            </View>
+
+            <View style={s.meterRow}>
+              <Text style={s.meterText}>{format(spentToday)} spent</Text>
+              <Text style={s.meterText}>
+                {format(sts.baseDaily, { compactZeroFraction: true })}/day
               </Text>
-              <Text style={s.heroHint}>{sts.daysUntilIncome} days to payday</Text>
-            </DayDial>
+            </View>
           </View>
-
-          <View style={s.meterRow}>
-            <Text style={s.meterText}>{format(spentToday)} spent</Text>
-            <Text style={s.meterText}>
-              {format(sts.baseDaily, { compactZeroFraction: true })}/day
-            </Text>
-          </View>
-        </View>
+        )}
 
         <Text style={s.section}>Today&apos;s ledger</Text>
         <View style={s.card}>
@@ -126,6 +199,13 @@ const styles = (c: Palette) =>
     },
 
     dialWrap: { alignItems: 'center', paddingVertical: space[2] },
+    disclosure: { alignSelf: 'flex-start', paddingVertical: space[2] },
+    disclosureText: {
+      color: c['text-lo'],
+      fontFamily: font.bodyMedium,
+      fontSize: 13,
+      textDecorationLine: 'underline',
+    },
     hero: {
       backgroundColor: c['surface-1'],
       borderColor: c.line,

@@ -866,3 +866,51 @@ risk by construction. Showing both implied an average over a distribution with o
 it. `riskProfile` now reports `tailSize`, and below two the panel says "worst month on
 record" and explains that a tail average needs more history. The tail deliberately includes
 the VaR observation, because CVaR is E[X | X ≥ VaR] — my first test asserted otherwise.
+
+---
+
+## The tone engine, the narrator, and the phone as companion (2026-08-16)
+
+`finy_v2.md` asks for a cloud model that writes sentences from computed inputs and invents
+nothing. **The constraint list describes a template exactly** — narrate these, state no
+number you were not given, invent nothing. A template satisfies every one of those by
+construction rather than by instruction, costs nothing, needs no key, works in airplane mode,
+and cannot hallucinate a figure. The model was skipped, not compromised on.
+
+The seam is deliberate: swapping a model in later means replacing `compose` and leaving the
+gate, the ranking and the frequency governor untouched. That is the whole reason the voice
+layer sits *above* the generation layer rather than inside it.
+
+**The tone engine is a safety system, not a style guide**, so it is enforced in code at
+display time and it fails closed. Six rule families — shame, diagnosis, body, agency,
+specificity, regulated advice — plus quiet hours and supportive mode. `gate()` returns the
+message **or null**, never a flag, so a caller cannot accidentally render something blocked.
+Thirty adversarial cases, including the eight that cross into licensed investment advice
+under SEBI and the SCA, which is a boundary one sentence wide and therefore checked rather
+than trusted.
+
+**Two of the patterns were wrong on the first run, and both mattered.** "Your streak *is*
+broken" slipped through a rule that required the words adjacent. And "Want the detail?" was
+rejected for offering no agency — which would have blocked the calmest sentences the app can
+write, exactly the ones most worth sending.
+
+**Every narrator template is tested against its own gate.** A template that drifts during an
+edit now fails loudly instead of quietly shipping a message the app would otherwise block.
+
+**At most one observation, ever.** Not the top three. Three observations on a screen is none
+— the reader skims all of them and acts on nothing, and the app has spent its whole welcome
+in one visit. It lives in the return type: a single item or nothing.
+
+**Verified on device, and the best evidence was the app staying silent.** At 22:29 the
+companion showed no card at all, because quiet hours start at 21:00. Forcing the hour to 10
+produced the card, the sentence and the three choices. The feature working correctly is
+invisible to anyone testing in the evening, which is worth knowing before someone reports it
+as a bug.
+
+**Liquid Glass is guarded three ways, not one.** Apple requires full adoption by September
+2026 and removes the opt-out in iOS 27, so it is the platform language now rather than
+decoration. But `isLiquidGlassAvailable()` is a **runtime** check — some iOS 26 betas ship
+without the API and calling into it there crashes rather than degrades — and reduced
+transparency is a setting people enable precisely because translucency makes text hard for
+them to read. The fallback is a solid surface with a hairline border: plainer, equally
+legible, never a translucent panel with nothing behind it.

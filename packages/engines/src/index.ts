@@ -18,6 +18,8 @@ export * from './domain/reconcileCash'
 export * from './domain/detectTrips'
 export * from './domain/realValue'
 export * from './domain/breakEven'
+export * from './domain/tone'
+export * from './domain/narrate'
 
 export * from './finance'
 export * from './stats'
