@@ -13,17 +13,39 @@ function block(selector: string): Record<string, string> {
   const close = css.indexOf('}', open)
   const body = css.slice(open + 1, close)
 
+  // Split on `;` rather than on newlines: a shadow is legitimately a multi-line value, and
+  // a line-based parser silently skips it — which reads as "the token is missing" and sends
+  // you looking in the wrong file.
   const declarations: Record<string, string> = {}
-  for (const line of body.split('\n')) {
-    const match = /^\s*--([a-z0-9-]+)\s*:\s*(.+?);\s*$/i.exec(line)
-    if (match?.[1] && match[2]) declarations[match[1]] = match[2].trim()
+  for (const chunk of body.replace(/\/\*[\s\S]*?\*\//g, '').split(';')) {
+    const match = /^\s*--([a-z0-9-]+)\s*:\s*([\s\S]+)$/i.exec(chunk)
+    if (match?.[1] && match[2]) declarations[match[1]] = match[2].replace(/\s+/g, ' ').trim()
   }
   return declarations
 }
 
+/**
+ * Design tokens that are CSS-only by nature — shadows and glass are compositions of
+ * `color-mix()` over the palette, not palette entries. They have no place in `Palette`,
+ * but they still must exist in every theme block, which the next test enforces.
+ */
+const CSS_ONLY = [
+  'shadow-1',
+  'shadow-2',
+  'shadow-3',
+  'glass-bg',
+  'glass-line',
+  'glass-blur',
+  'glass-sheen',
+] as const
+
 function expectMatchesPalette(declarations: Record<string, string>, expected: Palette) {
-  // Same key set — catches a token added to one file and not the other.
-  expect(Object.keys(declarations).sort()).toEqual([...colorTokens].sort())
+  // Same colour key set — catches a colour added to one file and not the other. CSS-only
+  // design tokens are excluded here and checked separately rather than being waved through.
+  const colours = Object.keys(declarations).filter(
+    (k) => !(CSS_ONLY as readonly string[]).includes(k),
+  )
+  expect(colours.sort()).toEqual([...colorTokens].sort())
 
   for (const token of colorTokens) {
     expect(
@@ -48,6 +70,25 @@ describe('tokens.css / tokens.ts parity', () => {
 
   it('the system-preference block carries the complete dark palette', () => {
     expectMatchesPalette(block(":root:not([data-theme='light'])"), palette.dark)
+  })
+
+  /**
+   * The same rule the palette lives by, applied to depth and glass: a token defined only
+   * in the dark block leaves the light theme with no shadow at all, and the failure is
+   * invisible to anyone developing in dark mode.
+   */
+  it('every CSS-only design token is defined in all four theme blocks', () => {
+    const blocks = {
+      ':root': block(':root {'),
+      'data-theme=dark': block(":root[data-theme='dark']"),
+      'data-theme=light': block(":root[data-theme='light']"),
+      'prefers dark': block(":root:not([data-theme='light'])"),
+    }
+    for (const [name, declarations] of Object.entries(blocks)) {
+      for (const token of CSS_ONLY) {
+        expect(declarations[token], `--${token} is missing from ${name}`).toBeDefined()
+      }
+    }
   })
 
   it('every token is defined outside a media query', () => {

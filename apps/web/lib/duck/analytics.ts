@@ -3,11 +3,16 @@ import {
   lorenzCurve,
   budgetVariance,
   detectRemittance,
+  changePoints,
+  concentrationOf,
   detectTrips,
   gini,
   madZScore,
   pareto,
+  riskProfile,
+  seasonalDecompose,
   tripExcess,
+  varianceExplained,
   type Trip,
 } from '@raseed/engines'
 import { money, type Currency, type Money } from '@raseed/money'
@@ -546,5 +551,76 @@ export async function trips(days = 540): Promise<{ trips: TripRow[]; baselineDai
         burn: money(Math.round(t.totalInHomeMinor / t.days), 'INR'),
       }))
       .reverse(), // most recent first
+  }
+}
+
+// ── regime, risk and concentration ──────────────────────────────────────────
+
+export interface Regime {
+  /** Where the level of spending shifted, newest first. */
+  shifts: { day: string; before: Money; after: Money; delta: Money; magnitude: number }[]
+  /** Downside profile of MONTHLY spend — the bad month, not the average one. */
+  risk: {
+    valueAtRisk: Money
+    conditional: Money
+    typical: Money
+    shortfall: Money
+    months: number
+    /** 1 means there is one bad month on record, not a tail to average. */
+    tailSize: number
+  }
+  /** How many places your money effectively goes, versus how many it nominally goes to. */
+  spread: { effective: number; nominal: number; evenness: number }
+  /** Share of daily movement the trend and weekly rhythm account for, 0–1. */
+  explained: number
+}
+
+/**
+ * The three questions a monthly total cannot answer: did something change, how bad is a bad
+ * month, and how many things is this actually spread across.
+ */
+export async function regime(lens: Lens): Promise<Regime> {
+  const [daily, monthly, categories] = await Promise.all([
+    dailySeries(365, lens),
+    query<{ month: string; home_minor: number }>(Q.monthlyTotals(lens)),
+    byCategory(365, lens),
+  ])
+
+  const values = daily.map((d) => d.total.minor)
+  const shifts = changePoints(values)
+    .map((c) => ({
+      day: daily[c.index]?.day ?? '',
+      before: asMoney(c.before, lens),
+      after: asMoney(c.after, lens),
+      delta: asMoney(c.delta, lens),
+      magnitude: c.magnitude,
+    }))
+    .filter((s) => s.day !== '')
+    .reverse()
+
+  // The last month is almost always partial, and a half-month masquerading as a cheap month
+  // drags the whole tail of the distribution down.
+  const months = monthly.slice(0, -1).map((m) => m.home_minor)
+  const r = riskProfile(months, 0.95)
+
+  const spread = concentrationOf(categories.map((c) => c.total.minor))
+
+  return {
+    shifts,
+    risk: {
+      valueAtRisk: asMoney(r.valueAtRisk, lens),
+      conditional: asMoney(r.conditionalValueAtRisk, lens),
+      typical: asMoney(r.typical, lens),
+      shortfall: asMoney(r.shortfall, lens),
+      months: r.observations,
+      tailSize: r.tailSize,
+    },
+    spread: {
+      effective: spread.effectiveCount,
+      nominal: spread.nominalCount,
+      evenness: spread.evenness,
+    },
+    explained:
+      values.length >= 14 ? varianceExplained(values, seasonalDecompose(values, 7)) : 0,
   }
 }

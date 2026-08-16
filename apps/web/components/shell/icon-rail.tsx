@@ -7,6 +7,7 @@ import {
   BarChart3,
   FlaskConical,
   LayoutGrid,
+  Radar,
   Flame,
   Plane,
   Receipt,
@@ -16,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 
 export const ROUTES = [
+  { href: '/tower', label: 'Tower', Icon: Radar },
   { href: '/overview', label: 'Overview', Icon: LayoutGrid },
   { href: '/flows', label: 'Flows', Icon: Waves },
   { href: '/categories', label: 'Categories', Icon: BarChart3 },

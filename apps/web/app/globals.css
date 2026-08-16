@@ -47,3 +47,87 @@ body {
     animation: none;
   }
 }
+
+/* ── depth ──────────────────────────────────────────────────────────────────
+   Three steps and no more. A shadow scale with eight rungs means nobody can
+   tell two adjacent ones apart and everybody picks one at random. */
+.elev-1 { box-shadow: var(--shadow-1); }
+.elev-2 { box-shadow: var(--shadow-2); }
+.elev-3 { box-shadow: var(--shadow-3); }
+
+/* ── glass ──────────────────────────────────────────────────────────────────
+   For nav, the floating dock, modals and an expanded tile. NOT for page
+   backgrounds: backdrop-filter costs 15–30% of the frame budget on a mid-tier
+   phone, and glass stacked on glass reads as fog rather than depth.
+
+   The ::before is the hairline sheen along the top edge — the single detail
+   that separates a glass panel from a translucent rectangle. */
+.glass {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-line);
+}
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-sheen), transparent);
+  pointer-events: none;
+}
+
+/* Where backdrop-filter is unsupported, fall back to an opaque surface. A
+   translucent panel with no blur behind it is unreadable, not degraded. */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass { background: var(--surface-1); }
+}
+
+/* ── bento ──────────────────────────────────────────────────────────────────
+   12 columns, dense packing. `grid-auto-flow: dense` lets a small tile
+   backfill a gap a large one left, which is the difference between a bento
+   grid and a grid with holes in it. */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: minmax(var(--bento-row, 5.5rem), auto);
+  grid-auto-flow: dense;
+  gap: 0.75rem;
+}
+
+/* Below 48rem everything is full width. A 12-column grid on a 360px phone is
+   twelve 22px columns, which is not a layout. */
+@media (max-width: 48rem) {
+  .bento > * { grid-column: span 12 !important; }
+}
+
+/* ── motion ─────────────────────────────────────────────────────────────────
+   Transform and opacity only. Animating a layout property on scroll drops
+   frames on every device that matters. */
+@keyframes raseed-rise {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rise {
+  animation: raseed-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+/* A magnetic hover reads as the surface responding to you rather than a state
+   flipping. Kept to a 1% scale — anything larger looks like a button growing. */
+.magnetic {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+@media (hover: hover) {
+  .magnetic:hover { transform: translate3d(0, -2px, 0) scale(1.006); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise { animation: none; opacity: 1; transform: none; }
+  .magnetic { transition: none; }
+  .magnetic:hover { transform: none; }
+}

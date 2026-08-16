@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 
 export const ROUTES = [
+  '/tower',
   '/overview',
   '/flows',
   '/categories',

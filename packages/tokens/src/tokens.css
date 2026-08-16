@@ -22,6 +22,31 @@
   --good: #317829;
   --warn: #B23A34;
   --horizon: #5566A8;
+
+  /* ── depth ────────────────────────────────────────────────────────────────
+     Elevation is a stack of two shadows, not one: a tight contact shadow that
+     anchors the element to the surface, and a wide ambient one that gives it
+     height. A single blurred shadow reads as a smudge at every size. Values are
+     colour-mixed from the ink so they warm and cool with the theme instead of
+     being neutral grey holes punched in a tinted surface. */
+  --shadow-1: 0 1px 2px color-mix(in oklab, var(--text-hi) 8%, transparent),
+              0 1px 3px color-mix(in oklab, var(--text-hi) 5%, transparent);
+  --shadow-2: 0 2px 4px color-mix(in oklab, var(--text-hi) 8%, transparent),
+              0 8px 20px color-mix(in oklab, var(--text-hi) 8%, transparent);
+  --shadow-3: 0 4px 8px color-mix(in oklab, var(--text-hi) 10%, transparent),
+              0 24px 48px color-mix(in oklab, var(--text-hi) 12%, transparent);
+
+  /* ── glass ────────────────────────────────────────────────────────────────
+     Surgical only: nav, floating dock, modals, an expanded tile. Never a
+     full-bleed background — backdrop-filter costs 15–30% of frame budget on a
+     mid-tier phone, and glass over glass reads as fog. */
+  --glass-bg: color-mix(in oklab, var(--surface-1) 72%, transparent);
+  --glass-line: color-mix(in oklab, var(--text-hi) 10%, transparent);
+  --glass-blur: 16px;
+
+  /* A single hairline highlight along the top edge. This is what separates a
+     glass panel from a translucent rectangle. */
+  --glass-sheen: color-mix(in oklab, var(--surface-1) 90%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,6 +62,31 @@
     --good: #7BC96F;
     --warn: #E66761;
     --horizon: #7E8EC6;
+
+    /* ── depth ────────────────────────────────────────────────────────────────
+       Elevation is a stack of two shadows, not one: a tight contact shadow that
+       anchors the element to the surface, and a wide ambient one that gives it
+       height. A single blurred shadow reads as a smudge at every size. Values are
+       colour-mixed from the ink so they warm and cool with the theme instead of
+       being neutral grey holes punched in a tinted surface. */
+    --shadow-1: 0 1px 2px color-mix(in oklab, var(--text-hi) 8%, transparent),
+                0 1px 3px color-mix(in oklab, var(--text-hi) 5%, transparent);
+    --shadow-2: 0 2px 4px color-mix(in oklab, var(--text-hi) 8%, transparent),
+                0 8px 20px color-mix(in oklab, var(--text-hi) 8%, transparent);
+    --shadow-3: 0 4px 8px color-mix(in oklab, var(--text-hi) 10%, transparent),
+                0 24px 48px color-mix(in oklab, var(--text-hi) 12%, transparent);
+
+    /* ── glass ────────────────────────────────────────────────────────────────
+       Surgical only: nav, floating dock, modals, an expanded tile. Never a
+       full-bleed background — backdrop-filter costs 15–30% of frame budget on a
+       mid-tier phone, and glass over glass reads as fog. */
+    --glass-bg: color-mix(in oklab, var(--surface-1) 64%, transparent);
+    --glass-line: color-mix(in oklab, var(--text-hi) 14%, transparent);
+    --glass-blur: 16px;
+
+    /* A single hairline highlight along the top edge. This is what separates a
+       glass panel from a translucent rectangle. */
+    --glass-sheen: color-mix(in oklab, var(--surface-1) 90%, transparent);
   }
 }
 
@@ -52,6 +102,31 @@
   --good: #7BC96F;
   --warn: #E66761;
   --horizon: #7E8EC6;
+
+  /* ── depth ────────────────────────────────────────────────────────────────
+     Elevation is a stack of two shadows, not one: a tight contact shadow that
+     anchors the element to the surface, and a wide ambient one that gives it
+     height. A single blurred shadow reads as a smudge at every size. Values are
+     colour-mixed from the ink so they warm and cool with the theme instead of
+     being neutral grey holes punched in a tinted surface. */
+  --shadow-1: 0 1px 2px color-mix(in oklab, var(--text-hi) 8%, transparent),
+              0 1px 3px color-mix(in oklab, var(--text-hi) 5%, transparent);
+  --shadow-2: 0 2px 4px color-mix(in oklab, var(--text-hi) 8%, transparent),
+              0 8px 20px color-mix(in oklab, var(--text-hi) 8%, transparent);
+  --shadow-3: 0 4px 8px color-mix(in oklab, var(--text-hi) 10%, transparent),
+              0 24px 48px color-mix(in oklab, var(--text-hi) 12%, transparent);
+
+  /* ── glass ────────────────────────────────────────────────────────────────
+     Surgical only: nav, floating dock, modals, an expanded tile. Never a
+     full-bleed background — backdrop-filter costs 15–30% of frame budget on a
+     mid-tier phone, and glass over glass reads as fog. */
+  --glass-bg: color-mix(in oklab, var(--surface-1) 64%, transparent);
+  --glass-line: color-mix(in oklab, var(--text-hi) 14%, transparent);
+  --glass-blur: 16px;
+
+  /* A single hairline highlight along the top edge. This is what separates a
+     glass panel from a translucent rectangle. */
+  --glass-sheen: color-mix(in oklab, var(--surface-1) 90%, transparent);
 }
 
 :root[data-theme='light'] {
@@ -66,4 +141,29 @@
   --good: #317829;
   --warn: #B23A34;
   --horizon: #5566A8;
+
+  /* ── depth ────────────────────────────────────────────────────────────────
+     Elevation is a stack of two shadows, not one: a tight contact shadow that
+     anchors the element to the surface, and a wide ambient one that gives it
+     height. A single blurred shadow reads as a smudge at every size. Values are
+     colour-mixed from the ink so they warm and cool with the theme instead of
+     being neutral grey holes punched in a tinted surface. */
+  --shadow-1: 0 1px 2px color-mix(in oklab, var(--text-hi) 8%, transparent),
+              0 1px 3px color-mix(in oklab, var(--text-hi) 5%, transparent);
+  --shadow-2: 0 2px 4px color-mix(in oklab, var(--text-hi) 8%, transparent),
+              0 8px 20px color-mix(in oklab, var(--text-hi) 8%, transparent);
+  --shadow-3: 0 4px 8px color-mix(in oklab, var(--text-hi) 10%, transparent),
+              0 24px 48px color-mix(in oklab, var(--text-hi) 12%, transparent);
+
+  /* ── glass ────────────────────────────────────────────────────────────────
+     Surgical only: nav, floating dock, modals, an expanded tile. Never a
+     full-bleed background — backdrop-filter costs 15–30% of frame budget on a
+     mid-tier phone, and glass over glass reads as fog. */
+  --glass-bg: color-mix(in oklab, var(--surface-1) 72%, transparent);
+  --glass-line: color-mix(in oklab, var(--text-hi) 10%, transparent);
+  --glass-blur: 16px;
+
+  /* A single hairline highlight along the top edge. This is what separates a
+     glass panel from a translucent rectangle. */
+  --glass-sheen: color-mix(in oklab, var(--surface-1) 90%, transparent);
 }

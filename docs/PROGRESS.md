@@ -57,7 +57,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
   Production build/start and webpack dev are all clean; only Turbopack dev fails.
   Retest with `pnpm --filter web run dev:turbo` on the next Next release.
 
-- **43 Playwright specs** run against a production build in CI (`pnpm --filter web e2e`): flows, plus axe-core WCAG 2 AA on all 8 routes in **both** themes, 360px overflow and keyboard traversal.
+- **46 Playwright specs** run against a production build in CI (`pnpm --filter web e2e`): flows, plus axe-core WCAG 2 AA on all 8 routes in **both** themes, 360px overflow and keyboard traversal.
 - **Web is deployed** — https://raseed-eosin.vercel.app, public, auto-deploys from `main`.
   Vercel project root directory is `apps/web`; do not unset it or deploys fail at upload.
 

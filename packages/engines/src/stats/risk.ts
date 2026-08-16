@@ -28,6 +28,15 @@ export interface RiskProfile {
   readonly shortfall: number
   /** How many observations this rests on. Below ~12 the tail is a guess; say so. */
   readonly observations: number
+  /**
+   * How many observations fall in the tail.
+   *
+   * Load-bearing for the UI. At 95% over 17 months the tail holds exactly one month, so
+   * CVaR equals VaR *by construction* — and rendering them as two figures implies a
+   * distribution that does not exist. When this is 1, there is one bad month on record and
+   * the honest presentation says so rather than showing an average of one number.
+   */
+  readonly tailSize: number
   readonly confidence: number
 }
 
@@ -49,6 +58,7 @@ export function riskProfile(amounts: readonly number[], confidence = 0.95): Risk
       typical: 0,
       shortfall: 0,
       observations: 0,
+      tailSize: 0,
       confidence,
     }
   }
@@ -69,6 +79,7 @@ export function riskProfile(amounts: readonly number[], confidence = 0.95): Risk
     typical,
     shortfall: Math.max(0, cvar - typical),
     observations: n,
+    tailSize: tail.length,
     confidence,
   }
 }

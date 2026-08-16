@@ -60,6 +60,27 @@ describe('riskProfile', () => {
     expect(r.typical).toBe(12)
     expect(r.shortfall).toBeGreaterThan(0)
     expect(r.observations).toBe(20)
+    // The tail INCLUDES the VaR observation — CVaR is E[X | X ≥ VaR], not E[X | X > VaR].
+    expect(r.tailSize).toBe(2)
+  })
+
+  /**
+   * The presentation trap. At 95% over a short history the tail is a single month, so CVaR
+   * is that month and equals VaR exactly. Reporting both as separate figures would imply an
+   * average over a distribution that has one point in it.
+   */
+  it('reports a single-observation tail so the UI can stop pretending', () => {
+    const short = Array.from({ length: 17 }, (_, i) => 100 + i)
+    const r = riskProfile(short, 0.95)
+    expect(r.tailSize).toBe(1)
+    expect(r.conditionalValueAtRisk).toBe(r.valueAtRisk)
+  })
+
+  it('reports a real tail once there is enough history to have one', () => {
+    const long = Array.from({ length: 120 }, (_, i) => 100 + i)
+    const r = riskProfile(long, 0.95)
+    expect(r.tailSize).toBeGreaterThan(1)
+    expect(r.conditionalValueAtRisk).toBeGreaterThan(r.valueAtRisk)
   })
 
   /**

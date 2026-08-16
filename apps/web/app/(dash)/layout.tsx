@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { IconRail } from '@/components/shell/icon-rail'
+import { CommandDock } from '@/components/shell/command-dock'
 import { TopBar } from '@/components/shell/top-bar'
 import { DuckProvider } from '@/lib/duck/provider'
 
@@ -40,6 +41,14 @@ export default function DashLayout({ children }: LayoutProps<'/'>) {
           {children}
         </main>
       </div>
+
+      {/* Floats over the content. Outside <main> so it is not inside the scroll region.
+          Suspense is required, not decorative: the dock hosts the currency lens, which reads
+          the URL through nuqs, and a useSearchParams call with no boundary above it fails
+          the whole prerender — which is exactly how this broke the first time. */}
+      <Suspense fallback={null}>
+        <CommandDock />
+      </Suspense>
       </div>
     </DuckProvider>
   )

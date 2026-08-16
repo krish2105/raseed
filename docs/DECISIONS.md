@@ -815,3 +815,54 @@ temperature as every figure in the app rather than inventing a third colour lang
   prebuilt binaries and `pod install` failed with "Skia prebuilt binaries not found".
   `@shopify/react-native-skia` is now in `onlyBuiltDependencies`, which is where the fix
   belongs — running `npx install-skia` by hand would work once and fail for the next person.
+
+---
+
+## The redesign: two surfaces, not one design (2026-08-16)
+
+The reference screenshot is a twenty-panel executive control tower. `finy_v2.md` argues for
+words-first, *"charts one tap below"*, *"be specific or say nothing"*, *"know when to stop
+talking"*. Both are coherent theses. Neither can be the same screen, and picking one
+silently would have thrown away half of what was asked for.
+
+**They are not in conflict — they are two surfaces.** The web is a 27-inch screen you sit
+down at to analyse: it gets the Control Tower. The phone is six inches in a queue: it gets
+the companion. That reading also puts `finy_v2` where it belongs, on the device where a
+warm sentence is the right interface and a wall of KPIs is not.
+
+**Density survives only because of progressive disclosure.** Twenty panels of full detail is
+a wall nobody parses. Twenty *headlines*, each with the working folded underneath a
+`Working` toggle, is a room you scan in four seconds. The detail subtree is not rendered
+until opened, so a collapsed board pays nothing for it.
+
+**Glass is used in exactly one place: the floating dock.** A translucent surface signals
+"above the content" only while it stays rare — a page where several things are glass has
+nothing floating above anything. `backdrop-filter` also costs 15–30% of the frame budget on
+a mid-tier phone, so it is spent once, deliberately. There is an `@supports not` fallback to
+an opaque surface, because a translucent panel with no blur behind it is unreadable rather
+than merely plainer.
+
+**Actions moved out of the top bar into the dock.** Duplicating them would give two elements
+the same accessible name, which makes "the Add button" ambiguous to a screen reader and to
+the test suite alike. The top bar keeps identity and search; the dock keeps everything you
+*do*, in thumb reach. It retreats on scroll-down and returns on scroll-up with a 24px
+deadband, because a permanently pinned dock covers the last row of every table.
+
+**Depth is three steps and each is two shadows.** A tight contact shadow anchors the element
+to the surface and a wide ambient one gives it height; a single blurred shadow reads as a
+smudge at every size. The values are `color-mix`ed from the ink so they warm and cool with
+the theme rather than being neutral grey holes punched in a tinted surface.
+
+### Two things the work caught
+
+**The dock broke the production build**, and the failure named the wrong page. It hosts the
+currency lens, which reads the URL through nuqs; mounting it outside a Suspense boundary
+made `useSearchParams` fail the prerender for `/categories` and `/currency` — pages that had
+not been touched. Wrapped, with the reason in a comment so it does not get "tidied" away.
+
+**VaR and CVaR were rendering as the same number, and that was correct.** At 95% over
+seventeen months the tail holds one month, so the conditional value at risk *is* the value at
+risk by construction. Showing both implied an average over a distribution with one point in
+it. `riskProfile` now reports `tailSize`, and below two the panel says "worst month on
+record" and explains that a tail average needs more history. The tail deliberately includes
+the VaR observation, because CVaR is E[X | X ≥ VaR] — my first test asserted otherwise.

@@ -1,10 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ThemeToggle } from './theme-toggle'
-import { CurrencyLens } from './currency-lens'
 import { QueryBar } from './query-bar'
-import { AddExpense } from './add-expense'
 
 export function TopBar() {
   return (
@@ -20,11 +17,8 @@ export function TopBar() {
 
       <QueryBar />
 
-      <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <AddExpense />
-        <CurrencyLens />
-        <ThemeToggle />
-      </div>
+      {/* Actions live in the floating dock at the bottom of the screen. */}
+
     </header>
   )
 }
