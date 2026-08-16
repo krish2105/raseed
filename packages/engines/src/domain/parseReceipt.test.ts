@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseReceipt, splitByItems } from './parseReceipt'
+import { linesFromBlocks, parseReceipt, splitByItems } from './parseReceipt'
 
 /** A UAE restaurant bill: VAT plus a mandatory service charge. */
 const DUBAI = `RAVI RESTAURANT
@@ -152,5 +152,102 @@ describe('splitByItems', () => {
 
   it('returns nothing when nobody has been assigned anything', () => {
     expect(splitByItems(receipt, {})).toEqual([])
+  })
+})
+
+/**
+ * What Apple Vision ACTUALLY returned for the Dubai fixture, copied off the device.
+ *
+ * Column-major: every label, then every amount. The first version of this test was written
+ * from imagination — interleaved label/amount pairs — and passed, while the real photograph
+ * produced a AED 2.00 butter chicken. An invented fixture tests the imagination.
+ */
+const VISION_BLOCKS = [
+  'RAVI RESTAURANT',
+  'Al Satwa, Dubai',
+  'TRN: 100234567800003',
+  'Date: 03/04/2026',
+  '2 x Butter Chicken',
+  '1 x Garlic Naan',
+  '3 x Karak Chai',
+  'Sub-Total',
+  'Service Charge',
+  'VAT 5%',
+  'TOTAL',
+  'Cash',
+  'Change',
+  '90.00',
+  '12.00',
+  '15.00',
+  '117.00',
+  '11.70',
+  '6.44',
+  '135.14',
+  '150.00',
+  '14.86',
+]
+
+describe('linesFromBlocks', () => {
+  it('rejoins an interleaved label and amount', () => {
+    expect(linesFromBlocks(['Sub-Total', '117.00'])).toEqual(['Sub-Total 117.00'])
+  })
+
+  /** The shape Vision actually produces. */
+  it('zips a column-major layout back into rows', () => {
+    const lines = linesFromBlocks(VISION_BLOCKS)
+    expect(lines).toContain('2 x Butter Chicken 90.00')
+    expect(lines).toContain('TOTAL 135.14')
+    expect(lines).toContain('VAT 5% 6.44')
+    // Header blocks have no price and must not be given one.
+    expect(lines).toContain('RAVI RESTAURANT')
+  })
+
+  it('leaves blocks alone when neither shape fits, rather than inventing prices', () => {
+    const odd = ['A', 'B', 'C']
+    expect(linesFromBlocks(odd)).toEqual(odd)
+  })
+
+  it('leaves a block that already carries its own amount alone', () => {
+    expect(linesFromBlocks(['Coffee 45.00', 'Tea 20.00'])).toEqual(['Coffee 45.00', 'Tea 20.00'])
+  })
+
+  it('does not swallow a following label as if it were an amount', () => {
+    expect(linesFromBlocks(['RAVI RESTAURANT', 'Al Satwa, Dubai'])).toEqual([
+      'RAVI RESTAURANT',
+      'Al Satwa, Dubai',
+    ])
+  })
+
+  it('drops empty blocks rather than emitting blank lines', () => {
+    expect(linesFromBlocks(['A 1.00', '', '  ', 'B 2.00'])).toEqual(['A 1.00', 'B 2.00'])
+  })
+
+  /** The whole point: the real Vision output must parse to the real bill. */
+  it('turns real Vision output into a bill that reconciles', () => {
+    const r = parseReceipt(linesFromBlocks(VISION_BLOCKS).join('\n'))
+
+    expect(r.merchant).toBe('RAVI RESTAURANT')
+    expect(r.currency).toBe('AED')
+    expect(r.subtotal!.minor).toBe(11_700)
+    expect(r.serviceCharge!.minor).toBe(1_170)
+    expect(r.total!.minor).toBe(13_514)
+    expect(r.reconciles).toBe(true)
+
+    const chicken = r.lines.find((l) => /Butter Chicken/i.test(l.description))!
+    expect(chicken.amount.minor).toBe(9_000) // not 200, which is the quantity
+    expect(chicken.quantity).toBe(2)
+  })
+})
+
+describe('percentages are rates, not amounts', () => {
+  /** "VAT 5%" is not a five-dirham tax, and the first real receipt read it as one. */
+  it('reads the tax from the amount beside the rate, not from the rate', () => {
+    const r = parseReceipt(linesFromBlocks(VISION_BLOCKS).join('\n'))
+    expect(r.tax!.minor).toBe(644)
+  })
+
+  it('ignores a bare rate with no amount at all', () => {
+    const r = parseReceipt('CAFE\nService 10%\nTotal 100.00')
+    expect(r.serviceCharge).toBeNull()
   })
 })

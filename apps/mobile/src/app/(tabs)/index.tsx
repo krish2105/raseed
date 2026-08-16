@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link } from 'expo-router'
-import { Plus } from 'lucide-react-native'
+import { Camera, Plus } from 'lucide-react-native'
 
 import { safeToSpend, type Fact } from '@raseed/engines'
 import { format, fromMajor } from '@raseed/money'
@@ -185,13 +185,27 @@ export default function TodayScreen() {
         </View>
       </ScrollView>
 
-      {/* Thumb zone. Capture is the product; it does not live behind a menu. */}
-      <Link href="/add" asChild>
-        <Pressable style={s.capture} accessibilityRole="button" accessibilityLabel="Add a transaction">
-          <Plus color={colors['surface-0']} size={18} />
-          <Text style={s.captureText}>Add what you spent</Text>
-        </Pressable>
-      </Link>
+      {/* Thumb zone. Capture is the product; it does not live behind a menu.
+          Typing stays the primary action and the camera sits beside it — a receipt photo
+          still needs confirming, so it is a shortcut into the same flow rather than a
+          different one. */}
+      <View style={s.captureRow}>
+        <Link href="/add" asChild>
+          <Pressable style={s.capture} accessibilityRole="button" accessibilityLabel="Add a transaction">
+            <Plus color={colors['surface-0']} size={18} />
+            <Text style={s.captureText}>Add what you spent</Text>
+          </Pressable>
+        </Link>
+        <Link href="/receipt" asChild>
+          <Pressable
+            style={s.captureCamera}
+            accessibilityRole="button"
+            accessibilityLabel="Photograph a receipt"
+          >
+            <Camera color={colors['text-hi']} size={20} />
+          </Pressable>
+        </Link>
+      </View>
     </SafeAreaView>
   )
 }
@@ -294,11 +308,29 @@ const styles = (c: Palette) =>
       textAlign: 'center',
     },
 
-    capture: {
+    // The ROW is what floats now. Leaving `capture` absolute and wrapping it in a flex row
+    // would have laid the camera out underneath it, invisible.
+    captureRow: {
       position: 'absolute',
       left: space[5],
       right: space[5],
       bottom: space[5],
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space[2],
+    },
+    captureCamera: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 52,
+      height: 52,
+      borderRadius: radius.full,
+      backgroundColor: c['surface-1'],
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+    },
+    capture: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',

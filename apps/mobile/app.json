@@ -10,7 +10,11 @@
     "ios": {
       "bundleIdentifier": "com.krishnamathur.raseed",
       "icon": "./assets/expo.icon",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "RASEED uses the camera to photograph receipts. The photo is read on this device and is never uploaded.",
+        "NSPhotoLibraryUsageDescription": "RASEED reads receipts you choose from your photos. Reading happens on this device and nothing is uploaded."
+      }
     },
     "plugins": [
       "expo-router",

@@ -1190,3 +1190,54 @@ which is the value the field actually holds and is immune to the race.
 than hiding: while you are the only person who ever pays, every debt already points at you
 and there is nothing to reroute. The copy now says that, and simplification only advertises a
 saving when there is one.
+
+---
+
+## Receipt capture, and a fixture written from imagination (2026-08-17)
+
+Photograph a receipt, read it with **Apple's Vision framework on the device**, parse it, and
+propose a transaction. No key, no cost, and the photo never leaves the phone — which matters
+more here than anywhere else in the app, because a receipt carries a card's last four digits,
+a location and a timestamp, and shipping that to a third party to save some typing is a trade
+nobody would knowingly make.
+
+`expo-text-extractor` over `@react-native-ml-kit/text-recognition`: it is a real **Expo
+Module** (New Architecture is mandatory in SDK 57 with no opt-out, and the ML Kit package
+still uses old bridge autolinking), it is the most recently maintained of the four
+candidates, and on iOS it uses Vision rather than pulling in Google's ML Kit.
+
+### Three failures, in the order they happened
+
+**The app died instantly on opening the picker.** No JS error, no crash report — the
+signature of a missing `Info.plist` usage string, which iOS treats as an immediate kill.
+The keys *were* in `app.json`; they had never reached the binary, because `expo run:ios`
+does not re-sync app config into an `ios/` directory that already exists. `expo prebuild`
+did. Worth knowing before it costs someone else an hour.
+
+**Then the parse was confidently wrong.** Butter chicken at AED 2.00, tax at AED 5.00, no
+total. Two causes: `VAT 5%` was read as a five-dirham tax (a number before a `%` is a *rate*),
+and the item amounts were the *quantities*.
+
+**And the fix for that was also wrong, because the fixture was invented.** I assumed Vision
+returns interleaved label/amount pairs, wrote a test that said so, and it passed — while the
+real photograph still produced AED 2.00. The raw text panel, kept deliberately visible on the
+screen, showed the truth: **Vision is column-major.** It groups by text region, so every
+label arrives first and every price after:
+
+```
+2 x Butter Chicken … Sub-Total … TOTAL … Change
+90.00  12.00  15.00  117.00  11.70  6.44  135.14 …
+```
+
+Adjacent pairing can never work on that. `linesFromBlocks` now handles both shapes — zipping
+a column-major run onto the *last* N labels, since headers have no price — and returns the
+blocks untouched when neither fits, because a wrong pairing invents prices while a missing
+one only means fewer lines were read.
+
+**The lesson is the same one as the compiler bug, and it keeps arriving:** a test written
+from an assumption tests the assumption. The fixture in the suite is now the exact text the
+device returned, copied off the screen.
+
+After the fix the same photograph reads: subtotal AED 117.00, tax 6.44, service 11.70, total
+135.14, butter chicken 90.00 — and the reconciliation check against the printed total passes,
+which is the signal that says the whole read can be trusted.

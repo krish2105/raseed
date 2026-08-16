@@ -79,7 +79,10 @@ const MAX_PLAUSIBLE_MINOR = 100_000_000_00 // 100 million major units
 
 /** Pull the last money-looking number from a line. Receipts put the amount on the right. */
 function trailingAmount(line: string): number | null {
-  const matches = [...line.matchAll(/(-?[\d][\d,.\s]*\d|\d)/g)]
+  // A number followed by `%` is a RATE. "VAT 5%" is not a five-dirham tax, and reading it as
+  // one produced exactly that on the first real receipt this saw.
+  const withoutRates = line.replace(/(-?[\d][\d,.]*)\s*%/g, ' ')
+  const matches = [...withoutRates.matchAll(/(-?[\d][\d,.\s]*\d|\d)/g)]
 
   const plausible = (raw: string): number | null => {
     // A long unbroken digit run is an identifier, not a price. A TRN is fifteen digits and
@@ -102,6 +105,72 @@ function trailingAmount(line: string): number | null {
   // Fall back to a bare integer only if it is the only number on the line.
   if (matches.length === 1) return plausible(matches[0]![0])
   return null
+}
+
+/** Only a price, nothing else: the right-hand column of a receipt, on its own. */
+const AMOUNT_ONLY = /^[^\d]{0,3}[\d][\d,.\s]*\d\s*$/
+
+/**
+ * Rejoin the blocks an OCR engine returns into the lines a receipt actually has.
+ *
+ * **Vision is column-major, and that is the whole difficulty.** It groups by text region, so
+ * a receipt whose labels sit in a left column and prices in a right one comes back as *every
+ * label*, then *every price* — not as rows. The first version of this paired adjacent blocks,
+ * which is the obvious guess and is simply wrong; on a real photograph it read every
+ * quantity as a price and produced a AED 2.00 butter chicken.
+ *
+ * Two shapes are handled, because engines and layouts differ:
+ *
+ * 1. **Column-major** — a run of labels followed by a run of bare amounts. The amounts belong
+ *    to the *last* N labels, since a header block ("RAVI RESTAURANT", an address, a TRN) has
+ *    no price. Zipped from the end backwards.
+ * 2. **Interleaved** — label, amount, label, amount. Paired adjacently.
+ *
+ * When neither fits, blocks are returned untouched: a wrong pairing invents prices, and a
+ * missing one only means fewer lines were read.
+ */
+export function linesFromBlocks(blocks: readonly string[]): string[] {
+  const clean = blocks.map((b) => b.trim()).filter((b) => b !== '')
+  if (clean.length === 0) return []
+
+  const isAmount = (b: string) => AMOUNT_ONLY.test(b) && trailingAmount(b) !== null
+
+  const firstAmount = clean.findIndex(isAmount)
+  const tail = firstAmount === -1 ? [] : clean.slice(firstAmount)
+
+  // Column-major: everything from the first bare amount onwards is a bare amount.
+  if (firstAmount > 0 && tail.length > 1 && tail.every(isAmount)) {
+    const labels = clean.slice(0, firstAmount)
+    const amounts = tail
+
+    // The prices attach to the LAST `amounts.length` labels. Anything before that is header.
+    const offset = labels.length - amounts.length
+    if (offset >= 0) {
+      return [
+        ...labels.slice(0, offset),
+        ...amounts.map((amount, i) => `${labels[offset + i]} ${amount}`),
+      ]
+    }
+  }
+
+  // Interleaved, or no clean split: pair a label with a bare amount immediately after it.
+  const out: string[] = []
+  for (let i = 0; i < clean.length; i += 1) {
+    const current = clean[i] as string
+    const next = clean[i + 1]
+
+    // Ends with a digit, so the price is already here. Asking `trailingAmount` instead was
+    // wrong: "2 x Butter Chicken" contains a number — the QUANTITY.
+    const hasOwnAmount = /\d\s*$/.test(current)
+
+    if (!hasOwnAmount && next !== undefined && isAmount(next)) {
+      out.push(`${current} ${next}`)
+      i += 1
+      continue
+    }
+    out.push(current)
+  }
+  return out
 }
 
 function readNumber(raw: string): number | null {
