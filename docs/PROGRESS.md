@@ -2,7 +2,7 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: 9**
+**Current session: 9** — S10/S12/S14/S16 partially landed early (charts, Sankey, variance, query bar)
 
 ---
 
@@ -21,13 +21,13 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [x] **S7** Mobile P1 — op-sqlite, schema, manual entry (sync deferred to a second device)
 - [x] **S8** Web P1 — DuckDB-WASM, Arrow ingest, demo path, view rebuild 41ms at 100k rows (live/Supabase path deferred until credentials exist)
 - [ ] **S9** Mobile P2 — Safe-to-Spend engine + Day Dial
-- [ ] **S10** Web P2 — chart foundation, theme-reactive colours, zero hex outside tokens
+- [x] **S10** Web P2 — hand-built charts, theme-reactive colours, zero hex outside tokens
 - [ ] **S11** Mobile P3 — capture router, confirmation sheet, eval harness ≥0.90
-- [ ] **S12** Web P3 — Sankey hero, totals reconcile to `v_spend`
+- [x] **S12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`
 - [ ] **S13** Mobile P4 — merchant resolver, alias learning, reversal pairing
-- [ ] **S14** Web P4 — Tier 0 features 2–7
+- [~] **S14** Web P4 — treemap, variance, ledger, currency done; net-worth timeline + calendar heatmap remain
 - [ ] **S15** Mobile P5 — multi-currency, remittance detection, Trip Mode
-- [ ] **S16** Web P5 — ⌘K query bar, SQL sandbox rejects 12 adversarial strings
+- [~] **S16** Web P5 — ⌘K bar with deterministic parser + SELECT-only sandbox; the 12 adversarial strings are not yet a test
 - [ ] **S17** Mobile P6 — worth-it loop, Weekly Reckoning, 4-nudge cap
 - [ ] **S18** Web P6 — Comlink workers, engines wired
 - [ ] **S19** 🚩 **Mobile P7 — splits + cash. SHIP GATE. Decide the store question here.**
@@ -59,6 +59,11 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 
 - **Web is deployed** — https://raseed-eosin.vercel.app, public, auto-deploys from `main`.
   Vercel project root directory is `apps/web`; do not unset it or deploys fail at upload.
+
+- **Backend is optional and not deployed** — nothing in the app needs one. Render/Supabase
+  steps are in `docs/RUNBOOK_BACKEND.md`; both need Krishna's credentials.
+- **Web cannot edit/delete an added expense yet** (the phone can). Custom categories not editable.
+- **The ⌘K sandbox needs its 12 adversarial strings as a test**, per S16's done-when.
 
 ## Deferred decisions
 
