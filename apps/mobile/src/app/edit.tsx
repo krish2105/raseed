@@ -22,6 +22,7 @@ import {
   getTransaction,
   listAccounts,
   listCategories,
+  recordRefund,
   softDeleteTransaction,
   updateTransaction,
   useQuery,
@@ -115,6 +116,25 @@ export default function EditScreen() {
     }
     router.back()
     commitAfterDismiss(() => updateTransaction(next))
+  }
+
+  function confirmRefund() {
+    if (!txn) return
+    Alert.alert(
+      'Was this refunded?',
+      `Records ${format(txn.amount)} coming back. Both this charge and the refund stop counting as spend — they net to zero.`,
+      [
+        { text: 'Not yet', style: 'cancel' },
+        {
+          text: 'Refunded',
+          onPress: () => {
+            const original = txn.id
+            router.back()
+            commitAfterDismiss(() => recordRefund(original))
+          },
+        },
+      ],
+    )
   }
 
   function confirmDelete() {
@@ -214,6 +234,10 @@ export default function EditScreen() {
 
           {error && <Text style={s.error}>{error}</Text>}
 
+          <Pressable onPress={confirmRefund} accessibilityRole="button" style={s.secondary}>
+            <Text style={s.secondaryText}>This was refunded</Text>
+          </Pressable>
+
           <Pressable onPress={confirmDelete} accessibilityRole="button" style={s.delete}>
             <Text style={s.deleteText}>Delete this transaction</Text>
           </Pressable>
@@ -298,8 +322,18 @@ const styles = (c: Palette) =>
 
     error: { color: c.warn, fontFamily: font.body, fontSize: 13, marginTop: space[3] },
 
-    delete: {
+    secondary: {
       marginTop: space[6],
+      borderColor: c.line,
+      borderWidth: 1,
+      borderRadius: radius.md,
+      paddingVertical: space[3],
+      alignItems: 'center',
+    },
+    secondaryText: { color: c['text-hi'], fontFamily: font.bodyMedium, fontSize: 15 },
+
+    delete: {
+      marginTop: space[3],
       borderColor: c.line,
       borderWidth: 1,
       borderRadius: radius.md,

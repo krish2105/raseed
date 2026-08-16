@@ -795,3 +795,72 @@ export function updateTransaction(input: {
     ],
   )
 }
+
+// ── refunds ────────────────────────────────────────────────────────────────
+
+/**
+ * Record that a transaction was refunded.
+ *
+ * A failed UPI debit and its refund are ONE event that nets to zero. Left unrecorded, the
+ * original keeps counting and every total is inflated by money you got back.
+ *
+ * The refund is entered **from the row it reverses**, so `reversal_of_id` is known at write
+ * time and both halves leave `v_spend` on the same statement — the predicate excludes the
+ * reversal leg (it has a `reversal_of_id`) and the original (it appears in the reversed set).
+ *
+ * This deliberately does not use `pairReversals`. That engine infers pairs by amount and time
+ * and reports a confidence, which is the right tool for an imported bank statement where
+ * nobody can be asked. Here the user is pointing at the row, so inference would be guessing
+ * where an exact answer was available — and any inference window leaves a period where an
+ * unpaired inbound row still counts as spend, which is the bug this exists to prevent.
+ *
+ * The refund copies the original's currency and frozen `fx_rate`. A refund is the same money
+ * coming back; re-pricing it at a new rate would invent a gain or loss that never happened.
+ */
+export function recordRefund(originalId: string, amount?: Money): string | null {
+  const db = getConnection()
+  const o = (
+    db.executeSync(
+      `SELECT amount_minor, currency, fx_rate, account_id, merchant_id, category_id, raw_text
+         FROM transactions WHERE id = ? AND deleted = 0;`,
+      [originalId],
+    ).rows as unknown as {
+      amount_minor: number
+      currency: Currency
+      fx_rate: number
+      account_id: string
+      merchant_id: string | null
+      category_id: string | null
+      raw_text: string | null
+    }[]
+  )[0]
+  if (!o) return null
+
+  const minor = amount?.minor ?? o.amount_minor
+  const id = `txn-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+
+  db.executeSync(
+    `INSERT INTO transactions
+       (id, occurred_at, direction, amount_minor, currency, home_amount_minor, fx_rate,
+        account_id, merchant_id, category_id, raw_text, source, txn_type, transfer_group_id,
+        reversal_of_id, trip_id, status, confidence, note, user_id, updated_at, deleted)
+     VALUES (?, ?, 'in', ?, ?, ?, ?, ?, ?, ?, ?, 'manual', 'spend', NULL,
+             ?, NULL, 'confirmed', 1.0, 'refund', ?, ?, 0);`,
+    [
+      id,
+      Date.now(),
+      minor,
+      o.currency,
+      Math.round(minor * o.fx_rate),
+      o.fx_rate,
+      o.account_id,
+      o.merchant_id,
+      o.category_id,
+      o.raw_text ? `REFUND ${o.raw_text}` : 'REFUND',
+      originalId,
+      USER,
+      Date.now(),
+    ],
+  )
+  return id
+}

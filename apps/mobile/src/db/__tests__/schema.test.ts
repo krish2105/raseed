@@ -233,6 +233,50 @@ describe('liquid balance', () => {
   })
 })
 
+describe('recording a refund', () => {
+  /**
+   * The behaviour `recordRefund` exists for, expressed as SQL so it is testable without the
+   * native module: writing the reversal leg with `reversal_of_id` already set removes BOTH
+   * rows from spend on the same statement. There is no window in which the refund has landed
+   * but the original still counts.
+   */
+  it('removes both the charge and its refund from v_spend at once', () => {
+    const original = insertTxn({ amount_minor: 45_000, home_amount_minor: 45_000 })
+    expect(db.prepare('SELECT COUNT(*) c FROM v_spend').get()).toMatchObject({ c: 1 })
+
+    insertTxn({
+      direction: 'in',
+      amount_minor: 45_000,
+      home_amount_minor: 45_000,
+      reversal_of_id: original.id,
+      raw_text: 'REFUND TEST',
+      note: 'refund',
+    })
+
+    expect(db.prepare('SELECT COUNT(*) c FROM v_spend').get()).toMatchObject({ c: 0 })
+  })
+
+  /** A partial refund still nets the pair out; the amounts need not match. */
+  it('nets out a partial refund too', () => {
+    const original = insertTxn({ amount_minor: 100_000, home_amount_minor: 100_000 })
+    insertTxn({
+      direction: 'in',
+      amount_minor: 30_000,
+      home_amount_minor: 30_000,
+      reversal_of_id: original.id,
+    })
+    expect(db.prepare('SELECT COUNT(*) c FROM v_spend').get()).toMatchObject({ c: 0 })
+  })
+
+  it('leaves other transactions alone', () => {
+    const original = insertTxn()
+    const untouched = insertTxn()
+    insertTxn({ direction: 'in', reversal_of_id: original.id })
+    const ids = db.prepare('SELECT id FROM v_spend').all().map((r) => (r as { id: string }).id)
+    expect(ids).toEqual([untouched.id])
+  })
+})
+
 describe('the spend predicate text', () => {
   it('is the same string the migration renders', () => {
     expect(spendViewSql('transactions', 'v_spend', false)).toContain(spendPredicate())
