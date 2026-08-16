@@ -1,36 +1,48 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Link } from 'expo-router'
+import { Plus } from 'lucide-react-native'
 
 import { safeToSpend } from '@raseed/engines'
 import { format, fromMajor } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { DEMO_NOW, todaySpend, todaysLedger } from '@/lib/demo'
+import { spendBetween, spendTotal, useQuery } from '@/db'
+import { useNow } from '@/hooks/useNow'
+
+const DAY = 86_400_000
 
 /**
- * Today. One number, the day's ledger beneath it.
+ * Today. One number, the day's ledger beneath it, capture pinned to the thumb zone.
  *
- * The Skia Day Dial replaces the flat meter at Session 9. The arithmetic behind the number
- * is already the real `safeToSpend` engine, not a mock.
+ * The Skia Day Dial replaces the flat meter at Session 9; the arithmetic is already the
+ * real `safeToSpend` engine reading real rows out of SQLite.
  */
-const sts = safeToSpend({
-  liquidBalance: fromMajor('96000.00', 'INR'),
-  committedBills: [fromMajor('22000.00', 'INR')],
-  pendingSweeps: [fromMajor('4000.00', 'INR')],
-  safetyBuffer: fromMajor('3000.00', 'INR'),
-  rawCarryover: fromMajor('310.00', 'INR'),
-  spentToday: todaySpend,
-  today: DEMO_NOW,
-  nextIncomeAt: DEMO_NOW + 9 * 86_400_000,
-})
-
-const allowance = Math.max(1, sts.baseDaily.minor + sts.carryover.minor)
-const usedPct = Math.min(100, Math.max(0, (todaySpend.minor / allowance) * 100))
-
 export default function TodayScreen() {
   const { colors } = useTheme()
   const s = styles(colors)
+
+  const now = useNow()
+  const startOfToday = Math.floor(now / DAY) * DAY
+  const entries = useQuery(() => spendBetween(startOfToday, startOfToday + DAY))
+  const spentToday = useQuery(() => spendTotal(startOfToday, startOfToday + DAY))
+
+  // Balances and bills become editable rows in `You` at a later session; the figures below
+  // are the only remaining hardcoded inputs on this screen.
+  const sts = safeToSpend({
+    liquidBalance: fromMajor('96000.00', 'INR'),
+    committedBills: [fromMajor('22000.00', 'INR')],
+    pendingSweeps: [fromMajor('4000.00', 'INR')],
+    safetyBuffer: fromMajor('3000.00', 'INR'),
+    rawCarryover: fromMajor('310.00', 'INR'),
+    spentToday,
+    today: now,
+    nextIncomeAt: now + 9 * DAY,
+  })
+
+  const allowance = Math.max(1, sts.baseDaily.minor + sts.carryover.minor)
+  const usedPct = Math.min(100, Math.max(0, (spentToday.minor / allowance) * 100))
   const accent = sts.overspent ? colors.warn : colors.inr
 
   return (
@@ -38,7 +50,6 @@ export default function TodayScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.eyebrow}>Today</Text>
 
-        {/* The single job of this screen: what you can spend, in the currency you are in. */}
         <View style={s.hero}>
           <Text style={s.heroLabel}>You&apos;ve got</Text>
           <Text style={[s.heroAmount, { color: accent }]}>
@@ -50,7 +61,7 @@ export default function TodayScreen() {
             <View style={[s.meterFill, { backgroundColor: accent, width: `${usedPct}%` }]} />
           </View>
           <View style={s.meterRow}>
-            <Text style={s.meterText}>{format(todaySpend)} spent</Text>
+            <Text style={s.meterText}>{format(spentToday)} spent</Text>
             <Text style={s.meterText}>
               {format(sts.baseDaily, { compactZeroFraction: true })}/day
             </Text>
@@ -59,8 +70,8 @@ export default function TodayScreen() {
 
         <Text style={s.section}>Today&apos;s ledger</Text>
         <View style={s.card}>
-          {todaysLedger.length > 0 ? (
-            todaysLedger.map((t, i) => (
+          {entries.length > 0 ? (
+            entries.map((t, i) => (
               <View key={t.id} style={[s.row, i === 0 && s.rowFirst]}>
                 <View style={s.rowLeft}>
                   <View
@@ -81,12 +92,15 @@ export default function TodayScreen() {
             <Text style={s.empty}>Nothing logged yet. Tap the bar and type what you spent.</Text>
           )}
         </View>
-
-        <View style={s.captureStub}>
-          <Text style={s.captureText}>chai 20, auto 80, bigbasket 640</Text>
-          <Text style={s.captureHint}>Capture arrives in session 11</Text>
-        </View>
       </ScrollView>
+
+      {/* Thumb zone. Capture is the product; it does not live behind a menu. */}
+      <Link href="/add" asChild>
+        <Pressable style={s.capture} accessibilityRole="button" accessibilityLabel="Add a transaction">
+          <Plus color={colors['surface-0']} size={18} />
+          <Text style={s.captureText}>Add what you spent</Text>
+        </Pressable>
+      </Link>
     </SafeAreaView>
   )
 }
@@ -94,7 +108,7 @@ export default function TodayScreen() {
 const styles = (c: Palette) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: c['surface-0'] },
-    content: { padding: space[5], paddingBottom: space[10], gap: space[3] },
+    content: { padding: space[5], paddingBottom: space[16], gap: space[3] },
 
     eyebrow: {
       color: c['text-lo'],
@@ -181,15 +195,18 @@ const styles = (c: Palette) =>
       textAlign: 'center',
     },
 
-    captureStub: {
-      marginTop: space[4],
-      borderColor: c.line,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderRadius: radius.lg,
-      padding: space[4],
-      gap: space[1],
+    capture: {
+      position: 'absolute',
+      left: space[5],
+      right: space[5],
+      bottom: space[5],
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: space[2],
+      backgroundColor: c['text-hi'],
+      borderRadius: radius.full,
+      paddingVertical: space[4],
     },
-    captureText: { color: c['text-lo'], fontFamily: font.mono, fontSize: 13 },
-    captureHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 11, opacity: 0.7 },
+    captureText: { color: c['surface-0'], fontFamily: font.bodyMedium, fontSize: 15 },
   })

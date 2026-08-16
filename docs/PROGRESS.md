@@ -43,9 +43,8 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 
 *Anything left unfinished or unresolved. Clear it or carry it forward — never let it sit for more than two sessions.*
 
-- **EAS unverified** (Android dropped from scope entirely — iOS + web only) — no JDK on the machine (`sdkmanager` is installed but holds only
-  cmdline-tools); `eas-cli` not installed and `eas login` needs Krishna's credentials. iOS Simulator
-  dev build is the only proven mobile target. **Own step, before S5.**
+- **EAS unverified** — steps written up in `docs/RUNBOOK_EAS.md`; needs Krishna's Expo
+  credentials so it is his to run. iOS Simulator is the only proven mobile target.
 - **ESLint pinned to 9.x** — ESLint 10 breaks `eslint-plugin-react`, which both `eslint-config-next`
   and `eslint-config-expo` depend on. Same for TypeScript, pinned to 6.0.3 until `typescript-eslint`
   supports TS 7. **Revisit when the plugin ecosystem catches up.**

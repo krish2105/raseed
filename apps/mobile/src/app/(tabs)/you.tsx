@@ -5,13 +5,7 @@ import { format, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { months, totalRows } from '@/lib/demo'
-
-const ACCOUNTS = [
-  { name: 'HDFC Savings', kind: 'bank', currency: 'INR' as const, balanceMinor: 4_200_000 },
-  { name: 'Emirates NBD', kind: 'bank', currency: 'AED' as const, balanceMinor: 1_240_000 },
-  { name: 'Wallet', kind: 'cash', currency: 'INR' as const, balanceMinor: 265_000 },
-]
+import { countSpend, listAccounts, useQuery } from '@/db'
 
 const UPCOMING = [
   { label: 'Rent', when: 'in 3 days', currency: 'INR' as const, minor: 2_200_000 },
@@ -23,6 +17,9 @@ export default function YouScreen() {
   const { colors, scheme } = useTheme()
   const s = styles(colors)
 
+  const accounts = useQuery(listAccounts)
+  const rowCount = useQuery(countSpend)
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.content}>
@@ -30,8 +27,8 @@ export default function YouScreen() {
 
         <Text style={s.section}>Accounts</Text>
         <View style={s.card}>
-          {ACCOUNTS.map((a, i) => (
-            <View key={a.name} style={[s.row, i === 0 && s.rowFirst]}>
+          {accounts.map((a, i) => (
+            <View key={a.id} style={[s.row, i === 0 && s.rowFirst]}>
               <View style={s.rowLeft}>
                 <View
                   style={[s.dot, { backgroundColor: a.currency === 'AED' ? colors.aed : colors.inr }]}
@@ -41,7 +38,7 @@ export default function YouScreen() {
                   <Text style={s.rowMeta}>{a.kind}</Text>
                 </View>
               </View>
-              <Text style={s.rowAmount}>{format(money(a.balanceMinor, a.currency))}</Text>
+              <Text style={s.rowAmount}>{format(money(a.opening_minor, a.currency))}</Text>
             </View>
           ))}
         </View>
@@ -62,10 +59,8 @@ export default function YouScreen() {
         <Text style={s.section}>About</Text>
         <View style={s.card}>
           <View style={[s.row, s.rowFirst]}>
-            <Text style={s.rowName}>Demo ledger</Text>
-            <Text style={s.rowAmount}>
-              {totalRows.toLocaleString('en-IN')} rows · {months}mo
-            </Text>
+            <Text style={s.rowName}>Transactions on device</Text>
+            <Text style={s.rowAmount}>{rowCount.toLocaleString('en-IN')}</Text>
           </View>
           <View style={s.row}>
             <Text style={s.rowName}>Theme</Text>
@@ -78,8 +73,9 @@ export default function YouScreen() {
         </View>
 
         <Text style={s.footnote}>
-          Accounts, budgets and goals become editable when the database lands in session 7.
-          Everything above already reads through @raseed/money — no float touches an amount.
+          These rows come from SQLite on this device, not from a server. The app is fully
+          functional with the network unreachable — airplane mode is a supported state, not a
+          degraded one. Editing accounts and budgets arrives with the settings work.
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -15,12 +15,14 @@
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/geist-mono": "^0.4.3",
     "@expo/ui": "~57.0.11",
+    "@op-engineering/op-sqlite": "^18.0.0",
     "@raseed/ai": "workspace:*",
     "@raseed/engines": "workspace:*",
     "@raseed/fixtures": "workspace:*",
     "@raseed/money": "workspace:*",
     "@raseed/schema": "workspace:*",
     "@raseed/tokens": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "expo": "~57.0.13",
     "expo-constants": "~57.0.11",
     "expo-dev-client": "~57.0.10",
@@ -49,6 +51,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "drizzle-kit": "^0.31.10",
     "eslint-config-expo": "^57.0.1"
   }
 }

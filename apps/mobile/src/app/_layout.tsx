@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Tabs } from 'expo-router'
+import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import { useFonts } from 'expo-font'
@@ -9,16 +9,17 @@ import {
 } from '@expo-google-fonts/bricolage-grotesque'
 import { Geist_400Regular, Geist_500Medium } from '@expo-google-fonts/geist'
 import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono'
-import { Home, Receipt, User } from 'lucide-react-native'
 
-import { font, useTheme } from '@/theme'
+import { useTheme } from '@/theme'
+import { initDatabase } from '@/db'
 
 void SplashScreen.preventAutoHideAsync()
 
-/**
- * Three tabs, maximum: Today / Ledger / You. Navigation is not the product; the capture bar
- * and the dial are. Anything that needs a fourth tab belongs inside one of these.
- */
+// Migrations and the first-run seed happen before the first render. op-sqlite is
+// synchronous over JSI, so this costs single-digit milliseconds and removes a whole class
+// of "screen rendered before the table existed" bugs.
+initDatabase()
+
 export default function RootLayout() {
   const { colors, scheme } = useTheme()
 
@@ -42,41 +43,16 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Tabs
+      <Stack
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.inr,
-          tabBarInactiveTintColor: colors['text-lo'],
-          tabBarStyle: {
-            backgroundColor: colors['surface-1'],
-            borderTopColor: colors.line,
-          },
-          tabBarLabelStyle: { fontFamily: font.body, fontSize: 11 },
-          sceneStyle: { backgroundColor: colors['surface-0'] },
+          contentStyle: { backgroundColor: colors['surface-0'] },
         }}
       >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Today',
-            tabBarIcon: ({ color, size }) => <Home color={color} size={size - 2} />,
-          }}
-        />
-        <Tabs.Screen
-          name="ledger"
-          options={{
-            title: 'Ledger',
-            tabBarIcon: ({ color, size }) => <Receipt color={color} size={size - 2} />,
-          }}
-        />
-        <Tabs.Screen
-          name="you"
-          options={{
-            title: 'You',
-            tabBarIcon: ({ color, size }) => <User color={color} size={size - 2} />,
-          }}
-        />
-      </Tabs>
+        <Stack.Screen name="(tabs)" />
+        {/* Capture is a sheet over the ledger, not a destination you navigate away to. */}
+        <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+      </Stack>
     </>
   )
 }

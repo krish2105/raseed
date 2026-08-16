@@ -5,7 +5,7 @@ import { format } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { recentLedger, totalRows, type LedgerRow } from '@/lib/demo'
+import { countSpend, recentSpend, useQuery, type LedgerEntry } from '@/db'
 
 /**
  * Receipt-styled history: right-aligned tabular numerals, a hairline rule between days.
@@ -13,9 +13,9 @@ import { recentLedger, totalRows, type LedgerRow } from '@/lib/demo'
  */
 const DAY = 86_400_000
 
-const sections = (() => {
-  const byDay = new Map<number, LedgerRow[]>()
-  for (const row of recentLedger) {
+function buildSections(rows: readonly LedgerEntry[]) {
+  const byDay = new Map<number, LedgerEntry[]>()
+  for (const row of rows) {
     const day = Math.floor(row.occurredAt / DAY)
     const list = byDay.get(day)
     if (list) list.push(row)
@@ -29,24 +29,32 @@ const sections = (() => {
         day: 'numeric',
         month: 'short',
       }),
-      total: data.reduce((acc, r) => acc + r.amount.minor, 0),
       data,
     }))
-})()
+}
 
 export default function LedgerScreen() {
   const { colors } = useTheme()
   const s = styles(colors)
 
+  const entries = useQuery(() => recentSpend(200))
+  const total = useQuery(countSpend)
+  const sections = buildSections(entries)
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
         <Text style={s.title}>Ledger</Text>
-        <Text style={s.subtitle}>{totalRows.toLocaleString('en-IN')} confirmed spend rows</Text>
+        <Text style={s.subtitle}>{total.toLocaleString('en-IN')} confirmed spend rows</Text>
       </View>
 
       <SectionList
         sections={sections}
+        ListEmptyComponent={
+          <Text style={s.empty}>
+            Nothing here yet. Add what you spent from the Today tab.
+          </Text>
+        }
         keyExtractor={(item) => item.id}
         contentContainerStyle={s.list}
         stickySectionHeadersEnabled={false}
@@ -115,5 +123,12 @@ const styles = (c: Palette) =>
       fontFamily: font.monoMedium,
       fontSize: 15,
       fontVariant: ['tabular-nums'],
+    },
+    empty: {
+      color: c['text-lo'],
+      fontFamily: font.body,
+      fontSize: 14,
+      textAlign: 'center',
+      paddingVertical: space[10],
     },
   })
