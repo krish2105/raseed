@@ -914,3 +914,23 @@ without the API and calling into it there crashes rather than degrades — and r
 transparency is a setting people enable precisely because translucency makes text hard for
 them to read. The fallback is a solid surface with a hairline border: plainer, equally
 legible, never a translucent panel with nothing behind it.
+
+---
+
+## 3D: CSS perspective, not WebGL (2026-08-16)
+
+The corridor — money crossing from dirhams to rupees — is the one picture that is actually
+about what this app is for, so it earned depth.
+
+It is **not** `react-three-fiber`. That plus `three` is roughly 600KB over the wire, for two
+nodes and five arcs. On a finance dashboard first paint matters more than technique, and a
+globe that costs a second of load to show a number already legible in a table is a worse
+product rather than a fancier one. `transform-style: preserve-3d` with a perspective ground
+plane gives real depth, real parallax and real ordering in about 4KB of markup.
+
+Pointer tilt is capped at **6°** and disabled for a coarse pointer. Enough to read as depth,
+small enough that nothing becomes a moving target; and on touch there is no hover, so an
+uncapped version would only fire mid-tap and make the surface feel unstable under a finger.
+
+If the brand later wants a true globe, this is the component to replace and `CorridorFlow` is
+the data shape to keep. It is the right size for the job, not a placeholder for a bigger one.

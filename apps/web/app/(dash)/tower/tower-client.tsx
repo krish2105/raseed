@@ -15,8 +15,10 @@ import {
   headline,
   recurring,
   regime,
+  remittances,
   trips,
 } from '@/lib/duck/analytics'
+import { Corridor } from '@/components/charts/corridor'
 import { cn } from '@/lib/utils'
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`
@@ -44,6 +46,7 @@ export function TowerClient() {
   const anom = useDuckQuery(() => anomalies(90, lens), [lens])
   const subs = useDuckQuery(() => recurring(), [])
   const trip = useDuckQuery(() => trips(), [])
+  const remit = useDuckQuery(() => remittances(), [])
 
   const h = head.data
   const r = reg.data
@@ -438,8 +441,43 @@ export function TowerClient() {
           )}
         </Tile>
 
+        {/* ── the corridor · the thing this app is actually about ──────────── */}
+        <Tile
+          span={8}
+          rows={2}
+          index={13}
+          title="The corridor"
+          hint="AED → INR, at the rate each transfer actually got"
+          detail={
+            <p className="leading-relaxed">
+              Drawn with CSS 3D rather than WebGL. `three` plus `react-three-fiber` is around
+              600KB over the wire for two nodes and some arcs, and on a finance dashboard the
+              first paint matters more than the technique. Real perspective, real parallax,
+              4KB of markup. Move the pointer over it — the tilt is capped at 6°, enough to
+              read as depth and small enough that nothing becomes a moving target.
+            </p>
+          }
+        >
+          {remit.data ? (
+            <Corridor
+              className="h-full"
+              flows={remit.data.slice(0, 5).map((x) => ({
+                label: new Date(x.occurredAt).toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'short',
+                }),
+                outbound: x.sentAed,
+                inbound: x.receivedInr,
+                efficiency: x.efficiency,
+              }))}
+            />
+          ) : (
+            <Skeleton className="h-full min-h-[11rem] w-full" />
+          )}
+        </Tile>
+
         {/* ── trips ────────────────────────────────────────────────────────── */}
-        <Tile span={4} index={13} title="Travel" hint="inferred, not declared">
+        <Tile span={4} index={14} title="Travel" hint="inferred, not declared">
           {trip.data ? (
             <Stat
               label={`${trip.data.trips.length} trips found`}
