@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { IconRail } from '@/components/shell/icon-rail'
 import { TopBar } from '@/components/shell/top-bar'
+import { DuckProvider } from '@/lib/duck/provider'
 
 /**
  * Dashboard shell. Native scroll, not Lenis — hijacked scroll fights dense data, and Lenis
@@ -8,7 +9,8 @@ import { TopBar } from '@/components/shell/top-bar'
  */
 export default function DashLayout({ children }: LayoutProps<'/'>) {
   return (
-    <div className="flex h-dvh flex-col">
+    <DuckProvider>
+      <div className="flex h-dvh flex-col">
       {/* Without this, a keyboard user tabs through all seven rail items on every page
           before reaching the content. Visible only when focused. */}
       <a
@@ -26,6 +28,7 @@ export default function DashLayout({ children }: LayoutProps<'/'>) {
           {children}
         </main>
       </div>
-    </div>
+      </div>
+    </DuckProvider>
   )
 }

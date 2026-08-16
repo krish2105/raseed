@@ -39,3 +39,11 @@ body {
   opacity: 1 !important;
   transform: none !important;
 }
+
+/* A pulsing skeleton is motion. Reduced motion gets a static placeholder — still visible,
+   still reserving the layout, just not throbbing. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse {
+    animation: none;
+  }
+}

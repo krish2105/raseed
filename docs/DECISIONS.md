@@ -367,3 +367,44 @@ to load. An inline script strips the class before paint; if it never runs, CSS w
 and therefore all Motion animations. Evaluating JS against it will show elements frozen at
 their `initial` state and look exactly like a broken animation. Screenshots foreground the
 pane and are the reliable check. This cost a detour; it is not a product bug.
+
+---
+
+## Session 8 — Web P1: DuckDB-WASM + Arrow ingest (2026-08-16)
+
+**The 400ms view-rebuild budget holds at 100k rows: 41ms.** Measured in the browser on the
+`/lab` route rather than quoted from the doc, and the button is still there so anyone can
+re-run it. Rows are the real fixture distribution cloned across years, so cardinality stays
+realistic — a single repeated value would compress away and flatter the number.
+
+**Arrow encoding must preserve NULL, and this cost a real bug.** The first pass coerced
+`merchant_id`/`reversal_of_id` nulls to `''`. `reversal_of_id IS NULL` then matched nothing,
+`v_spend` returned zero rows, and the dashboard rendered ₹0.00 spent with no error anywhere
+— income was fine, which made it look like a data problem rather than an encoding one. Fixed
+with explicitly typed `vectorFromArray`; `tableFromArrays` infers per column and does not
+keep nulls. `deleted` is a real BOOL for the same reason.
+
+**DuckDB and the old TypeScript reductions agree to the paisa.** ₹88,781.92 spend, 79.9%
+savings rate, Gini 0.45, six merchants at 80% — identical across both implementations, which
+is the cross-check that the spend predicate survived the port. 951 spend rows of 979: the 28
+excluded are 18 salary rows, 4 remittance legs and 6 reversal-pair rows. That reconciles.
+
+**One spend predicate, three engines.** `v_spend` in DuckDB, in the Supabase migration, and
+in the mobile SQLite view are all rendered from `spendPredicate()` in
+`@raseed/schema/contract`. DuckDB needs no `security_invoker` — the browser only ever holds
+one user's rows.
+
+**Every SQL string lives in `lib/duck/queries.ts`.** Verified by grep: no SQL in any
+component or page.
+
+**Arrow build is the slow part, not DuckDB.** At 100k rows: build 4,509ms, insert 271ms,
+view rebuild 41ms. Building the columnar buffers in JS blocks the main thread, which is
+precisely the work Session 18's Comlink workers exist to move off it. The engine itself is
+not the bottleneck.
+
+**The provider is dashboard-only.** The landing route must not pull ~3MB of WASM to render a
+headline, so `DuckProvider` wraps `(dash)` and nothing else, and it loads after first paint.
+
+**Three states everywhere:** skeletons at final dimensions, empty states with a real
+instruction, and errors that print the actual failure. An analytics failure rendered as an
+empty chart is indistinguishable from "you have no data", which is the worse of the two.

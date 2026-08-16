@@ -12,12 +12,14 @@
     "dev:turbo": "next dev"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "1.33.1-dev57.0",
     "@raseed/ai": "workspace:*",
     "@raseed/engines": "workspace:*",
     "@raseed/fixtures": "workspace:*",
     "@raseed/money": "workspace:*",
     "@raseed/schema": "workspace:*",
     "@raseed/tokens": "workspace:*",
+    "apache-arrow": "^17.0.0",
     "clsx": "^2.1.1",
     "lenis": "^1.3.26",
     "lucide-react": "^1.31.0",
