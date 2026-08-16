@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SESSION 0 DEBT — this :root block is the ONLY place hex literals may live in
+   apps/web. CLAUDE.md requires zero hex outside @raseed/tokens, which does not
+   exist until Session 1. Session 6 deletes this block and imports the real
+   tokens. Values below are copied verbatim from WEB_ARCHITECTURE.md §6 so the
+   swap is a straight substitution.
+
+   Light is a designed cool-paper theme, not an inversion.
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  --surface-0: #f2f4f6;
+  --surface-1: #ffffff;
+  --surface-2: #e7ebef;
+  --line: #d3dae1;
+  --text-hi: #12181f;
+  --text-lo: #5a6773;
+  --inr: #b87a2e;
+  --aed: #2e7f76;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-0: #0f1419;
+    --surface-1: #171d24;
+    --surface-2: #212932;
+    --line: #2c353f;
+    --text-hi: #e8edf2;
+    --text-lo: #8b98a5;
+    --inr: #e0a458;
+    --aed: #4fb0a5;
+  }
+}
+
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-text-hi: var(--text-hi);
+  --color-text-lo: var(--text-lo);
+  --color-inr: var(--inr);
+  --color-aed: var(--aed);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bricolage);
+}
+
+body {
+  background: var(--surface-0);
+  color: var(--text-hi);
+}
+
+/* Tabular numerals are load-bearing — misaligned decimals in a financial table
+   destroy credibility faster than a wrong number. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

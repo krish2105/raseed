@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Mirrors .npmrc's node-linker=hoisted. pnpm 11+ reads this file, not .npmrc.
+nodeLinker: hoisted
+
+# pnpm 10 blocks dependency lifecycle scripts by default. Expo/RN native deps need these
+# to run or the install silently produces a broken tree.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - unrs-resolver

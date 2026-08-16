@@ -1,0 +1,36 @@
+{
+  "name": "web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "eslint",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@raseed/ai": "workspace:*",
+    "@raseed/engines": "workspace:*",
+    "@raseed/fixtures": "workspace:*",
+    "@raseed/money": "workspace:*",
+    "@raseed/schema": "workspace:*",
+    "@raseed/tokens": "workspace:*",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.31.0",
+    "motion": "^13.1.0",
+    "next": "16.3.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "eslint-config-next": "16.3.1",
+    "tailwindcss": "^4.3.3"
+  }
+}
