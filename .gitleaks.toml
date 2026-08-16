@@ -1,0 +1,17 @@
+# gitleaks configuration.
+#
+# The Supabase anon key is public by design — RLS is the protection, and the key appears in
+# client bundles by necessity. Allowlisting it stops the scan crying wolf on every build,
+# which is what makes people start ignoring it. Nothing else is allowlisted.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-service-role"
+description = "Supabase service_role key — this one must never be committed"
+regex = '''eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]*?service_role[A-Za-z0-9_-]*?\.[A-Za-z0-9_-]{10,}'''
+keywords = ["service_role"]
+
+[allowlist]
+description = "The anon key is public by design; RLS is the protection."
+regexes = ['''NEXT_PUBLIC_SUPABASE_ANON_KEY''']

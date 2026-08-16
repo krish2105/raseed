@@ -24,6 +24,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # A leaked key is not a bug you can fix in a follow-up commit — git history is public
+      # the moment the repo is, and rotation is the only remedy. Scanned on every push.
+      - name: Secret scan (history)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # High and critical only. Failing on every low-severity transitive advisory trains
+      # everyone to ignore the gate, which is worse than not having one.
+      - name: Dependency audit
+        run: pnpm audit --audit-level high
+
       # --continue so a failure in one workspace still reports the others.
       # Session 0's whole point is that breaking a shared package fails BOTH apps —
       # fail-fast would hide the second one.
