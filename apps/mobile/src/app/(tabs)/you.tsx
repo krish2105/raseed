@@ -5,7 +5,8 @@ import { format, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { countSpend, listAccounts, useQuery } from '@/db'
+import { countSpend, listAccounts, listCategories, useQuery } from '@/db'
+import { WalletCount } from '@/components/WalletCount'
 
 const UPCOMING = [
   { label: 'Rent', when: 'in 3 days', currency: 'INR' as const, minor: 2_200_000 },
@@ -19,11 +20,19 @@ export default function YouScreen() {
 
   const accounts = useQuery(listAccounts)
   const rowCount = useQuery(countSpend)
+  const categories = useQuery(listCategories)
+  // Where a wallet count's difference lands. 'Uncategorised' if the seed has one, else the
+  // first category — the row is named "Uncategorised cash" either way, so the guess stays
+  // visible rather than being laundered into a confident category.
+  const cashCategoryId =
+    categories.find((c) => /misc|other|uncategor/i.test(c.name))?.id ?? categories[0]?.id ?? ''
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.title}>You</Text>
+
+        {cashCategoryId !== '' && <WalletCount categoryId={cashCategoryId} />}
 
         <Text style={s.section}>Accounts</Text>
         <View style={s.card}>

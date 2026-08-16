@@ -38,6 +38,10 @@ export function notifyChanged(): void {
  *
  * The server snapshot is the same read: this app has no SSR, and returning a different
  * value there would be a lie rather than a safety net.
+ *
+ * KNOWN BUG — see DECISIONS.md, "the read that lags one write". After a write, every read
+ * on this connection returns the pre-write state until the process restarts. It is not this
+ * hook: the version does increment and the component does re-render.
  */
 export function useQuery<T>(read: () => T): T {
   useSyncExternalStore(subscribe, snapshot, snapshot)

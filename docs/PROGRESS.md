@@ -30,7 +30,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [x] **S16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
 - [~] **S17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
 - [x] **S18** Web P6 — Comlink worker; Arrow encoding moved off the main thread (837ms → 16ms longest block, measured)
-- [~] **S19** 🚩 splits + cash are live on **web** (engine + 1,600-case test + UI); the mobile sheet and the store question remain
+- [~] **S19** 🚩 splits + cash live on **web and phone** (one engine, 1,600-case test); blocked on the read-lags-one-write bug below, and the store question
 - [~] **S20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
 - [ ] **S21** Web P8 — landing route, Lenis, Lighthouse ≥95
 - [ ] **S22** Web P9 — Vercel deploy, nuqs share links, a11y sweep
@@ -64,6 +64,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - **Backend is optional and not deployed** — nothing in the app needs one. Render/Supabase
   steps are in `docs/RUNBOOK_BACKEND.md`; both need Krishna's credentials.
 - **Editing an added expense** is still delete-and-re-add on web; the phone has the same gap.
+- 🐞 **Mobile reads lag exactly one write** until the app restarts — see DECISIONS.md, "the read that lags one write". Predates this session; blocks the S19 ship gate.
 
 ## Deferred decisions
 

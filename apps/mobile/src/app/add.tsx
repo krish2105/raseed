@@ -12,7 +12,8 @@ import {
 import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { fromMajor, type Currency, type Money } from '@raseed/money'
+import { format, fromMajor, type Currency, type Money } from '@raseed/money'
+import { splitEvenly } from '@raseed/engines'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
@@ -37,6 +38,7 @@ export default function AddScreen() {
   const [currency, setCurrency] = useState<Currency>('INR')
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '')
+  const [ways, setWays] = useState(1)
   const [error, setError] = useState<string | null>(null)
 
   // Parse on every keystroke so the button state is honest, but surface the error only
@@ -52,6 +54,14 @@ export default function AddScreen() {
 
   const canSave = parsed !== null && merchant.trim().length > 0 && accountId && categoryId
 
+  /**
+   * The whole bill splits; only your share is your spend.
+   *
+   * The same function the dashboard calls, from `@raseed/engines` — so a bill split on the
+   * phone and the same bill split on the web cannot produce two different numbers.
+   */
+  const split = parsed && ways > 1 ? splitEvenly(parsed, ways) : null
+
   function save() {
     if (!parsed) {
       setError(`Enter an amount, like 240 or 240.50`)
@@ -62,12 +72,15 @@ export default function AddScreen() {
       return
     }
     insertTransaction({
-      amount: parsed,
+      amount: split ? split.yourShare : parsed,
       accountId,
       categoryId,
       merchantText: merchant.trim(),
       occurredAt: Date.now(),
       fxRate: currency === 'AED' ? AED_TO_INR : 1,
+      note: split
+        ? `Your share, 1 of ${ways}. Paid ${format(parsed)}, ${format(split.owedToYou)} owed to you.`
+        : undefined,
     })
     notifyChanged()
     router.back()
@@ -137,6 +150,34 @@ export default function AddScreen() {
               style={[s.amountInput, { color: currency === 'INR' ? colors.inr : colors.aed }]}
             />
           </View>
+
+          <Text style={s.label}>Split</Text>
+          <View style={s.chips}>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <Pressable
+                key={n}
+                onPress={() => setWays(n)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: ways === n }}
+                style={[s.chip, ways === n && s.chipActive]}
+              >
+                <Text style={[s.chipText, ways === n && s.chipTextActive]}>
+                  {n === 1 ? 'Just me' : `${n} ways`}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {split && parsed && (
+            <Text style={s.splitNote}>
+              Your share is {format(split.yourShare)} of {format(parsed)} — only that counts as
+              your spend. {format(split.owedToYou)} is owed to you.
+              {split.shares.some((sh) => sh.minor !== split.shares[0]!.minor) &&
+                ` It does not divide evenly, so the shares are ${split.shares
+                  .map((sh) => sh.minor)
+                  .join('/')} — they add up exactly.`}
+            </Text>
+          )}
 
           <Text style={s.label}>Paid to</Text>
           <TextInput
@@ -242,6 +283,13 @@ const styles = (c: Palette) =>
       fontSize: 12,
       marginTop: space[4],
       marginBottom: space[1],
+    },
+    splitNote: {
+      color: c['text-lo'],
+      fontFamily: font.body,
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: space[2],
     },
     input: {
       color: c['text-hi'],

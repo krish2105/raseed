@@ -137,7 +137,8 @@ export interface NewTransaction {
   accountId: string
   categoryId: string
   merchantText: string
-  occurredAt: number
+  /** Defaults to now. The store stamps the clock, as it already does for `updated_at`. */
+  occurredAt?: number
   /** Frozen at write time and never recomputed. 1 when the amount is already home currency. */
   fxRate: number
   note?: string
@@ -162,7 +163,7 @@ export function insertTransaction(input: NewTransaction): string {
              NULL, NULL, 'confirmed', 1.0, ?, ?, ?, 0)`,
     [
       id,
-      input.occurredAt,
+      input.occurredAt ?? Date.now(),
       input.amount.minor,
       input.amount.currency,
       homeMinor,
@@ -192,4 +193,94 @@ export function softDeleteTransaction(id: string): void {
     'UPDATE transactions SET deleted = 1, updated_at = ? WHERE id = ?',
     [Date.now(), id],
   )
+}
+
+// ── cash reconciliation ─────────────────────────────────────────────────────
+
+export interface CashAccount {
+  id: string
+  name: string
+  currency: Currency
+  openingMinor: number
+}
+
+/**
+ * The wallet.
+ *
+ * `is_cash` rather than `kind = 'cash'`: the flag is what the schema declares as the
+ * meaning, and a wallet-like prepaid card should reconcile the same way without pretending
+ * to be a different kind of account.
+ */
+export function cashAccount(): CashAccount | null {
+  const rows = getConnection().executeSync(
+    `SELECT id, name, currency, opening_minor FROM accounts
+      WHERE is_cash = 1 AND deleted = 0 AND archived_at IS NULL
+      ORDER BY name LIMIT 1;`,
+  ).rows as { id: string; name: string; currency: string; opening_minor: number }[]
+
+  const row = rows[0]
+  if (!row) return null
+  return {
+    id: row.id,
+    name: row.name,
+    currency: row.currency as Currency,
+    openingMinor: row.opening_minor,
+  }
+}
+
+/** Cash spend since a moment, in that wallet's own currency. */
+export function cashSpentSince(accountId: string, at: number): number {
+  const rows = getConnection().executeSync(
+    `SELECT COALESCE(SUM(amount_minor), 0) AS total FROM transactions
+      WHERE account_id = ? AND occurred_at > ? AND direction = 'out'
+        AND status = 'confirmed' AND deleted = 0;`,
+    [accountId, at],
+  ).rows as { total: number }[]
+  return rows[0]?.total ?? 0
+}
+
+export interface CashCountRow {
+  id: string
+  countedAt: number
+  countedMinor: number
+}
+
+/** The most recent count, or null if you have never counted. */
+export function lastCashCount(accountId: string): CashCountRow | null {
+  const rows = getConnection().executeSync(
+    `SELECT id, counted_at, counted_minor FROM cash_counts
+      WHERE account_id = ? AND deleted = 0
+      ORDER BY counted_at DESC LIMIT 1;`,
+    [accountId],
+  ).rows as { id: string; counted_at: number; counted_minor: number }[]
+
+  const row = rows[0]
+  return row ? { id: row.id, countedAt: row.counted_at, countedMinor: row.counted_minor } : null
+}
+
+export function insertCashCount(input: {
+  accountId: string
+  countedMinor: number
+  expectedMinor: number
+  adjustmentTxnId: string | null
+}): string {
+  const countedAt = Date.now()
+  const id = `cash-${countedAt.toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  getConnection().executeSync(
+    `INSERT INTO cash_counts
+       (id, account_id, counted_at, counted_minor, expected_minor, adjustment_txn_id,
+        user_id, updated_at, deleted)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0);`,
+    [
+      id,
+      input.accountId,
+      countedAt,
+      input.countedMinor,
+      input.expectedMinor,
+      input.adjustmentTxnId,
+      USER,
+      Date.now(),
+    ],
+  )
+  return id
 }

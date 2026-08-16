@@ -686,3 +686,48 @@ will stop the next palette edit from regressing: it runs in `turbo test` in unde
 One of my own test cases was wrong too: I used `#767676` as an example of a colour that
 fails AA body text. It is 4.54:1 and passes — it is the classic AA boundary grey. `#8C8C8C`
 (3.36) is the honest example.
+
+---
+
+## S19 on the phone, and the read that lags one write (2026-08-16)
+
+The split control and the wallet count are live in the Expo app, calling the **same**
+`splitBill` and `reconcileCash` from `@raseed/engines` that the dashboard calls. Verified on
+the simulator: ₹1,000 three ways reads ₹333.34 / ₹666.66 owed / shares 33334/33333/33333 —
+character-for-character what the web shows, because it is one implementation.
+
+The wallet needed no new schema. `cash_counts`, `is_cash` and a real `Wallet (INR)` account
+were already in `contract.ts`, so the device tables existed. On the phone there is also no
+"paid in cash" toggle: you already pick an account, and one of them is the wallet. That is
+strictly better than the web's extra switch, and the web should follow.
+
+### A pre-existing bug this surfaced — not yet fixed
+
+**Every read returns the state before the most recent write, until the process restarts.**
+Save a transaction and the Today screen shows the previous total; save another and it shows
+the one before that. Exactly one write behind, every time. A cold launch is always correct.
+This predates this session — it is in the S7 data layer, and it means every number on the
+phone's home screen has been one entry stale since manual entry shipped.
+
+What was ruled out, each by measurement rather than reasoning:
+
+- **Not the store.** A temporary counter rendered on screen showed the version incrementing
+  0 → 1 on save, so `notifyChanged` fires and the component genuinely re-renders.
+- **Not React Compiler memoisation.** Calling `spendBetween` *directly in the render body*,
+  bypassing `useQuery` entirely, returned the same stale count. Threading the version through
+  a `useMemo` changed nothing, so that change was reverted rather than kept as a talisman.
+- **Not prepared-statement or parameter caching.** Inlining the bounds into the SQL instead
+  of binding them changed nothing. (Reverted — parameters are the injection-safe form.)
+- **Not notification timing.** Deferring the notify by a macrotask changed nothing.
+- **Not two connections.** `getConnection()` memoises a single `open()`, and both the write
+  and the read go through it. A connection cannot miss its own committed write, which is
+  what makes this interesting.
+
+The `sqlite3` CLI sees the row immediately after, so it does commit to the file. The
+remaining suspect is inside op-sqlite's JSI layer, and chasing it is a library
+investigation rather than a feature — logged here with the evidence instead of guessed at.
+`useQuery` now carries a pointer to this entry so the next reader does not re-derive it.
+
+Worth naming: the Ledger tab was showing the new row immediately while Today was not, which
+is what made this look like a screen-level refresh problem for far longer than it should
+have. The two tabs differ only in their WHERE clause.
