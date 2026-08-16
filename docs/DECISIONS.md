@@ -131,3 +131,40 @@ express that without a circular type. The database enforces them either way.
 **Still outstanding:** the migration has never been applied to a real Supabase project.
 `supabase link` + `db push` needs Krishna's login. Everything is authored and tested; only
 the cloud apply is pending.
+
+---
+
+## Session 3 — @raseed/engines, domain half (2026-08-16)
+
+**Seven pure functions, 65 tests, no Date.now() anywhere.** Time is a parameter on every
+function that needs it, so a midnight recompute is a call rather than a side effect and
+every edge case is reachable from a test.
+
+**safeToSpend guards the two ways the formula goes wrong.** A negative pool yields a zero
+allowance rather than a negative daily via integer division, and carryover is clamped to
+[0, 3 x baseDaily]. Without the cap a frugal week hands you a number that invites a
+blowout; without the floor a negative carryover would silently tax today.
+
+**pairReversals is greedy nearest-match, oldest debit first.** Each row is used at most
+once. A refund must come AFTER its debit — an inflow before it is not a reversal, which a
+naive absolute-time-window check gets wrong. A missing merchant on the refund is accepted
+(refunds often arrive as a bare bank descriptor); a *different* merchant is disqualifying.
+
+**detectRecurrence is CV-based, not regex.** Interval CV < 0.15 and amount CV < 0.10 over
+at least 3 observations. This survives a payment landing a day late, which a fixed-period
+rule does not, and it annualises a price hike: 649 -> 799 monthly reports as +1,825/year.
+
+**detectRemittance reports what the spread cost, not just that a transfer happened.**
+efficiency = implied / mid-market, and costMinor is what you would have received at
+mid-market minus what you actually got. Same-currency movement is excluded — that is an
+internal transfer, not a remittance.
+
+**rankNudges saturates impact.** score = |impact| x urgency x novelty x (1 - fatigue), with
+impact normalised through a ceiling so one enormous number cannot monopolise the week's
+four slots. A zero score never ships even when slots are free, and suppressed nudges expire
+rather than queueing for next week.
+
+**regretRate weights by amount, not count.** Ten regretted chais matter less than one
+regretted 8,000 dinner. Unrated transactions stay out of the denominator — a skipped
+rating is not evidence of satisfaction — and `coverage` is reported so a category rated
+twice is visibly less trustworthy than one rated thirty times.

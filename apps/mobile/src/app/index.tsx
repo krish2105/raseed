@@ -2,13 +2,24 @@ import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { aiPlaceholder } from '@raseed/ai'
-import { enginesPlaceholder } from '@raseed/engines'
+import { safeToSpend } from '@raseed/engines'
 import { fixturesPlaceholder } from '@raseed/fixtures'
 import { allocate, format, formatMinor, fromMajor } from '@raseed/money'
 import { schemaPlaceholder } from '@raseed/schema'
 import { fontFamily, palette, radius, space, type Palette } from '@raseed/tokens'
 
-const inr = fromMajor('740.00', 'INR')
+const sts = safeToSpend({
+  liquidBalance: fromMajor('30000.00', 'INR'),
+  committedBills: [fromMajor('12000.00', 'INR')],
+  pendingSweeps: [fromMajor('2000.00', 'INR')],
+  safetyBuffer: fromMajor('3000.00', 'INR'),
+  rawCarryover: fromMajor('400.00', 'INR'),
+  spentToday: fromMajor('260.00', 'INR'),
+  today: 1_755_300_000_000,
+  nextIncomeAt: 1_755_300_000_000 + 10 * 86_400_000,
+})
+
+const inr = sts.amount
 const aed = fromMajor('92.50', 'AED')
 const split = allocate(fromMajor('1.00', 'INR'), 3)
 
@@ -16,7 +27,7 @@ const packages = [
   { name: '@raseed/money', value: formatMinor(inr) },
   { name: '@raseed/tokens', value: fontFamily.display },
   { name: '@raseed/schema', value: schemaPlaceholder() },
-  { name: '@raseed/engines', value: enginesPlaceholder() },
+  { name: '@raseed/engines', value: `STS ${formatMinor(sts.amount)}` },
   { name: '@raseed/ai', value: aiPlaceholder() },
   { name: '@raseed/fixtures', value: fixturesPlaceholder() },
 ]

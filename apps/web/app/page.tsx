@@ -1,12 +1,23 @@
 import { aiPlaceholder } from '@raseed/ai'
-import { enginesPlaceholder } from '@raseed/engines'
+import { safeToSpend } from '@raseed/engines'
 import { fixturesPlaceholder } from '@raseed/fixtures'
 import { allocate, format, fromMajor, formatMinor } from '@raseed/money'
 import { schemaPlaceholder } from '@raseed/schema'
 import { fontFamily } from '@raseed/tokens'
 import { AmountCard } from '@/components/ui/amount-card'
 
-const inr = fromMajor('740.00', 'INR')
+const sts = safeToSpend({
+  liquidBalance: fromMajor('30000.00', 'INR'),
+  committedBills: [fromMajor('12000.00', 'INR')],
+  pendingSweeps: [fromMajor('2000.00', 'INR')],
+  safetyBuffer: fromMajor('3000.00', 'INR'),
+  rawCarryover: fromMajor('400.00', 'INR'),
+  spentToday: fromMajor('260.00', 'INR'),
+  today: 1_755_300_000_000,
+  nextIncomeAt: 1_755_300_000_000 + 10 * 86_400_000,
+})
+
+const inr = sts.amount
 const aed = fromMajor('92.50', 'AED')
 
 // The S1 criterion, rendered rather than asserted: 100 minor units, three ways.
@@ -16,7 +27,7 @@ const packages = [
   { name: '@raseed/money', value: formatMinor(inr) },
   { name: '@raseed/tokens', value: fontFamily.display },
   { name: '@raseed/schema', value: schemaPlaceholder() },
-  { name: '@raseed/engines', value: enginesPlaceholder() },
+  { name: '@raseed/engines', value: `safe to spend ${formatMinor(sts.amount)}` },
   { name: '@raseed/ai', value: aiPlaceholder() },
   { name: '@raseed/fixtures', value: fixturesPlaceholder() },
 ]
