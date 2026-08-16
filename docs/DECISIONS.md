@@ -1130,3 +1130,25 @@ One of my assertions was wrong again, in a way worth recording: I checked the im
 by searching the ledger for "SWIGGY" and expecting one row. The seeded demo contains **thirty**
 Swiggy rows, so that assertion proved nothing either way. Searching for a string unique to
 the imported file is the check that actually tests something.
+
+---
+
+## The audit gate found four things on its first run (2026-08-16)
+
+Two high and two moderate, and the tempting response was to move the threshold to `critical`
+and get green. That would have been the wrong call: it hides the *next* genuine high-severity
+finding, which is the one that matters. A gate you weaken to pass is not a gate.
+
+All four are transitive **build-time** dependencies — Metro's bundler, `drizzle-kit`, Expo's
+config plugins. None ships to a user. And `image-size` reports `Patched versions: <0.0.0`,
+meaning **no fix exists to upgrade to**; there is no action available even in principle.
+
+So the four are acknowledged individually by advisory id, with the reason and the removal
+condition written down in `docs/AUDIT_EXCEPTIONS.md`, and the threshold stays at `high`.
+Acknowledging four known advisories by id is a decision with a paper trail. Moving the bar is
+a decision that hides every future one.
+
+The rule recorded there — an exception needs the package to be build-time only, to have no
+reachable patch, *and* for the attack to require access already lost by other means — is
+what stops that file becoming a place where inconvenient findings go to be forgotten. The
+Expo SDK upgrade is the natural point to re-check, because Metro moves with it.
