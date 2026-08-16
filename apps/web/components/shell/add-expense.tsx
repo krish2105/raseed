@@ -7,12 +7,13 @@ import { fromMajor, type Currency, type Money } from '@raseed/money'
 import { CATEGORIES } from '@raseed/fixtures'
 import { useDuck } from '@/lib/duck/provider'
 import { addLocal } from '@/lib/store/local-ledger'
+import { addCategory, customCategories } from '@/lib/store/preferences'
 import { cn } from '@/lib/utils'
 
 /** INR per AED used for rows you add now. Frozen onto the row; never recomputed. */
 const AED_TO_INR = 24.86
 
-const SPEND_CATEGORIES = CATEGORIES.filter((c) => c.kind !== 'income')
+const SEEDED = CATEGORIES.filter((c) => c.kind !== 'income')
 
 /**
  * Add an expense from the dashboard.
@@ -25,7 +26,17 @@ export function AddExpense() {
   const [amount, setAmount] = useState('')
   const [merchant, setMerchant] = useState('')
   const [currency, setCurrency] = useState<Currency>('INR')
-  const [categoryId, setCategoryId] = useState(SPEND_CATEGORIES[0]!.id)
+  const [categoryId, setCategoryId] = useState(SEEDED[0]!.id)
+  const [newCategory, setNewCategory] = useState('')
+  const [categoryVersion, setCategoryVersion] = useState(0)
+
+  // Read during render rather than in an effect. localStorage is unavailable during SSR,
+  // but this dialog only mounts after a click — which is always post-hydration — so the
+  // read is safe and setState-in-an-effect (which the compiler rejects) is unnecessary.
+  const custom = useMemo(
+    () => (open ? customCategories() : []),
+    [open, categoryVersion],
+  )
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
@@ -189,7 +200,7 @@ export function AddExpense() {
 
                 <p className="mt-4 text-xs text-text-lo">Category</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {SPEND_CATEGORIES.map((c) => (
+                  {[...SEEDED, ...custom].map((c) => (
                     <button
                       key={c.id}
                       type="button"
@@ -207,6 +218,24 @@ export function AddExpense() {
                       {c.name}
                     </button>
                   ))}
+                </div>
+
+                <div className="mt-2 flex gap-1.5">
+                  <input
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter' || !newCategory.trim()) return
+                      e.preventDefault()
+                      const created = addCategory(newCategory, 'want')
+                      setCategoryVersion((v) => v + 1)
+                      setCategoryId(created.id)
+                      setNewCategory('')
+                    }}
+                    placeholder="New category, then Enter"
+                    aria-label="New category name"
+                    className="min-w-0 flex-1 rounded-full border border-dashed border-line bg-transparent px-2.5 py-1 text-xs focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                  />
                 </div>
 
                 {error && <p className="mt-3 text-sm text-warn">{error}</p>}

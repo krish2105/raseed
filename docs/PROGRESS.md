@@ -27,11 +27,11 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [ ] **S13** Mobile P4 — merchant resolver, alias learning, reversal pairing
 - [~] **S14** Web P4 — treemap, variance, ledger, currency done; net-worth timeline + calendar heatmap remain
 - [ ] **S15** Mobile P5 — multi-currency, remittance detection, Trip Mode
-- [~] **S16** Web P5 — ⌘K bar with deterministic parser + SELECT-only sandbox; the 12 adversarial strings are not yet a test
-- [ ] **S17** Mobile P6 — worth-it loop, Weekly Reckoning, 4-nudge cap
+- [x] **S16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
+- [~] **S17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
 - [ ] **S18** Web P6 — Comlink workers, engines wired
 - [ ] **S19** 🚩 **Mobile P7 — splits + cash. SHIP GATE. Decide the store question here.**
-- [ ] **S20** Web P7 — Tier 1 analytics; block-bootstrap fan provably wider than IID
+- [~] **S20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
 - [ ] **S21** Web P8 — landing route, Lenis, Lighthouse ≥95
 - [ ] **S22** Web P9 — Vercel deploy, nuqs share links, a11y sweep
 - [ ] **S23** Mobile P8 — voice capture, receipt OCR
@@ -62,8 +62,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 
 - **Backend is optional and not deployed** — nothing in the app needs one. Render/Supabase
   steps are in `docs/RUNBOOK_BACKEND.md`; both need Krishna's credentials.
-- **Web cannot edit/delete an added expense yet** (the phone can). Custom categories not editable.
-- **The ⌘K sandbox needs its 12 adversarial strings as a test**, per S16's done-when.
+- **Editing an added expense** is still delete-and-re-add on web; the phone has the same gap.
 
 ## Deferred decisions
 

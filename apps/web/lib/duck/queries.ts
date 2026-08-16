@@ -175,16 +175,16 @@ export const Q = {
 
   /** Daily totals for the trailing window — feeds the MAD anomaly detector and the charts. */
   dailyTotalsSince: (sinceMs: number, lens: Lens) =>
-    `SELECT CAST(epoch_ms(occurred_at) AS DATE) AS day,
-            SUM(${lensAmount(lens)})::BIGINT     AS home_minor,
-            COUNT(*)::BIGINT                     AS txn_count
+    `SELECT CAST(epoch_ms(occurred_at) AS DATE)::VARCHAR AS day,
+            SUM(${lensAmount(lens)})::BIGINT             AS home_minor,
+            COUNT(*)::BIGINT                             AS txn_count
      FROM v_spend
      WHERE occurred_at >= ${sinceMs}
      GROUP BY 1 ORDER BY 1;`,
 
   /** Monthly totals for the forecast and the net-worth line. */
   monthlyTotals: (lens: Lens) =>
-    `SELECT DATE_TRUNC('month', CAST(epoch_ms(occurred_at) AS DATE)) AS month,
+    `SELECT DATE_TRUNC('month', CAST(epoch_ms(occurred_at) AS DATE))::VARCHAR AS month,
             SUM(${lensAmount(lens)})::BIGINT AS home_minor
      FROM v_spend GROUP BY 1 ORDER BY 1;`,
 
@@ -236,7 +236,7 @@ export const Q = {
 
   /** Opening balance and net flow per month, for FX attribution. */
   fxAttributionInput: `
-    SELECT DATE_TRUNC('month', CAST(epoch_ms(occurred_at) AS DATE)) AS month,
+    SELECT DATE_TRUNC('month', CAST(epoch_ms(occurred_at) AS DATE))::VARCHAR AS month,
            SUM(CASE WHEN currency = 'AED' THEN amount_minor ELSE 0 END)::BIGINT AS aed_minor,
            AVG(fx_inr_per_aed) AS rate
     FROM ${RAW_TABLE} WHERE deleted = false

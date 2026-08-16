@@ -7,6 +7,7 @@ import {
   BarChart3,
   FlaskConical,
   LayoutGrid,
+  Flame,
   Receipt,
   TrendingUp,
   Waves,
@@ -19,6 +20,7 @@ export const ROUTES = [
   { href: '/categories', label: 'Categories', Icon: BarChart3 },
   { href: '/forecast', label: 'Forecast', Icon: TrendingUp },
   { href: '/currency', label: 'Currency', Icon: ArrowLeftRight },
+  { href: '/reckoning', label: 'Reckoning', Icon: Flame },
   { href: '/ledger', label: 'Ledger', Icon: Receipt },
   { href: '/lab', label: 'Lab', Icon: FlaskConical },
 ] as const

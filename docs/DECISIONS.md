@@ -458,3 +458,37 @@ sandbox rejects anything that is not a single SELECT.
 only in their own browser and never touch anyone else's data, which is what makes a public
 demo with write access safe. The benchmark path deliberately skips them so the row count it
 reports is exactly what was requested.
+
+---
+
+## The daily loop, the Lab, and the sandbox test (2026-08-16)
+
+**The streak counts days you RECORDED, not days you underspent.** Rewarding low spend makes
+skipping lunch look like virtue, and it punishes an honest expensive week. Rewarding the
+logging habit rewards the thing the app actually needs from you.
+
+**The rating queue only asks about the top 40%.** Above the 60th-percentile transaction,
+unrated, most recent first, five at a time. Asking about a 20-rupee chai spends the one
+interaction anyone will actually give you.
+
+**Nudges are capped at four a week and unused slots are not banked.** Scored on
+|impact| x urgency x novelty x (1 - fatigue) through the tested `rankNudges` engine.
+Everything under the cut expires silently rather than queueing — notification fatigue is the
+named reason these apps get uninstalled, so attention is spent as a budget.
+
+**Benford honestly reports non-conformance on this data.** χ² 117.71 against a 15.51 critical
+value. That is correct and expected: everyday spend occupies a narrow band of magnitudes, and
+Benford only means something across several orders. The panel says so rather than hiding a
+red number, because a forensic test that always passes is not a test.
+
+**Dates are cast to VARCHAR in SQL, not parsed in JS.** DuckDB returns DATE through Arrow as
+a Date32 number; `String(day).slice(0,10)` turned it into "1752796800 was unusual" on the
+Reckoning page. Casting at the query boundary removes the guesswork entirely.
+
+**The SQL sandbox now has the twelve adversarial strings S16 asked for** — stacked DROP and
+DELETE, bare DDL, ATTACH, INSTALL, COPY, PRAGMA — plus a check that the parser itself cannot
+be talked into emitting anything unsafe. 27 tests. The parser is deterministic today; the
+boundary is guarded for the day a model is allowed to write the SQL.
+
+**Only rows you added can be deleted.** The seeded demo is shared across every visitor, so it
+is read-only and shows no delete control at all rather than a button that fails.

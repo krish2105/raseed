@@ -1,4 +1,6 @@
 import {
+  benford,
+  lorenzCurve,
   budgetVariance,
   detectRemittance,
   gini,
@@ -474,4 +476,40 @@ export async function ledgerPage(limit: number, offset: number, lens: Lens): Pro
     native: money(r.amount_minor, r.currency),
     lensAmount: asMoney(r.lens_minor, lens),
   }))
+}
+
+// ── audit / concentration lab ───────────────────────────────────────────────
+
+export interface AuditReport {
+  benford: { observed: number[]; expected: number[]; chiSquare: number; n: number }
+  lorenz: ReturnType<typeof lorenzCurve>
+  gini: number
+  pareto: { item: string; value: Money; cumulativeShare: number }[]
+}
+
+/**
+ * The forensic tab: Benford's first-digit test, the Lorenz curve, and Pareto by merchant.
+ *
+ * All three engines are unit-tested against known answers in `@raseed/engines`; this only
+ * feeds them real rows and shapes the output for the charts.
+ */
+export async function audit(lens: Lens): Promise<AuditReport> {
+  const [rows, merchants] = await Promise.all([
+    query<{ lens_minor: number }>(Q.ledgerPage(2000, 0, lens)),
+    byMerchant(365, lens),
+  ])
+
+  const amounts = rows.map((r) => r.lens_minor / 100) // major units: Benford reads leading digits
+  const values = merchants.map((m) => m.total.minor)
+
+  return {
+    benford: benford(amounts),
+    lorenz: lorenzCurve(values),
+    gini: gini(values),
+    pareto: pareto(merchants.map((m) => ({ item: m.name, value: m.total.minor }))).map((p) => ({
+      item: p.item,
+      value: asMoney(p.value, lens),
+      cumulativeShare: p.cumulativeShare,
+    })),
+  }
 }

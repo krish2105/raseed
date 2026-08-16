@@ -1,13 +1,15 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { format } from '@raseed/money'
 import { Panel } from '@/components/ui/panel'
 import { RowsSkeleton } from '@/components/ui/skeleton'
 import { PanelError } from '@/components/ui/panel-error'
-import { useDuckQuery } from '@/lib/duck/provider'
+import { useDuck, useDuckQuery } from '@/lib/duck/provider'
 import { useCurrencyLens } from '@/components/shell/currency-lens'
 import { ledgerPage } from '@/lib/duck/analytics'
+import { removeLocal } from '@/lib/store/local-ledger'
 import { cn } from '@/lib/utils'
 
 const PAGE = 250
@@ -20,6 +22,7 @@ const PAGE = 250
  */
 export function LedgerClient() {
   const [lens] = useCurrencyLens()
+  const { reload } = useDuck()
   const [search, setSearch] = useState('')
   const [kind, setKind] = useState<'all' | 'need' | 'want' | 'save'>('all')
 
@@ -45,7 +48,8 @@ export function LedgerClient() {
         <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Ledger</h1>
         <p className="mt-1.5 text-sm text-text-lo">
           Reads through <code className="font-mono">v_spend</code>, so transfers, pending rows
-          and reversal pairs never appear — the table and the totals cannot disagree.
+          and reversal pairs never appear — the table and the totals cannot disagree. Rows you
+          added in this browser can be removed; the seeded demo is shared and read-only.
         </p>
       </header>
 
@@ -103,8 +107,8 @@ export function LedgerClient() {
             <table className="w-full min-w-[560px] border-collapse text-sm">
               <thead className="sticky top-0 bg-surface-1">
                 <tr className="border-b border-line text-left">
-                  {['Date', 'Merchant', 'Category', 'Native', 'Amount'].map((h) => (
-                    <th key={h} className="pb-2 text-xs font-medium text-text-lo">
+                  {['Date', 'Merchant', 'Category', 'Native', 'Amount', ''].map((h, i) => (
+                    <th key={h || i} className="pb-2 text-xs font-medium text-text-lo">
                       {h}
                     </th>
                   ))}
@@ -137,6 +141,25 @@ export function LedgerClient() {
                     </td>
                     <td className="tabular py-2.5 text-right font-mono">
                       {format(r.lensAmount)}
+                    </td>
+                    <td className="py-2.5 pl-3 text-right">
+                      {/* Only rows you added here can be removed. The seeded demo is shared
+                          and read-only, so there is nothing to delete and no button to press. */}
+                      {r.id.startsWith('local-') ? (
+                        <button
+                          type="button"
+                          aria-label={`Delete ${r.merchant}`}
+                          onClick={() => {
+                            removeLocal(r.id)
+                            reload()
+                          }}
+                          className="rounded p-1 text-text-lo transition-colors hover:text-warn focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        <span className="sr-only">Seeded demo row</span>
+                      )}
                     </td>
                   </tr>
                 ))}
