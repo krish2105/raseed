@@ -763,3 +763,26 @@ convert at the rate frozen on each row at its own date, so a trip costs what it 
 On the seeded ledger: 13 trips in 18 months, an ordinary day of ₹1,975.76, and ₹1,84,436 of
 travel cost above staying home. Spot-checked — the 20–22 Jun trip's ₹12,350.53 all-in less
 three ordinary days (₹5,927.28) is exactly the ₹6,423.25 excess shown.
+
+---
+
+## S13 — the merchant resolver, on device (2026-08-16)
+
+`razorpay@hdfcbank` means nothing until someone tells you it is Big Bazaar. The point of the
+alias table is that they only tell you **once**: the normalised descriptor is written back,
+so the second occurrence resolves with an indexed lookup and no thought.
+
+Two steps, cheapest first. An exact alias hit is one indexed read. Only on a miss does it
+compare against normalised canonical names, and a match there is immediately recorded as an
+alias — so the expensive path runs once per descriptor, ever. No model call on either path.
+
+**Resolution happens on write, not on read**, and `raw_text` stays on the row regardless. It
+is what you actually typed, and discarding it would make a wrong resolution impossible to
+audit later. The ledger reads `COALESCE(m.canonical_name, s.raw_text, 'Unknown')`, so an
+unresolved row still shows what you typed rather than "Unknown".
+
+Verified on the simulator: typing `Swiggy@okhdfcbank` (iOS capitalised it) produced a row
+with `merchant_id = m-swiggy` and canonical name **Swiggy**, and bumped that alias's
+`hit_count` from 0 to 1. Note that `SWIGGY LIMITED` normalises to `swiggy limited`, not
+`swiggy` — the bank-statement form is a separate alias pointing at the same merchant, which
+is correct rather than a miss.

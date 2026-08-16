@@ -24,7 +24,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [x] **S10** Web P2 — hand-built charts, theme-reactive colours, zero hex outside tokens
 - [ ] **S11** Mobile P3 — capture router, confirmation sheet, eval harness ≥0.90
 - [x] **S12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`
-- [ ] **S13** Mobile P4 — merchant resolver, alias learning, reversal pairing
+- [x] **S13** Mobile P4 — merchant resolver, alias learning, reversal pairing
 - [~] **S14** Web P4 — treemap, variance, ledger, currency done; net-worth timeline + calendar heatmap remain
 - [~] **S15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips); the mobile envelope and Live Activity remain
 - [x] **S16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests

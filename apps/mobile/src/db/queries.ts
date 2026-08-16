@@ -1,3 +1,4 @@
+import { normaliseMerchant } from '@raseed/engines'
 import { money, type Currency, type Money } from '@raseed/money'
 import type { Scalar } from '@op-engineering/op-sqlite'
 import { getConnection } from './client'
@@ -154,12 +155,16 @@ export function insertTransaction(input: NewTransaction): string {
   const id = `txn-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
   const homeMinor = Math.round(input.amount.minor * input.fxRate)
 
+  // Resolve on write, not on read. The raw text stays on the row either way — it is what you
+  // actually typed, and losing it would make a wrong resolution impossible to audit.
+  const merchantId = resolveMerchant(input.merchantText)?.merchantId ?? null
+
   getConnection().executeSync(
     `INSERT INTO transactions
        (id, occurred_at, direction, amount_minor, currency, home_amount_minor, fx_rate,
         account_id, merchant_id, category_id, raw_text, source, txn_type, transfer_group_id,
         reversal_of_id, trip_id, status, confidence, note, user_id, updated_at, deleted)
-     VALUES (?, ?, 'out', ?, ?, ?, ?, ?, NULL, ?, ?, 'manual', 'spend', NULL,
+     VALUES (?, ?, 'out', ?, ?, ?, ?, ?, ?, ?, ?, 'manual', 'spend', NULL,
              NULL, NULL, 'confirmed', 1.0, ?, ?, ?, 0)`,
     [
       id,
@@ -169,6 +174,7 @@ export function insertTransaction(input: NewTransaction): string {
       homeMinor,
       input.fxRate,
       input.accountId,
+      merchantId,
       input.categoryId,
       input.merchantText,
       input.note ?? null,
@@ -283,4 +289,72 @@ export function insertCashCount(input: {
     ],
   )
   return id
+}
+
+// ── merchant resolution ─────────────────────────────────────────────────────
+
+export interface ResolvedMerchant {
+  merchantId: string
+  canonicalName: string
+  /** 'alias' when the exact descriptor was already known, 'name' on a first-time match. */
+  via: 'alias' | 'name'
+}
+
+/**
+ * Raw descriptor → canonical merchant, and it learns.
+ *
+ * `razorpay@hdfcbank` means nothing until someone tells you it is Big Bazaar. The point of
+ * the alias table is that they only tell you once: the normalised form is written back, so
+ * the second occurrence resolves without any thought and without any model call.
+ *
+ * Two steps, cheapest first. An exact alias hit is a single indexed lookup. Only on a miss
+ * do we compare against canonical names, and a match there is immediately recorded as an
+ * alias so the expensive path runs once per descriptor, ever.
+ */
+export function resolveMerchant(rawText: string): ResolvedMerchant | null {
+  const norm = normaliseMerchant(rawText)
+  if (norm === '') return null
+
+  const hit = rows<{ merchant_id: string; canonical_name: string }>(
+    `SELECT a.merchant_id, m.canonical_name
+       FROM merchant_aliases a JOIN merchants m ON m.id = a.merchant_id
+      WHERE a.alias_norm = ? AND a.deleted = 0 LIMIT 1;`,
+    [norm],
+  )[0]
+
+  if (hit) {
+    // Hit count is what will rank suggestions later; bumping it costs one indexed update.
+    getConnection().executeSync(
+      'UPDATE merchant_aliases SET hit_count = hit_count + 1, updated_at = ? WHERE alias_norm = ?;',
+      [Date.now(), norm],
+    )
+    return { merchantId: hit.merchant_id, canonicalName: hit.canonical_name, via: 'alias' }
+  }
+
+  // Compare normalised canonical names, so "BigBasket" typed by hand finds `m-bigbasket`.
+  const byName = rows<{ id: string; canonical_name: string }>(
+    'SELECT id, canonical_name FROM merchants WHERE deleted = 0;',
+  ).find((m) => normaliseMerchant(m.canonical_name) === norm)
+
+  if (!byName) return null
+
+  learnAlias(byName.id, rawText, norm)
+  return { merchantId: byName.id, canonicalName: byName.canonical_name, via: 'name' }
+}
+
+/** Record a descriptor so this resolution never has to be worked out again. */
+export function learnAlias(merchantId: string, rawText: string, norm?: string): void {
+  getConnection().executeSync(
+    `INSERT OR IGNORE INTO merchant_aliases
+       (id, merchant_id, alias_raw, alias_norm, source, hit_count, user_id, updated_at, deleted)
+     VALUES (?, ?, ?, ?, 'user', 1, ?, ?, 0);`,
+    [
+      `alias-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
+      merchantId,
+      rawText,
+      norm ?? normaliseMerchant(rawText),
+      USER,
+      Date.now(),
+    ],
+  )
 }
