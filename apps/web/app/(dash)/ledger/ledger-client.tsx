@@ -94,7 +94,14 @@ export function LedgerClient() {
           </p>
         )}
 
-        <div className="mt-4 max-h-[62vh] overflow-auto">
+        {/* Scrolls in both directions, so it needs to be keyboard-reachable in its own
+            right — most of its rows contain nothing focusable to tab to. */}
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Transactions"
+          className="mt-4 max-h-[62vh] overflow-auto rounded focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+        >
           {rows.error ? (
             <PanelError message={rows.error} />
           ) : !filtered ? (

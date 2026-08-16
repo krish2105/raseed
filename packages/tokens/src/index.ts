@@ -39,9 +39,9 @@ const light: Palette = {
   line: '#D3DAE1',
   'text-hi': '#12181F',
   'text-lo': '#5A6773',
-  inr: '#A36821',
-  aed: '#2E7F76',
-  good: '#3E8536',
+  inr: '#965B14',
+  aed: '#24756C',
+  good: '#317829',
   warn: '#B23A34',
   horizon: '#5566A8',
 }
@@ -56,8 +56,8 @@ const dark: Palette = {
   inr: '#E0A458',
   aed: '#4FB0A5',
   good: '#7BC96F',
-  warn: '#DB5C56',
-  horizon: '#7C8CC4',
+  warn: '#E66761',
+  horizon: '#7E8EC6',
 }
 
 export const palette: Readonly<Record<ThemeName, Palette>> = { light, dark }
@@ -136,4 +136,46 @@ export const easing = {
 
 export function cubicBezier(curve: readonly [number, number, number, number]): string {
   return `cubic-bezier(${curve.join(', ')})`
+}
+
+// ── contrast ────────────────────────────────────────────────────────────────
+
+/**
+ * WCAG relative luminance. Sits here because this is the only package allowed to know what
+ * a hex literal is.
+ */
+export function relativeLuminance(hex: string): number {
+  const channels = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  }) as [number, number, number]
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+}
+
+/** WCAG contrast ratio, 1 (identical) to 21 (black on white). AA body text needs 4.5. */
+export function contrastRatio(a: string, b: string): number {
+  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x) as [
+    number,
+    number,
+  ]
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/**
+ * The readable ink for a given fill.
+ *
+ * A chart tile's fill is data-driven, so a fixed label token is a coin flip: `text-hi` reads
+ * on a dark segment and vanishes on a bright one. Picking by luminance is correct for every
+ * fill, including ones nobody has designed yet.
+ */
+export function readableInk(fill: string, theme: ThemeName = 'light'): string {
+  const palette = theme === 'dark' ? dark : light
+  const onDark = palette['text-hi']
+  const onLight = theme === 'dark' ? light['text-hi'] : dark['text-hi']
+  return contrastRatio(fill, onDark) >= contrastRatio(fill, onLight) ? onDark : onLight
+}
+
+/** Does this pair clear WCAG AA for body text? */
+export function meetsAA(fg: string, bg: string, largeText = false): boolean {
+  return contrastRatio(fg, bg) >= (largeText ? 3 : 4.5)
 }

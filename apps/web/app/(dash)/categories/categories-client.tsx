@@ -96,8 +96,15 @@ export function CategoriesClient() {
                     span,
                   )}
                   style={{
-                    background: c.kind === 'need' ? 'var(--inr)' : 'var(--aed)',
-                    opacity: 0.14 + share * 0.5,
+                    // The tint goes on the BACKGROUND, not the element.
+                    //
+                    // `opacity` on the container faded the label with it, so a small tile
+                    // rendered its text at 14% — permanently, not mid-animation. axe read
+                    // ratios as low as 1.15 and it was right. `color-mix` keeps the same
+                    // share-proportional tint while the text stays fully opaque.
+                    background: `color-mix(in oklab, var(--${
+                      c.kind === 'need' ? 'inr' : 'aed'
+                    }) ${Math.round((0.14 + share * 0.5) * 100)}%, var(--surface-1))`,
                   }}
                 >
                   <span className="truncate text-sm font-medium text-text-hi">{c.name}</span>

@@ -631,3 +631,58 @@ that *every* panel re-read.
 **One worker, no parallelism.** Every spec writes to the same localStorage origin; running
 them concurrently would make them fight over the ledger and produce exactly the kind of
 flake that gets a suite skipped.
+
+---
+
+## Accessibility: what was real, and what was the measurement (2026-08-16)
+
+Twenty more specs — axe-core over all eight routes in **both** themes, plus 360px overflow,
+keyboard traversal, and the theme swap. First run: 18 failures. Most were not defects.
+
+**The measurement was wrong three separate ways, and each one had to be ruled out before
+touching a colour.** Repainting a palette to satisfy a bad reading is worse than not
+checking at all.
+
+1. **Mid-animation sampling.** axe reads computed colour at an instant, and a card a third
+   through its fade-in reports the blend — `#edeff1` on `#ffffff`, a ratio of 1.15, for text
+   that is perfectly legible once settled. Fixed by emulating `prefers-reduced-motion`,
+   which also means these assertions now cover the static fallback `CLAUDE.md` requires.
+2. **Mid-theme-transition sampling.** Flipping `data-theme` on a live page and measuring
+   immediately catches every element blended between palettes. `#727579` — the background in
+   a dozen "failures" — is almost exactly halfway between light `#E7EBEF` and dark
+   `#212932`. next-themes ships `disableTransitionOnChange` for the toggle; setting the
+   attribute directly bypasses it. The theme is now set **before load**, the way a returning
+   visitor arrives.
+3. **Disabled controls.** WCAG 1.4.3 explicitly exempts inactive components; axe cannot tell
+   a 50%-opacity disabled button from a badly coloured one. Excluded, per the standard.
+
+**What was genuinely broken:**
+
+- **The category treemap faded its own labels.** `opacity: 0.14 + share * 0.5` was set on the
+  tile container, so the text inherited it — a small tile rendered its label at 14% opacity,
+  permanently. Now the tint is a `color-mix` background and the text stays opaque. Identical
+  appearance, readable labels.
+- **Five token values failed AA.** Computed, not eyeballed: light `inr` 3.84, `aed` 3.97,
+  `good` 3.80; dark `warn` 3.98, `horizon` 4.49 — each against its worst surface. Corrected
+  to the nearest value clearing 4.5. **Light was where four of the five lived**, exactly as
+  `CLAUDE.md` warns.
+- **The Add button had no accessible name below 640px.** The label is `hidden sm:inline` and
+  the icon is `aria-hidden`, so a screen reader announced "button". Now always `aria-label`ed.
+- **Two scroll regions were unreachable by keyboard.** `#content` carried `tabIndex={-1}`,
+  which makes it a skip-link target but not something you can focus and drive with the arrow
+  keys. The ledger's table container had no tabindex at all and most of its rows contain
+  nothing focusable to tab to.
+- **The page scrolled sideways at 360px** — 376px of header in a 360px viewport. My first
+  diagnosis blamed the icon rail, because the heuristic picked the element with the largest
+  bounding-box right and the rail's chips extend beyond their own correctly-clipped scroller.
+  The real source was found by looking for elements whose `scrollWidth` exceeds their
+  `clientWidth` while `overflow-x` is `visible`, which named the header directly.
+
+**`contrastRatio`, `relativeLuminance`, `readableInk` and `meetsAA` now live in
+`@raseed/tokens`** — the one package allowed to know what a hex literal is — with a test that
+walks every ink against every surface in both themes. That test, not axe, is the thing that
+will stop the next palette edit from regressing: it runs in `turbo test` in under a second.
+
+One of my own test cases was wrong too: I used `#767676` as an example of a colour that
+fails AA body text. It is 4.54:1 and passes — it is the classic AA boundary grey. `#8C8C8C`
+(3.36) is the honest example.

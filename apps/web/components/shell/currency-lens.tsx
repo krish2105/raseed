@@ -38,7 +38,7 @@ export function CurrencyLens() {
             aria-checked={active}
             onClick={() => void setLens(value)}
             className={cn(
-              'inline-flex h-7 items-center rounded-md px-2 font-mono text-[11px] tracking-tight transition-colors',
+              'inline-flex h-7 items-center rounded-md px-1.5 font-mono text-[11px] tracking-tight transition-colors sm:px-2',
               'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
               active ? 'bg-surface-2 text-text-hi' : 'text-text-lo hover:bg-surface-2 hover:text-text-hi',
               active && value === 'INR' && 'text-inr',

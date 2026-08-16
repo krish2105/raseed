@@ -114,6 +114,8 @@ export function AddExpense() {
         type="button"
         onClick={() => setOpen(true)}
         disabled={status !== 'ready'}
+        aria-label="Add"
+        title="Add an expense"
         className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-text-hi px-2.5 py-1.5 text-sm font-medium text-surface-0 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none disabled:opacity-50"
       >
         <Plus aria-hidden className="h-4 w-4" />
