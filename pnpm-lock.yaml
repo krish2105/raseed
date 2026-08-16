@@ -206,7 +206,11 @@ importers:
         specifier: workspace:*
         version: link:../money
 
-  packages/fixtures: {}
+  packages/fixtures:
+    dependencies:
+      '@raseed/engines':
+        specifier: workspace:*
+        version: link:../engines
 
   packages/money: {}
 

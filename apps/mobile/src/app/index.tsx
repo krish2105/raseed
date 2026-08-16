@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { aiPlaceholder } from '@raseed/ai'
 import { safeToSpend } from '@raseed/engines'
-import { fixturesPlaceholder } from '@raseed/fixtures'
+import { generateLedger } from '@raseed/fixtures'
 import { allocate, format, formatMinor, fromMajor } from '@raseed/money'
 import { schemaPlaceholder } from '@raseed/schema'
 import { fontFamily, palette, radius, space, type Palette } from '@raseed/tokens'
@@ -20,6 +20,7 @@ const sts = safeToSpend({
 })
 
 const inr = sts.amount
+const demo = generateLedger({ endAt: 1_755_300_000_000 })
 const aed = fromMajor('92.50', 'AED')
 const split = allocate(fromMajor('1.00', 'INR'), 3)
 
@@ -29,7 +30,7 @@ const packages = [
   { name: '@raseed/schema', value: schemaPlaceholder() },
   { name: '@raseed/engines', value: `STS ${formatMinor(sts.amount)}` },
   { name: '@raseed/ai', value: aiPlaceholder() },
-  { name: '@raseed/fixtures', value: fixturesPlaceholder() },
+  { name: '@raseed/fixtures', value: `${demo.transactions.length} txns` },
 ]
 
 export default function HomeScreen() {

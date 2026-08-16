@@ -168,3 +168,41 @@ rather than queueing for next week.
 regretted 8,000 dinner. Unrated transactions stay out of the denominator — a skipped
 rating is not evidence of satisfaction — and `coverage` is reported so a category rated
 twice is visibly less trustworthy than one rated thirty times.
+
+---
+
+## Session 4 — engines finance/stats + @raseed/fixtures (2026-08-16)
+
+**xirr uses bisection, not Newton-Raphson.** Slower, but it cannot diverge. It returns
+`null` when there is no sign change rather than a confident wrong number — a financial
+figure that silently fails to converge is worse than one that admits it.
+
+**amortise's final payment absorbs accumulated rounding.** Found by test: the level payment
+is rounded to whole minor units, so over 240 periods the schedule ended with 56 paise
+outstanding. The last period now settles the balance exactly, and a test asserts total
+principal repaid equals principal borrowed.
+
+**budgetVariance keeps the interaction term separate.** rate x volume decomposition with
+(p1-p0)(q1-q0) reported on its own rather than folded into one of the other two. Folding it
+in is a choice, and hiding a choice inside a number is how dashboards mislead.
+
+**MAD, not mean/sigma.** A test proves the point: with one 80,000 outlier in a week of ~200
+days, the classic z-score is 2.4 — under the usual threshold, because the outlier inflates
+sigma enough to hide itself. The robust score is >100.
+
+**Block bootstrap is provably wider than IID.** A test builds an autocorrelated series and
+asserts the block-resampled P10-P90 spread strictly exceeds the IID one. That is the whole
+argument for the extra complexity, so it is asserted rather than assumed.
+
+**Statistics have exactly one home.** `mean`/`median` were briefly defined in both
+detectRecurrence and stats, which broke the barrel export with a name collision.
+Consolidated into `stats/`; detectRecurrence imports from there.
+
+**Fixtures are byte-identical for a seed, and the engines are asserted against them.**
+Rather than trusting the generator, the suite runs pairReversals, detectRemittance and
+detectRecurrence over the output and asserts they find the three planted refund pairs, both
+planted remittances (at 1.5% worse than mid-market, so efficiency has something to report)
+and the Netflix 649 -> 799 hike. A generator nobody validates is a generator that drifts.
+
+**Weekend spend is heavier by construction**, so the autocorrelation block bootstrap exists
+for is actually present in the demo data.

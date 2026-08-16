@@ -1,3 +1,5 @@
+import { coefficientOfVariation, mean, median } from '../stats'
+
 /**
  * Recurrence radar — statistical, not regex.
  *
@@ -112,37 +114,10 @@ export function detectRecurrence(
   return found.sort((a, b) => b.confidence - a.confidence)
 }
 
-// ── statistics ──────────────────────────────────────────────────────────────
-
-export function diff(values: readonly number[]): number[] {
+function diff(values: readonly number[]): number[] {
   const out: number[] = []
   for (let i = 1; i < values.length; i += 1) out.push(values[i]! - values[i - 1]!)
   return out
-}
-
-export function mean(values: readonly number[]): number {
-  if (values.length === 0) return Number.NaN
-  return values.reduce((a, b) => a + b, 0) / values.length
-}
-
-/** Population standard deviation. */
-export function stdev(values: readonly number[]): number {
-  if (values.length === 0) return Number.NaN
-  const m = mean(values)
-  return Math.sqrt(values.reduce((acc, v) => acc + (v - m) ** 2, 0) / values.length)
-}
-
-export function coefficientOfVariation(values: readonly number[]): number {
-  const m = mean(values)
-  if (m === 0) return Number.POSITIVE_INFINITY
-  return stdev(values) / Math.abs(m)
-}
-
-export function median(values: readonly number[]): number {
-  if (values.length === 0) return Number.NaN
-  const sorted = [...values].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
 }
 
 function round2(n: number): number {

@@ -1,6 +1,6 @@
 import { aiPlaceholder } from '@raseed/ai'
 import { safeToSpend } from '@raseed/engines'
-import { fixturesPlaceholder } from '@raseed/fixtures'
+import { generateLedger } from '@raseed/fixtures'
 import { allocate, format, fromMajor, formatMinor } from '@raseed/money'
 import { schemaPlaceholder } from '@raseed/schema'
 import { fontFamily } from '@raseed/tokens'
@@ -18,6 +18,7 @@ const sts = safeToSpend({
 })
 
 const inr = sts.amount
+const demo = generateLedger({ endAt: 1_755_300_000_000 })
 const aed = fromMajor('92.50', 'AED')
 
 // The S1 criterion, rendered rather than asserted: 100 minor units, three ways.
@@ -29,7 +30,7 @@ const packages = [
   { name: '@raseed/schema', value: schemaPlaceholder() },
   { name: '@raseed/engines', value: `safe to spend ${formatMinor(sts.amount)}` },
   { name: '@raseed/ai', value: aiPlaceholder() },
-  { name: '@raseed/fixtures', value: fixturesPlaceholder() },
+  { name: '@raseed/fixtures', value: `${demo.transactions.length} txns seeded` },
 ]
 
 export default function Home() {
