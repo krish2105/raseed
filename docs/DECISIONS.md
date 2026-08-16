@@ -304,3 +304,38 @@ test. `د.إ` is right-to-left, so bidi reordering turned `د.إ101.09` into `10
 symbol jumped behind the number and the glyphs re-formed. UAE bank statements print
 "AED 101.09" for exactly this reason. A regression test now asserts `format()` emits no
 character in the RTL ranges.
+
+---
+
+## Session 7 — Mobile P1: op-sqlite + Drizzle + manual entry (2026-08-16)
+
+**The DDL is generated from the contract, not hand-written.** `src/db/migrations.ts` renders
+CREATE TABLE from `@raseed/schema`'s `TABLES`, so the device schema cannot drift from the
+Postgres one. CHECK constraints come across too — an invalid `txn_type` is rejected on
+device, not only on the server.
+
+**`v_spend` is rendered from `spendPredicate()`, the same string the Supabase migration
+uses.** Verified on the simulator against a hand-built six-row fixture: a normal spend, a
+transfer, a pending row, a soft-deleted row, and a reversal pair. The view returned exactly
+one row. SQLite needs no `security_invoker` — one user per device, nothing to scope.
+
+**Persistence proven by force-quit, not by assertion.** Killed the app, wrote rows, relaunched:
+Safe-to-Spend moved 7,754.44 -> 7,014.44, exactly the 740.00 that was inserted. The engine,
+the view and the database all agree on the same number.
+
+**No query library.** op-sqlite is synchronous over JSI, so reads are cheap enough to redo
+on render. A 40-line `useQuery` over `useSyncExternalStore` replaces TanStack Query entirely;
+there is no async cache to invalidate. Legend-State and the Supabase plugin arrive when there
+is a second device — at n=1 they are complexity paid for and unused.
+
+**`useNow()` instead of `Date.now()` in render.** The React Compiler rejects impure calls
+during render, which is the same rule `@raseed/engines` follows by taking time as a
+parameter. The hook refreshes on app foreground, on tab focus, and at midnight — precisely
+when Safe-to-Spend must recompute anyway.
+
+**Writes freeze `fx_rate` and `home_amount_minor` once.** Nothing recomputes them later;
+changing home currency must not rewrite history. Soft delete only.
+
+**Known, not a bug:** the dev client shows an "Open in RASEED?" prompt on each launch. That
+is `expo start` handing over a deep link, not app behaviour — it does not appear in a
+release build.
