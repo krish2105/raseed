@@ -1098,3 +1098,35 @@ saying what to do instead. It is the most load-bearing invariant in the repo: bo
 import these functions, and the moment one reaches for a clock, a number on the phone and the
 same number on the dashboard can legitimately differ. Verified by writing a file that breaks
 all of it and watching three errors appear, then deleting it.
+
+---
+
+## Statement import, wired (2026-08-16)
+
+The parser proposes; the screen commits. Nothing is written until the button is pressed, and
+every row on display can be excluded — the alternative is an import that silently adds three
+hundred transactions to a ledger you then cannot trust.
+
+**The date question is the design.** When the file cannot say whether `03/04` is 3 April or
+4 March, the screen asks — and shows what *each answer would mean* ("03/04 = 3 April" versus
+"03/04 = 4 March") rather than asking an abstract question about date formats that nobody
+should have to hold in their head. The import button stays disabled until it is answered.
+
+**A real UX bug the tests caught.** The date control was keyed on
+`parsed.needsDateConfirmation`, so it vanished the instant you chose — meaning a wrong pick
+could only be undone by re-uploading the file. It now tracks whether the *file* is ambiguous,
+independent of whether it has been answered, and the choice stays changeable right up until
+import. The whole reason for asking is that the answer is not obvious, so the answer has to
+be revisable.
+
+**Deduplication is enforced, not advisory.** Rows already in the ledger are excluded and
+cannot be re-enabled by hand. Importing the same file twice offers zero rows.
+
+Income lines import with `direction: 'in'` so they land as income rather than spend. Filing
+a salary credit as an expense would be a far worse bug than skipping it, and the `v_spend`
+predicate keeps it out of every spend figure automatically.
+
+One of my assertions was wrong again, in a way worth recording: I checked the import landed
+by searching the ledger for "SWIGGY" and expecting one row. The seeded demo contains **thirty**
+Swiggy rows, so that assertion proved nothing either way. Searching for a string unique to
+the imported file is the check that actually tests something.

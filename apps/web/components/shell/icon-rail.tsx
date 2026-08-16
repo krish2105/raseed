@@ -11,6 +11,7 @@ import {
   Flame,
   Plane,
   Receipt,
+  FileUp,
   TrendingUp,
   Waves,
 } from 'lucide-react'
@@ -26,6 +27,7 @@ export const ROUTES = [
   { href: '/trips', label: 'Trips', Icon: Plane },
   { href: '/reckoning', label: 'Reckoning', Icon: Flame },
   { href: '/ledger', label: 'Ledger', Icon: Receipt },
+  { href: '/import', label: 'Import', Icon: FileUp },
   { href: '/lab', label: 'Lab', Icon: FlaskConical },
 ] as const
 

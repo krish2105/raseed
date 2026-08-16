@@ -10,6 +10,7 @@ export const ROUTES = [
   '/trips',
   '/reckoning',
   '/ledger',
+  '/import',
   '/lab',
 ] as const
 
