@@ -174,6 +174,26 @@ export const Q = {
      ORDER BY home_minor DESC;`,
 
   /** Daily totals for the trailing window — feeds the MAD anomaly detector and the charts. */
+  /**
+   * Net movement per day across EVERY transaction, not just spend.
+   *
+   * Reads the raw table, not `v_spend`, and that is not an inlined predicate — it is a
+   * different question. A net-worth line has to count income and transfers; a spend view
+   * exists precisely to exclude them. Signed by direction so the running total can be
+   * accumulated client-side.
+   *
+   * `home_amount_minor` is used under the INR lens and never a live rate: each row carries the
+   * rate frozen at its own date, so the curve is what your balance actually did rather than
+   * what it would have done at today's rate.
+   */
+  netMovementSince: (sinceMs: number, lens: Lens) =>
+    `SELECT CAST(epoch_ms(occurred_at) AS DATE)::VARCHAR AS day,
+            SUM(CASE WHEN direction = 'in' THEN ${lensAmount(lens)}
+                     ELSE -${lensAmount(lens)} END)::BIGINT AS net_minor
+     FROM ${RAW_TABLE}
+     WHERE occurred_at >= ${sinceMs} AND deleted = false AND status = 'confirmed'
+     GROUP BY 1 ORDER BY 1;`,
+
   dailyTotalsSince: (sinceMs: number, lens: Lens) =>
     `SELECT CAST(epoch_ms(occurred_at) AS DATE)::VARCHAR AS day,
             SUM(${lensAmount(lens)})::BIGINT             AS home_minor,

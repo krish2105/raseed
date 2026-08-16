@@ -17,8 +17,12 @@ import {
   regime,
   remittances,
   trips,
+  netWorthSeries,
+  dailySeries,
 } from '@/lib/duck/analytics'
 import { CorridorAuto } from '@/components/charts/corridor-auto'
+import { CalendarHeatmap } from '@/components/charts/calendar-heatmap'
+import { NetWorthLine } from '@/components/charts/net-worth-line'
 import { cn } from '@/lib/utils'
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`
@@ -40,6 +44,9 @@ export function TowerClient() {
   const head = useDuckQuery(() => headline(lens), [lens])
   const reg = useDuckQuery(() => regime(lens), [lens])
   const fc = useDuckQuery(() => forecast(lens, 14), [lens])
+  // Tier 0 #2 and #4, the last two core features that were never built.
+  const nw = useDuckQuery(() => netWorthSeries(365, lens), [lens])
+  const cal = useDuckQuery(() => dailySeries(548, lens), [lens])
   const cats = useDuckQuery(() => byCategory(30, lens), [lens])
   const conc = useDuckQuery(() => concentration(lens), [lens])
   const mix = useDuckQuery(() => currencyMix(90), [])
@@ -495,6 +502,43 @@ export function TowerClient() {
             />
           ) : (
             <Skeleton className="h-16 w-full" />
+          )}
+        </Tile>
+
+        {/* ── net worth · Tier 0 #2 ────────────────────────────────────────── */}
+        <Tile
+          span={6}
+          rows={2}
+          index={15}
+          title="Where you stand"
+          hint="365 days, relative to the start"
+        >
+          {/* The error branch is not decoration. A query that failed used to render a
+              skeleton for ever — which is exactly how a wrong table name in netMovementSince
+              survived a build, a deploy and a screenshot before anyone noticed. */}
+          {nw.error ? (
+            <p className="text-xs leading-relaxed text-warn">{nw.error}</p>
+          ) : nw.data ? (
+            <NetWorthLine points={nw.data} />
+          ) : (
+            <Skeleton className="h-44 w-full" />
+          )}
+        </Tile>
+
+        {/* ── calendar · Tier 0 #4 ─────────────────────────────────────────── */}
+        <Tile
+          span={6}
+          rows={2}
+          index={16}
+          title="Every day"
+          hint="18 months, quantile-shaded"
+        >
+          {cal.error ? (
+            <p className="text-xs leading-relaxed text-warn">{cal.error}</p>
+          ) : cal.data ? (
+            <CalendarHeatmap points={cal.data} />
+          ) : (
+            <Skeleton className="h-32 w-full" />
           )}
         </Tile>
       </div>

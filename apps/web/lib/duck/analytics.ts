@@ -143,6 +143,37 @@ export async function dailySeries(days: number, lens: Lens): Promise<DailyPoint[
   }))
 }
 
+export interface NetWorthPoint {
+  day: string
+  /** Running balance at the end of that day, relative to the window's start. */
+  balance: Money
+  /** That day's own net movement, for the tooltip. */
+  change: Money
+}
+
+/**
+ * The running balance curve (Tier 0 · #2).
+ *
+ * **Relative to the start of the window, not absolute.** The ledger has no opening balance for
+ * accounts it has never seen, so an absolute figure would be a guess with a currency symbol on
+ * it. What this shows is the shape — how much you are up or down over the period — which is
+ * the question the chart is actually asked, and the caption says so.
+ */
+export async function netWorthSeries(days: number, lens: Lens): Promise<NetWorthPoint[]> {
+  const rows = await query<{ day: string; net_minor: number }>(
+    Q.netMovementSince(NOW - days * DAY, lens),
+  )
+  let running = 0
+  return rows.map((r) => {
+    running += Number(r.net_minor)
+    return {
+      day: String(r.day).slice(0, 10),
+      balance: asMoney(running, lens),
+      change: asMoney(Number(r.net_minor), lens),
+    }
+  })
+}
+
 // ── engine-backed ───────────────────────────────────────────────────────────
 
 export interface Concentration {
