@@ -206,3 +206,41 @@ and the Netflix 649 -> 799 hike. A generator nobody validates is a generator tha
 
 **Weekend spend is heavier by construction**, so the autocorrelation block bootstrap exists
 for is actually present in the demo data.
+
+---
+
+## Session 6 — Web P0 shell + three-state theme toggle (2026-08-16)
+
+**`next dev` runs on webpack, not Turbopack.** Turbopack in Next 16.3.1 under pnpm's
+hoisted linker cannot resolve Next's own Pages-Router internals
+(`next/dist/shared/lib/utils`, `next/dist/compiled/*`), producing ~25 module-not-found
+errors, a 500 and dead HMR. `next build` and `next start` are completely clean, and
+`next dev --webpack` is completely clean — so this is Turbopack-specific and dev-only.
+`dev` is pinned to `--webpack`; `dev:turbo` is kept to retest on the next Next release.
+
+**The theme toggle uses `useSyncExternalStore`, not setState-in-an-effect.** The usual
+next-themes mount guard trips the React Compiler lint rule about cascading renders. A
+server snapshot of false and a client snapshot of true gives the same "am I hydrated"
+answer without scheduling a second render pass.
+
+**Three states, not a binary switch.** Light / System / Dark as a radiogroup. Collapsing
+"system" into a toggle silently overrides the OS preference the first time someone clicks.
+Verified all three: Light writes `data-theme="light"` and the light palette resolves;
+System writes `dark` on this machine because the OS prefers dark; Dark forces it.
+
+**The currency lens lives in the URL via nuqs**, so a view pasted into Slack reproduces
+exactly — including which currency it was read in. It swaps which column is read; it never
+recomputes history.
+
+**The panel left edge encodes the currency mix of the data inside it**, not decoration:
+warm for INR-dominant, cool for AED, a gradient in between. Category bars use the same
+logic for need vs want. Every colour resolves from a CSS variable at render, so a theme
+change re-resolves it — a hardcoded chart palette is the most common way theme toggles
+break.
+
+**Charts are hand-built CSS, no chart library yet.** visx and d3 arrive at S10 with the
+real chart foundation. A bar whose width is a share needs no dependency, and the reveal
+animates `transform` only.
+
+**Every rail route exists**, with an honest placeholder naming the session that fills it
+and what it will contain — rather than an empty chart frame that looks broken.

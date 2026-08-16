@@ -2,7 +2,7 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: 5**
+**Current session: 5 (S6 done out of order — web shell prioritised for deploy)**
 
 ---
 
@@ -17,7 +17,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 ## Tracks B & C — alternating
 
 - [ ] **S5** Mobile P0 — shell, tokens, fonts, three tabs
-- [ ] **S6** Web P0 — shell, three-state theme toggle, no hydration warning, no FOUC
+- [x] **S6** Web P0 — shell, three-state theme toggle, no hydration warning, no FOUC
 - [ ] **S7** Mobile P1 — op-sqlite, schema, manual entry, sync wiring
 - [ ] **S8** Web P1 — DuckDB-WASM, Arrow ingest, live + demo paths, view rebuild <400ms
 - [ ] **S9** Mobile P2 — Safe-to-Spend engine + Day Dial
@@ -53,6 +53,10 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - **Supabase cloud not linked** — schema, migration and RLS are authored and verified
   against PGlite. Applying to a real project needs `supabase login` + `link` + `db push`,
   which needs Krishna's credentials. **One command when he's back.**
+
+- **Turbopack dev is broken under pnpm hoisted** — `next dev` pinned to `--webpack`.
+  Production build/start and webpack dev are all clean; only Turbopack dev fails.
+  Retest with `pnpm --filter web run dev:turbo` on the next Next release.
 
 ## Deferred decisions
 
