@@ -695,3 +695,103 @@ export function liquidBalanceMinor(): number {
 
   return opening + movement
 }
+
+// ── editing a transaction ───────────────────────────────────────────────────
+
+export interface EditableTxn {
+  id: string
+  occurredAt: number
+  amount: Money
+  merchantText: string
+  categoryId: string | null
+  accountId: string
+  note: string | null
+}
+
+/**
+ * One transaction, in the shape the edit form needs.
+ *
+ * Reads `transactions` rather than `v_spend` on purpose: you must be able to open a row that
+ * the spend predicate excludes — a refund, or something already deleted — otherwise the only
+ * rows you can correct are the ones that were already right.
+ */
+export function getTransaction(id: string): EditableTxn | null {
+  const r = (
+    getConnection().executeSync(
+      `SELECT id, occurred_at, amount_minor, currency, raw_text, category_id, account_id, note
+         FROM transactions WHERE id = ? AND deleted = 0;`,
+      [id],
+    ).rows as unknown as {
+      id: string
+      occurred_at: number
+      amount_minor: number
+      currency: Currency
+      raw_text: string | null
+      category_id: string | null
+      account_id: string
+      note: string | null
+    }[]
+  )[0]
+  if (!r) return null
+  return {
+    id: r.id,
+    occurredAt: r.occurred_at,
+    amount: money(r.amount_minor, r.currency),
+    merchantText: r.raw_text ?? '',
+    categoryId: r.category_id,
+    accountId: r.account_id,
+    note: r.note,
+  }
+}
+
+/**
+ * Correct a transaction in place.
+ *
+ * **`fx_rate` and `home_amount_minor` are recomputed only when the amount or currency actually
+ * changes, and then from the rate already frozen on the row** — never from a fresh rate.
+ * `CLAUDE.md`: FX is frozen at transaction date, written once, never recomputed. Fixing a typo
+ * in a merchant name is not a reason to re-price a Dubai dinner at today's rate; that would
+ * silently rewrite history every time someone edited a label.
+ */
+export function updateTransaction(input: {
+  id: string
+  amount: Money
+  merchantText: string
+  categoryId: string
+  accountId: string
+  note?: string | null
+}): void {
+  const existing = (
+    getConnection().executeSync(
+      'SELECT fx_rate, amount_minor, currency FROM transactions WHERE id = ?;',
+      [input.id],
+    ).rows as unknown as { fx_rate: number; amount_minor: number; currency: Currency }[]
+  )[0]
+  if (!existing) return
+
+  const fxRate = existing.fx_rate
+  const homeMinor = Math.round(input.amount.minor * fxRate)
+
+  // Re-resolve, because the merchant text may have been corrected — that is often the whole
+  // point of the edit. raw_text is overwritten with what you now say you paid.
+  const merchantId = resolveMerchant(input.merchantText)?.merchantId ?? null
+
+  getConnection().executeSync(
+    `UPDATE transactions
+        SET amount_minor = ?, currency = ?, home_amount_minor = ?, raw_text = ?,
+            merchant_id = ?, category_id = ?, account_id = ?, note = ?, updated_at = ?
+      WHERE id = ?;`,
+    [
+      input.amount.minor,
+      input.amount.currency,
+      homeMinor,
+      input.merchantText,
+      merchantId,
+      input.categoryId,
+      input.accountId,
+      input.note ?? null,
+      Date.now(),
+      input.id,
+    ],
+  )
+}

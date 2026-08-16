@@ -1,5 +1,6 @@
-import { SectionList, StyleSheet, Text, View } from 'react-native'
+import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
 
 import { format } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
@@ -75,7 +76,14 @@ export default function LedgerScreen() {
           </View>
         )}
         renderItem={({ item }) => (
-          <View style={s.row}>
+          // The whole row opens the editor. A transaction you cannot correct is one you learn
+          // to distrust, and P1's own done-when has always included edit and delete.
+          <Pressable
+            style={s.row}
+            onPress={() => router.push({ pathname: '/edit', params: { id: item.id } })}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit ${item.merchant}, ${format(item.amount)}`}
+          >
             <View style={s.rowLeft}>
               <View
                 style={[s.dot, { backgroundColor: item.currency === 'AED' ? colors.aed : colors.inr }]}
@@ -88,7 +96,7 @@ export default function LedgerScreen() {
               </View>
             </View>
             <Text style={s.rowAmount}>{format(item.amount)}</Text>
-          </View>
+          </Pressable>
         )}
       />
     </SafeAreaView>
