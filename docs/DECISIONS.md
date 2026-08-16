@@ -1297,3 +1297,48 @@ means. Same discipline the engines have.
 Verified on the simulator end to end: plan over and under budget, goal created, contributed
 against, driven to reached (green, full bar, buttons gone), and removed. `turbo typecheck lint
 test` 24/24, 342 engine tests.
+
+## Audit — 17 August 2026
+
+Surveyed all five tracks against the code; `docs/AUDIT.md` holds the evidence, file by file.
+Web P0–P3 and P6–P8 are built, Mobile P0 and P2; the whole of the D, C and S tracks is
+unstarted. Three findings reorder the plan:
+
+- **There is no Supabase project**, so D0 is provisioning, not migration. Nothing already built
+  breaks under it, because nothing is wired to Supabase. The real risk is inverted: the
+  migration SQL has never met a real Postgres, only PGlite.
+- **There is no outbound network call anywhere**, so S4 (redaction) has no surface to protect
+  and its verify — "assert on the outbound payload" — cannot be written. It merges into Mobile
+  P3 as a gate rather than preceding it as a phase. Same for S5 and Ledger Link.
+- **There is no auth.** `user_id` is the literal `'local-user'`, so RLS protects nothing today
+  and every local row would fail the `with check` on first sync. S0 is promoted from position 6
+  to position 2, and a `user_id` reconciliation phase — listed in no document — added after it.
+
+Cut S2 (passkeys), C4 (mutation testing) and D4 (k6). Kept C2 as a table of contents rather than
+an ADR rewrite.
+
+Two `CLAUDE.md` violations found and both fixed the same night. A committed root `ios/` and
+`app.json` carried two bundle identifiers against the mandated one — my error, from an
+`expo prebuild` run at the repo root followed by `git add -A` in `9270163`. And the spend
+predicate was defined a second time in `apps/web/lib/demo.ts`, in a comment that claimed to be
+the single definition; it now renders from the contract, with `spend-parity.test.ts` proving the
+SQL and TypeScript renderings select identical rows.
+
+Also fixed: Safe-to-Spend divided a real ledger into an invented ₹96,000 balance while two
+screens disagreed about committed bills; and the CFO briefing claimed 2,000 bootstrap paths
+where the worker runs 10,000.
+
+`docs/WORKSPACE_ARCHITECTURE.md` did not exist despite being referenced by two docs. Written as
+a **derived** spec with a provenance table and a `PROPOSED` marker on its numbering — the
+recovered content is real, the phase numbers are mine. Its headline finding: `workspace_id`
+exists in no table, so the W track is a breaking migration across 17 tables and 17 policies, not
+a feature. It stays gated on the business path.
+
+Renamed `PROGRESS.md` session numbers from `S0`–`S24` to `#0`–`#24`. `S4` meant both "engines
+finance/stats, complete" and "redaction pipeline, unstarted priority 2" depending on which
+document you were holding.
+
+Open and needing a ruling: three documents cut the 3D globe permanently
+(`RASEED_V2_MASTER_BUILD.md:18`, `:198`, `RASEED_V2_CLAUDE_CODE_PROMPT.md:89`,
+`WEB_ARCHITECTURE.md:88`), and a WebGL version was later requested verbally. `CLAUDE.md` is
+silent, so it does not adjudicate. Not built pending that decision.

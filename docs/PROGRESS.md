@@ -2,40 +2,52 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: 9** — S10/S12/S14/S16 partially landed early (charts, Sankey, variance, query bar)
+**Current session: #26** — S10/S12/S14/S16 partially landed early (charts, Sankey, variance, query bar)
 
 ---
 
+> **Numbering.** These are **session** numbers (`#0`–`#24`). They are not the security phases
+> `S0`–`S10` in `RASEED_SECURITY_ARCHITECTURE.md` §5, and not the `P` phases in the two
+> architecture docs. They used to be written `S0`–`S24`, which meant `#4` (engines finance)
+> read as complete while security `S4` (redaction) was unstarted. Renamed by the 17 Aug audit.
+>
+> Build state for every track lives in **`docs/AUDIT.md`**, which is the reference; this file
+> tracks sessions.
+
 ## Track A — Shared core (must finish before B or C)
 
-- [x] **S0** Monorepo scaffold — both apps import a shared package; breaking it fails both typechecks
-- [x] **S1** `@raseed/money` + `@raseed/tokens` — `allocate` gives 34/33/33; tokens render in both apps
-- [x] **S2** `@raseed/schema` + Supabase migrations + RLS — parity test catches deliberate drift; cross-user read returns zero rows
-- [x] **S3** `@raseed/engines` domain half — safeToSpend, pairReversals, detectRecurrence, detectRemittance, normaliseMerchant, rankNudges, regretRate, all unit tested
-- [x] **S4** `@raseed/engines` finance/stats + `@raseed/fixtures` — known-answer tests pass; same seed twice gives identical output
+- [x] **#0** Monorepo scaffold — both apps import a shared package; breaking it fails both typechecks
+- [x] **#1** `@raseed/money` + `@raseed/tokens` — `allocate` gives 34/33/33; tokens render in both apps
+- [x] **#2** `@raseed/schema` + Supabase migrations + RLS — parity test catches deliberate drift; cross-user read returns zero rows
+- [x] **#3** `@raseed/engines` domain half — safeToSpend, pairReversals, detectRecurrence, detectRemittance, normaliseMerchant, rankNudges, regretRate, all unit tested
+- [x] **#4** `@raseed/engines` finance/stats + `@raseed/fixtures` — known-answer tests pass; same seed twice gives identical output
 
 ## Tracks B & C — alternating
 
-- [x] **S5** Mobile P0 — shell, tokens, fonts, three tabs
-- [x] **S6** Web P0 — shell, three-state theme toggle, no hydration warning, no FOUC
-- [x] **S7** Mobile P1 — op-sqlite, schema, manual entry (sync deferred to a second device)
-- [x] **S8** Web P1 — DuckDB-WASM, Arrow ingest, demo path, view rebuild 41ms at 100k rows (live/Supabase path deferred until credentials exist)
-- [x] **S9** Mobile P2 — Safe-to-Spend engine + Skia Day Dial
-- [x] **S10** Web P2 — hand-built charts, theme-reactive colours, zero hex outside tokens
-- [ ] **S11** Mobile P3 — capture router, confirmation sheet, eval harness ≥0.90
-- [x] **S12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`
-- [x] **S13** Mobile P4 — merchant resolver, alias learning, reversal pairing
-- [~] **S14** Web P4 — treemap, variance, ledger, currency done; net-worth timeline + calendar heatmap remain
-- [~] **S15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips) and **mobile** (`/trip`: `planTrip` over habits read from the ledger, Numbeo price ratios, unconstrained plan with the budget asked separately). Goals ship alongside it (`/goals`: new `goals` table, `savingsPlan` against real monthly surplus, copy through the tone gate). The Live Activity remains
-- [x] **S16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
-- [~] **S17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
-- [x] **S18** Web P6 — Comlink worker; Arrow encoding moved off the main thread (837ms → 16ms longest block, measured)
-- [~] **S19** 🚩 splits + cash live on **web and phone** (one engine, 1,600-case test); blocked on the read-lags-one-write bug below, and the store question
-- [~] **S20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
-- [ ] **S21** Web P8 — landing route, Lenis, Lighthouse ≥95
-- [ ] **S22** Web P9 — Vercel deploy, nuqs share links, a11y sweep
-- [~] **S23** Mobile P8 — receipt OCR is live (`/receipt`, Apple Vision, column-major blocks handled); voice capture remains
-- [ ] **S24** Both — buffer, eval regression, hardening
+- [x] **#5** Mobile P0 — shell, tokens, fonts, three tabs
+- [x] **#6** Web P0 — shell, three-state theme toggle, no hydration warning, no FOUC
+- [x] **#7** Mobile P1 — op-sqlite, schema, manual entry (sync deferred to a second device)
+- [x] **#8** Web P1 — DuckDB-WASM, Arrow ingest, demo path, view rebuild 41ms at 100k rows (live/Supabase path deferred until credentials exist)
+- [x] **#9** Mobile P2 — Safe-to-Spend engine + Skia Day Dial
+- [x] **#10** Web P2 — hand-built charts, theme-reactive colours, zero hex outside tokens
+- [ ] **#11** Mobile P3 — capture router, confirmation sheet, eval harness ≥0.90
+- [x] **#12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`
+- [~] **#13** Mobile P4 — merchant resolver and alias learning are live and on the write path;
+  **reversal pairing is not built** — `pairReversals` is never imported by mobile and
+  `reversal_of_id` is written NULL (`db/queries.ts:166`). Re-marked from [x] by the 17 Aug audit
+- [~] **#14** Web P4 — treemap, variance, ledger, currency done; net-worth timeline + calendar heatmap remain
+- [~] **#15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips) and **mobile** (`/trip`: `planTrip` over habits read from the ledger, Numbeo price ratios, unconstrained plan with the budget asked separately). Goals ship alongside it (`/goals`: new `goals` table, `savingsPlan` against real monthly surplus, copy through the tone gate). The Live Activity remains
+- [x] **#16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
+- [~] **#17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
+- [x] **#18** Web P6 — Comlink worker; Arrow encoding moved off the main thread (837ms → 16ms longest block, measured)
+- [~] **#19** 🚩 splits + cash live on **web and phone** (one engine, 1,600-case test); blocked on the read-lags-one-write bug below, and the store question
+- [~] **#20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
+- [~] **#21** Web **P9** — landing route and Lenis are live (`app/page.tsx`,
+  `components/landing/`); **Lighthouse ≥95 never measured**, which is the actual done-when
+- [~] **#22** Web **P10** — deploy, nuqs share links and the a11y sweep are done;
+  **data export is not built**, and it is a DPDP right, not a nice-to-have
+- [~] **#23** Mobile P8 — receipt OCR is live (`/receipt`, Apple Vision, column-major blocks handled); voice capture remains
+- [ ] **#24** Both — buffer, eval regression, hardening
 
 ---
 

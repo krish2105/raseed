@@ -36,7 +36,7 @@ section.
 psql "PASTE_YOUR_CONNECTION_STRING" -f supabase/migrations/00000000000000_init.sql
 ```
 
-That file creates all 16 tables, the indexes, `v_spend`, and enables RLS with an owner
+That file creates all 17 tables, the indexes, `v_spend`, and enables RLS with an owner
 policy on every table.
 
 4. **One thing will fail, and it should.** The migration references `auth.users` and
