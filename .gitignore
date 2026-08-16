@@ -38,6 +38,9 @@ coverage/
 .vercel
 .env*
 
+# Copied from node_modules at build time; ~75MB has no business in git.
+apps/web/public/duckdb/
+
 # Playwright
 apps/web/test-results/
 apps/web/playwright-report/

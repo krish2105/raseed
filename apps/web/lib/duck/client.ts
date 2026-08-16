@@ -14,13 +14,32 @@ import * as duckdb from '@duckdb/duckdb-wasm'
 let instance: Promise<duckdb.AsyncDuckDB> | null = null
 
 async function create(): Promise<duckdb.AsyncDuckDB> {
-  // jsDelivr bundles are selected by feature detection — it picks the COI/EH/MVP build
-  // that this browser can actually run rather than assuming threads are available.
-  const bundles = duckdb.getJsDelivrBundles()
-  const bundle = await duckdb.selectBundle(bundles)
+  // Served from our own origin, not jsDelivr.
+  //
+  // `getJsDelivrBundles()` is the documented path and it was what this used. It also means a
+  // third party sees the IP of everyone who opens a personal finance dashboard, and that a
+  // CDN outage silently empties every figure on the site. Neither is acceptable for this app,
+  // and the strict CSP added in S6 blocked it outright — which is how it was found.
+  //
+  // `scripts/copy-duckdb.mjs` puts these in public/ at build time. Feature detection is
+  // unchanged: `selectBundle` still picks EH or MVP based on what the browser can run.
+  // Absolute URLs, not root-relative. `instantiate` resolves `mainModule` *inside the worker*,
+  // where a bare "/duckdb/…" has no base to resolve against — it fails with "Failed to parse
+  // URL", and only after the worker has already started, so the page looks like it is loading
+  // rather than broken.
+  const at = (p: string) => new URL(p, location.origin).href
+  const bundle = await duckdb.selectBundle({
+    mvp: {
+      mainModule: at('/duckdb/duckdb-mvp.wasm'),
+      mainWorker: at('/duckdb/duckdb-browser-mvp.worker.js'),
+    },
+    eh: {
+      mainModule: at('/duckdb/duckdb-eh.wasm'),
+      mainWorker: at('/duckdb/duckdb-browser-eh.worker.js'),
+    },
+  })
 
-  // The worker has to come from a same-origin URL or the module worker is blocked, so the
-  // CDN script is wrapped in a Blob.
+  // Wrapped in a Blob so the worker is same-origin regardless of where the script is served.
   const workerUrl = URL.createObjectURL(
     new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
   )

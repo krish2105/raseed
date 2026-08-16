@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendor bundles copied out of node_modules at build time by scripts/copy-duckdb.mjs.
+    // Minified third-party code, not ours to lint.
+    "public/duckdb/**",
   ]),
 ]);
 
