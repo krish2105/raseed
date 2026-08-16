@@ -1,6 +1,7 @@
 import { generateLedger, type FixtureTransaction } from '@raseed/fixtures'
 import { detectRecurrence, gini, madZScore, pareto } from '@raseed/engines'
 import { money, sum, type Money } from '@raseed/money'
+import { selectSpend } from '@raseed/schema/contract'
 
 /**
  * The demo ledger, computed once per process.
@@ -16,23 +17,15 @@ export const DEMO_END_AT = 1_755_300_000_000
 export const ledger = generateLedger({ endAt: DEMO_END_AT })
 
 /**
- * The spend predicate. Mirrors packages/schema/src/contract.ts SPEND_PREDICATE exactly —
- * confirmed, not a reversal, not reversed by anything, not soft-deleted.
+ * The spend predicate, from the contract rather than re-typed here.
  *
- * Defined once here and imported everywhere. Never inline this filter in a component.
+ * This used to be a hand-written copy that claimed in its own comment to be the single
+ * definition. It was not — `packages/schema` already owned the rule, and a second copy is
+ * exactly the "two places disagreeing about what counts as spend" that `CLAUDE.md` names as
+ * the source of every wrong number in a finance dashboard. The two happened to agree; nothing
+ * kept them agreeing. `spend-parity.test.ts` now runs both renderings over the same rows.
  */
-const reversedIds = new Set(
-  ledger.transactions.map((t) => t.reversal_of_id).filter((id): id is string => id !== null),
-)
-
-export const vSpend: FixtureTransaction[] = ledger.transactions.filter(
-  (t) =>
-    t.txn_type === 'spend' &&
-    t.status === 'confirmed' &&
-    t.reversal_of_id === null &&
-    !t.deleted &&
-    !reversedIds.has(t.id),
-)
+export const vSpend: FixtureTransaction[] = selectSpend(ledger.transactions)
 
 const vIncome: FixtureTransaction[] = ledger.transactions.filter(
   (t) => t.txn_type === 'income' && t.status === 'confirmed' && !t.deleted,

@@ -317,6 +317,42 @@ export function spendPredicate(table = 'transactions'): string {
   return SPEND_PREDICATE.replaceAll('{table}', table)
 }
 
+/** The columns the predicate reads. Anything row-shaped with these can be filtered. */
+export interface SpendRow {
+  readonly id: string
+  readonly txn_type: string
+  readonly status: string
+  readonly reversal_of_id: string | null
+  readonly deleted: boolean
+}
+
+/**
+ * The same predicate, for callers holding rows in memory rather than in a table.
+ *
+ * Three surfaces need this rule and only two of them have a SQL engine: DuckDB has `v_spend`,
+ * SQLite has `v_spend`, and the web demo path is plain TypeScript over fixture output before
+ * DuckDB has loaded. That third one used to hand-write the filter, which is precisely the
+ * "two places disagreeing about what counts as spend" that `CLAUDE.md` names as the origin of
+ * every wrong number in every finance dashboard.
+ *
+ * This is still two renderings of one rule, so `spend-parity.test.ts` runs both against the
+ * same adversarial rows and asserts identical output. The rule is defined once; the proof that
+ * both renderings honour it is a test, not a comment.
+ */
+export function selectSpend<T extends SpendRow>(rows: readonly T[]): T[] {
+  const reversed = new Set(
+    rows.map((r) => r.reversal_of_id).filter((id): id is string => id !== null),
+  )
+  return rows.filter(
+    (r) =>
+      r.txn_type === 'spend' &&
+      r.status === 'confirmed' &&
+      r.reversal_of_id === null &&
+      !r.deleted &&
+      !reversed.has(r.id),
+  )
+}
+
 /**
  * `securityInvoker` is Postgres-only and load-bearing there: without it the view runs as
  * its owner and bypasses RLS on the underlying table, returning every user's rows. SQLite
