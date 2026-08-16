@@ -969,3 +969,47 @@ closure. The disable carries that sentence.
 The lesson worth keeping: a negative result is only as good as the mechanism it actually
 excluded. Two of the five experiments here excluded nothing, and both of them read as
 conclusive at the time.
+
+---
+
+## Splits that settle, and trips planned from your own ledger (2026-08-16)
+
+**The Splitwise feature that matters is not splitting — it is simplification.** Four people
+and eleven shared expenses is a dozen transfers; restructured it is two or three, and
+nobody's net position moves by a paisa. Greedy largest-debtor-to-largest-creditor, which is
+what Splitwise itself uses: the true minimum is NP-hard, and greedy never exceeds n−1
+payments for n people, which is the bound that actually matters.
+
+The property test is the one worth having: forty randomly generated groups, and after
+applying the settlements every single person must land on exactly zero. Preserving each net
+position is far more important than the payment count — simplification reorganises who pays
+whom and must never move money.
+
+**One honest caveat their marketing does not make obvious:** greedy can produce a payment
+between two people who never shared an expense. Same money, same net for everyone, but "why
+do I owe Sam, I was never at that dinner" is a real reaction. So `directDebts` is offered
+alongside — every debt attached to the pair that actually shared something, more payments
+but each one explicable. Both are exposed rather than one being chosen on the user's behalf.
+
+**Trips are planned from behaviour, not from a template.** Every travel budgeter starts from
+a generic split that describes nobody. Here the food line is *your* average per meal times
+*your* meals-a-day times the destination multiplier; the stay line is your real past nightly
+rate. Activities are the one line with no history behind them, so they are derived from the
+others rather than invented.
+
+Two deliberate refusals in `planTrip`:
+
+- **The buffer is a real line, not a rounding cushion.** Trips overrun. A plan that pretends
+  otherwise sets someone up to feel they failed at arithmetic that was always optimistic.
+- **When the budget is tight it trims the flexible lines only.** Flights and a booked room
+  are not negotiable by an algorithm; how often you eat out is. And when the fixed costs
+  alone break the budget it says exactly that rather than scaling them down to fit a number
+  that cannot be met.
+
+`savingsPlan` states arithmetic and takes no view: what per month reaches the target, whether
+that is inside genuine capacity, and — when it is not — how many months it would actually
+take. Naming the shortfall is more useful than insisting the deadline works.
+
+A test caught me choosing the wrong branch rather than the wrong behaviour: at a ₹30,000
+budget the fixed costs alone are ₹39,800, so the planner correctly reported the trip
+impossible instead of trimming. The test wanted ₹45,000.
