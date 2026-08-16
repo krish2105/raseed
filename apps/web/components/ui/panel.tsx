@@ -33,10 +33,10 @@ export function Panel({ title, hint, children, className, aedShare }: PanelProps
     >
       {edge && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5" style={{ background: edge }} />}
       {(title || hint) && (
-        <header className="flex items-baseline justify-between gap-3 px-5 pt-4">
+        <div className="flex items-baseline justify-between gap-3 px-5 pt-4">
           {title && <h2 className="text-sm font-medium text-text-hi">{title}</h2>}
           {hint && <p className="text-xs text-text-lo">{hint}</p>}
-        </header>
+        </div>
       )}
       <div className="px-5 pt-3 pb-5">{children}</div>
     </section>

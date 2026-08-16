@@ -1,6 +1,6 @@
 import { generateLedger, type FixtureTransaction } from '@raseed/fixtures'
-import { detectRecurrence, gini, madZScore, pareto, regretRate } from '@raseed/engines'
-import { money, sum, zero, type Money } from '@raseed/money'
+import { detectRecurrence, gini, madZScore, pareto } from '@raseed/engines'
+import { money, sum, type Money } from '@raseed/money'
 
 /**
  * The demo ledger, computed once per process.
@@ -34,13 +34,13 @@ export const vSpend: FixtureTransaction[] = ledger.transactions.filter(
     !reversedIds.has(t.id),
 )
 
-export const vIncome: FixtureTransaction[] = ledger.transactions.filter(
+const vIncome: FixtureTransaction[] = ledger.transactions.filter(
   (t) => t.txn_type === 'income' && t.status === 'confirmed' && !t.deleted,
 )
 
 const DAY = 86_400_000
 
-export function homeMoney(minor: number): Money {
+function homeMoney(minor: number): Money {
   return money(Math.round(minor), 'INR')
 }
 
@@ -68,7 +68,7 @@ export const savingsRate =
   income30.minor === 0 ? 0 : (income30.minor - spend30.minor) / income30.minor
 
 /** Median of the trailing three months' daily spend, annualised into a burn figure. */
-export const dailyBurn: number[] = (() => {
+const dailyBurn: number[] = (() => {
   const byDay = new Map<number, number>()
   for (const t of trailing(vSpend, 90)) {
     const day = Math.floor(t.occurred_at / DAY)
@@ -168,10 +168,7 @@ export const paretoMerchants = pareto(byMerchant.map((m) => ({ item: m.name, val
 /** Days in the trailing 90 whose spend is a robust-z outlier. */
 export const anomalyCount = madZScore(dailyBurn).filter((z) => Math.abs(z) > 3.5).length
 
-export const regret = regretRate(
-  // No worth-it ratings exist until S17, so this is empty by construction rather than faked.
-  [],
-)
+// regretRate is deliberately NOT surfaced yet: no worth-it ratings exist until S17, and a
+// regret figure computed over zero ratings is a fake number dressed as an insight.
 
 export const remittanceCount = ledger.meta.planted.remittances
-export const zeroMoney = zero('INR')
