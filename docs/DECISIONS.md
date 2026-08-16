@@ -786,3 +786,32 @@ with `merchant_id = m-swiggy` and canonical name **Swiggy**, and bumped that ali
 `hit_count` from 0 to 1. Note that `SWIGGY LIMITED` normalises to `swiggy limited`, not
 `swiggy` — the bank-statement form is a separate alias pointing at the same merchant, which
 is correct rather than a miss.
+
+---
+
+## S9 — the Skia Day Dial (2026-08-16)
+
+The flat meter is gone. A 270° arc with a gap at the bottom reads as a gauge rather than a
+pie, and as *how much day is left* rather than *what percentage of a budget is consumed* —
+the same number, and only one of them is usable at a glance.
+
+**The figure inside the ring is real React Native text, not pixels in the canvas.** Screen
+readers and text selection both work; painting the number into Skia would have cost both for
+nothing. The canvas draws the arc, and only the arc.
+
+`progress` is clamped to 0–1: a 130% day should fill the ring, not wrap around it and read as
+30%. A zero-length arc is skipped entirely, because a round stroke cap still paints a dot at
+the start position, and a dot reads as "you spent something" on a day you have not.
+
+The sweep gradient runs brass → verdigris → brass, so the dial carries the same currency
+temperature as every figure in the app rather than inventing a third colour language.
+
+**Two environment fixes were needed and both belong in the repo, not in someone's shell:**
+
+- **CocoaPods 1.17.0 on Ruby 4.0.6 fails** with `Unicode Normalization not appropriate for
+  ASCII-8BIT` unless the locale is UTF-8. `LANG=en_US.UTF-8` fixes it; noted in the runbook
+  because the error names Unicode and not the locale, which sends you the wrong way.
+- **pnpm 10 blocks lifecycle scripts by default**, so Skia's postinstall never downloaded its
+  prebuilt binaries and `pod install` failed with "Skia prebuilt binaries not found".
+  `@shopify/react-native-skia` is now in `onlyBuiltDependencies`, which is where the fix
+  belongs — running `npx install-skia` by hand would work once and fail for the next person.

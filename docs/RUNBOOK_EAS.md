@@ -96,3 +96,20 @@ Then rebuild, because the provisioning profile has to include the new device.
   native dependency is in `package.json` rather than only linked locally.
 - App installs but shows a blank screen → the dev client cannot reach Metro. Both devices
   must be on the same network; `pnpm start --tunnel` works around a hostile one.
+
+## Native rebuild gotchas (found the hard way, S9)
+
+Adding a native module means a real rebuild — `npx expo run:ios`. Two failures that do not
+say what is actually wrong:
+
+**`Unicode Normalization not appropriate for ASCII-8BIT`** from CocoaPods. This is a locale
+problem, not a Unicode one. Ruby 4.x + CocoaPods 1.17 need a UTF-8 locale:
+
+```bash
+export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
+```
+
+**`Skia prebuilt binaries not found. Run npx install-skia`.** pnpm 10 blocks dependency
+lifecycle scripts by default, so the postinstall that downloads them never ran. The fix is
+in `pnpm-workspace.yaml` under `onlyBuiltDependencies`, not a one-off command — running
+`npx install-skia` by hand works once and fails for the next person to clone the repo.

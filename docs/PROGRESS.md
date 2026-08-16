@@ -20,7 +20,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [x] **S6** Web P0 — shell, three-state theme toggle, no hydration warning, no FOUC
 - [x] **S7** Mobile P1 — op-sqlite, schema, manual entry (sync deferred to a second device)
 - [x] **S8** Web P1 — DuckDB-WASM, Arrow ingest, demo path, view rebuild 41ms at 100k rows (live/Supabase path deferred until credentials exist)
-- [ ] **S9** Mobile P2 — Safe-to-Spend engine + Day Dial
+- [x] **S9** Mobile P2 — Safe-to-Spend engine + Skia Day Dial
 - [x] **S10** Web P2 — hand-built charts, theme-reactive colours, zero hex outside tokens
 - [ ] **S11** Mobile P3 — capture router, confirmation sheet, eval harness ≥0.90
 - [x] **S12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`

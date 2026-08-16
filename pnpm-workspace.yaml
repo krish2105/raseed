@@ -8,6 +8,9 @@ nodeLinker: hoisted
 # pnpm 10 blocks dependency lifecycle scripts by default. Expo/RN native deps need these
 # to run or the install silently produces a broken tree.
 onlyBuiltDependencies:
+  # Skia's postinstall downloads its prebuilt binaries. Without this, `pod install` fails
+  # with "Skia prebuilt binaries not found" — pnpm 10 blocks lifecycle scripts by default.
+  - '@shopify/react-native-skia'
   - esbuild
   - sharp
   - unrs-resolver

@@ -10,6 +10,7 @@ import { radius, space, type Palette } from '@raseed/tokens'
 import { font, useTheme } from '@/theme'
 import { spendBetween, spendTotal, useQuery } from '@/db'
 import { useNow } from '@/hooks/useNow'
+import { DayDial } from '@/components/DayDial'
 
 const DAY = 86_400_000
 
@@ -51,15 +52,21 @@ export default function TodayScreen() {
         <Text style={s.eyebrow}>Today</Text>
 
         <View style={s.hero}>
-          <Text style={s.heroLabel}>You&apos;ve got</Text>
-          <Text style={[s.heroAmount, { color: accent }]}>
-            {format(sts.amount, { compactZeroFraction: true })}
-          </Text>
-          <Text style={s.heroHint}>for today · {sts.daysUntilIncome} days to payday</Text>
-
-          <View style={s.meterTrack}>
-            <View style={[s.meterFill, { backgroundColor: accent, width: `${usedPct}%` }]} />
+          <View style={s.dialWrap}>
+            <DayDial progress={usedPct / 100} overspent={sts.overspent}>
+              <Text style={s.heroLabel}>You&apos;ve got</Text>
+              <Text
+                style={[s.heroAmount, { color: accent }]}
+                adjustsFontSizeToFit
+                numberOfLines={1}
+                accessibilityLabel={`${format(sts.amount)} left for today`}
+              >
+                {format(sts.amount, { compactZeroFraction: true })}
+              </Text>
+              <Text style={s.heroHint}>{sts.daysUntilIncome} days to payday</Text>
+            </DayDial>
           </View>
+
           <View style={s.meterRow}>
             <Text style={s.meterText}>{format(spentToday)} spent</Text>
             <Text style={s.meterText}>
@@ -118,6 +125,7 @@ const styles = (c: Palette) =>
       textTransform: 'uppercase',
     },
 
+    dialWrap: { alignItems: 'center', paddingVertical: space[2] },
     hero: {
       backgroundColor: c['surface-1'],
       borderColor: c.line,
