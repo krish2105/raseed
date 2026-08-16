@@ -381,3 +381,35 @@ export function seasonalDecompose(values: readonly number[], seasonLength: numbe
 
   return { trend, seasonal, residual }
 }
+
+/**
+ * How much of a series' movement the decomposition actually accounts for, 0–1.
+ *
+ * Without it, a decomposition is three lines with no claim attached. This is the claim: at
+ * 0.9 the trend and the weekly rhythm explain almost everything and the residuals are worth
+ * reading as events; at 0.2 the series is mostly noise and any story told about a bump in it
+ * is invented.
+ *
+ * NaN ends from the moving average are skipped rather than zero-filled — zeros there would
+ * be counted as perfectly explained points and would flatter the score.
+ */
+export function varianceExplained(
+  values: readonly number[],
+  decomposition: Decomposition,
+): number {
+  const pairs = values
+    .map((v, i) => [v, decomposition.residual[i]] as const)
+    .filter((p): p is readonly [number, number] => p[1] !== undefined && !Number.isNaN(p[1]))
+
+  if (pairs.length < 2) return 0
+
+  const spread = (xs: readonly number[]) => {
+    const m = mean(xs)
+    return mean(xs.map((x) => (x - m) ** 2))
+  }
+
+  const observed = spread(pairs.map(([v]) => v))
+  if (observed === 0) return 0
+
+  return Math.min(1, Math.max(0, 1 - spread(pairs.map(([, r]) => r)) / observed))
+}
