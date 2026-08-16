@@ -207,7 +207,15 @@ describe('format', () => {
   })
 
   it('groups AED in the western system', () => {
-    expect(format(fromMajor('1234567.89', 'AED'))).toBe('د.إ1,234,567.89')
+    expect(format(fromMajor('1234567.89', 'AED'))).toBe('AED 1,234,567.89')
+  })
+
+  // The Arabic dirham sign is right-to-left: bidi reordering renders it after the
+  // number and re-forms the glyphs, which is what it did on the iOS simulator.
+  it('emits no right-to-left characters, so bidi cannot reorder an amount', () => {
+    const rtl = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/
+    expect(rtl.test(format(fromMajor('101.09', 'AED')))).toBe(false)
+    expect(rtl.test(formatMinor(fromMajor('101.09', 'AED')))).toBe(false)
   })
 
   it('places the sign outside the symbol', () => {

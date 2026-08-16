@@ -298,3 +298,9 @@ screens do not change.
 
 **Empty states are invitations.** "Nothing logged yet. Tap the bar and type what you spent."
 — not an apology, and not a shrug emoji.
+
+**AED renders as the ISO code, not the Arabic symbol** — found on the simulator, not in a
+test. `د.إ` is right-to-left, so bidi reordering turned `د.إ101.09` into `101.09 ﺩ.ﺇ`: the
+symbol jumped behind the number and the glyphs re-formed. UAE bank statements print
+"AED 101.09" for exactly this reason. A regression test now asserts `format()` emits no
+character in the RTL ranges.

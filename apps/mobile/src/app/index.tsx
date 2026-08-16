@@ -15,7 +15,7 @@ import { DEMO_NOW, todaySpend, todaysLedger } from '@/lib/demo'
  * is already the real `safeToSpend` engine, not a mock.
  */
 const sts = safeToSpend({
-  liquidBalance: fromMajor('42000.00', 'INR'),
+  liquidBalance: fromMajor('96000.00', 'INR'),
   committedBills: [fromMajor('22000.00', 'INR')],
   pendingSweeps: [fromMajor('4000.00', 'INR')],
   safetyBuffer: fromMajor('3000.00', 'INR'),

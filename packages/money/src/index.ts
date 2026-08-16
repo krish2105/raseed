@@ -19,9 +19,15 @@ interface CurrencyMeta {
   readonly locale: string
 }
 
+/**
+ * AED displays as the ISO code, not the Arabic symbol. `د.إ` is right-to-left, so bidi
+ * reordering renders `د.إ101.09` as `101.09 ﺩ.ﺇ` — the symbol jumps behind the number and
+ * the glyphs re-form. UAE bank statements print "AED 101.09" for the same reason.
+ * The trailing space keeps it readable; ₹ needs none.
+ */
 const CURRENCIES: Record<Currency, CurrencyMeta> = {
   INR: { exponent: 2, symbol: '₹', locale: 'en-IN' },
-  AED: { exponent: 2, symbol: 'د.إ', locale: 'en-AE' },
+  AED: { exponent: 2, symbol: 'AED ', locale: 'en-AE' },
 }
 
 export function isCurrency(value: string): value is Currency {
