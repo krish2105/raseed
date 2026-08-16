@@ -51,9 +51,13 @@ body {
 /* ── depth ──────────────────────────────────────────────────────────────────
    Three steps and no more. A shadow scale with eight rungs means nobody can
    tell two adjacent ones apart and everybody picks one at random. */
-.elev-1 { box-shadow: var(--shadow-1); }
-.elev-2 { box-shadow: var(--shadow-2); }
-.elev-3 { box-shadow: var(--shadow-3); }
+.elev-1 { box-shadow: var(--rim), var(--shadow-1); }
+.elev-2 { box-shadow: var(--rim), var(--shadow-2); }
+.elev-3 { box-shadow: var(--rim), var(--shadow-3); }
+
+/* The rim comes first so it paints inside the edge, over the fill. In dark mode it is the
+   whole trick: a near-black ground cannot separate cards by lightness alone, so a hairline of
+   light along the top edge does the work a paler surface would do in light mode. */
 
 /* ── glass ──────────────────────────────────────────────────────────────────
    For nav, the floating dock, modals and an expanded tile. NOT for page

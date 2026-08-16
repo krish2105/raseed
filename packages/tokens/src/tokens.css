@@ -36,6 +36,11 @@
   --shadow-3: 0 4px 8px color-mix(in oklab, var(--text-hi) 10%, transparent),
               0 24px 48px color-mix(in oklab, var(--text-hi) 12%, transparent);
 
+  /* In light mode the ground is already brighter than anything on it, so a rim would be
+     invisible. Declared anyway: a token that exists in one theme only is a token every
+     consumer has to branch on. */
+  --rim: inset 0 1px 0 rgb(255 255 255 / 0.6);
+
   /* ── glass ────────────────────────────────────────────────────────────────
      Surgical only: nav, floating dock, modals, an expanded tile. Never a
      full-bleed background — backdrop-filter costs 15–30% of frame budget on a
@@ -51,30 +56,33 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --surface-0: #0F1419;
-    --surface-1: #171D24;
-    --surface-2: #212932;
-    --line: #2C353F;
-    --text-hi: #E8EDF2;
-    --text-lo: #8B98A5;
-    --inr: #E0A458;
-    --aed: #4FB0A5;
-    --good: #7BC96F;
-    --warn: #E66761;
-    --horizon: #7E8EC6;
+    --surface-0: #090C11;
+    --surface-1: #12171F;
+    --surface-2: #1C232E;
+    --line: #2B3441;
+    --text-hi: #EEF2F7;
+    --text-lo: #9AA7B6;
+    --inr: #F0AC5E;
+    --aed: #4FC0B0;
+    --good: #6FCB68;
+    --warn: #F0736B;
+    --horizon: #8B9BDB;
 
     /* ── depth ────────────────────────────────────────────────────────────────
-       Elevation is a stack of two shadows, not one: a tight contact shadow that
-       anchors the element to the surface, and a wide ambient one that gives it
-       height. A single blurred shadow reads as a smudge at every size. Values are
-       colour-mixed from the ink so they warm and cool with the theme instead of
-       being neutral grey holes punched in a tinted surface. */
-    --shadow-1: 0 1px 2px color-mix(in oklab, var(--text-hi) 8%, transparent),
-                0 1px 3px color-mix(in oklab, var(--text-hi) 5%, transparent);
-    --shadow-2: 0 2px 4px color-mix(in oklab, var(--text-hi) 8%, transparent),
-                0 8px 20px color-mix(in oklab, var(--text-hi) 8%, transparent);
-    --shadow-3: 0 4px 8px color-mix(in oklab, var(--text-hi) 10%, transparent),
-                0 24px 48px color-mix(in oklab, var(--text-hi) 12%, transparent);
+       Dark elevation is not light elevation with the numbers turned down.
+
+       These used to be `color-mix(... var(--text-hi) ...)`, which in dark mode mixes toward
+       #EEF2F7 — so every raised card wore a pale halo. That is a glow, and a glow reads as
+       fog rather than height. Real rooms do not do it.
+
+       So: the shadow is black, and the cue that a surface is RAISED is `--rim`, a hairline of
+       light along its top edge, as though a source were above it. That is how dark interfaces
+       express elevation, and it is why this palette can afford a near-black ground — the
+       cards separate by light, not by being paler. */
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.55), 0 1px 3px rgb(0 0 0 / 0.4);
+    --shadow-2: 0 2px 6px rgb(0 0 0 / 0.5), 0 10px 26px rgb(0 0 0 / 0.45);
+    --shadow-3: 0 6px 14px rgb(0 0 0 / 0.55), 0 30px 60px rgb(0 0 0 / 0.5);
+    --rim: inset 0 1px 0 rgb(255 255 255 / 0.06);
 
     /* ── glass ────────────────────────────────────────────────────────────────
        Surgical only: nav, floating dock, modals, an expanded tile. Never a
@@ -91,17 +99,17 @@
 }
 
 :root[data-theme='dark'] {
-  --surface-0: #0F1419;
-  --surface-1: #171D24;
-  --surface-2: #212932;
-  --line: #2C353F;
-  --text-hi: #E8EDF2;
-  --text-lo: #8B98A5;
-  --inr: #E0A458;
-  --aed: #4FB0A5;
-  --good: #7BC96F;
-  --warn: #E66761;
-  --horizon: #7E8EC6;
+  --surface-0: #090C11;
+  --surface-1: #12171F;
+  --surface-2: #1C232E;
+  --line: #2B3441;
+  --text-hi: #EEF2F7;
+  --text-lo: #9AA7B6;
+  --inr: #F0AC5E;
+  --aed: #4FC0B0;
+  --good: #6FCB68;
+  --warn: #F0736B;
+  --horizon: #8B9BDB;
 
   /* ── depth ────────────────────────────────────────────────────────────────
      Elevation is a stack of two shadows, not one: a tight contact shadow that
@@ -115,6 +123,11 @@
               0 8px 20px color-mix(in oklab, var(--text-hi) 8%, transparent);
   --shadow-3: 0 4px 8px color-mix(in oklab, var(--text-hi) 10%, transparent),
               0 24px 48px color-mix(in oklab, var(--text-hi) 12%, transparent);
+
+  /* In light mode the ground is already brighter than anything on it, so a rim would be
+     invisible. Declared anyway: a token that exists in one theme only is a token every
+     consumer has to branch on. */
+  --rim: inset 0 1px 0 rgb(255 255 255 / 0.6);
 
   /* ── glass ────────────────────────────────────────────────────────────────
      Surgical only: nav, floating dock, modals, an expanded tile. Never a
@@ -154,6 +167,11 @@
               0 8px 20px color-mix(in oklab, var(--text-hi) 8%, transparent);
   --shadow-3: 0 4px 8px color-mix(in oklab, var(--text-hi) 10%, transparent),
               0 24px 48px color-mix(in oklab, var(--text-hi) 12%, transparent);
+
+  /* In light mode the ground is already brighter than anything on it, so a rim would be
+     invisible. Declared anyway: a token that exists in one theme only is a token every
+     consumer has to branch on. */
+  --rim: inset 0 1px 0 rgb(255 255 255 / 0.6);
 
   /* ── glass ────────────────────────────────────────────────────────────────
      Surgical only: nav, floating dock, modals, an expanded tile. Never a

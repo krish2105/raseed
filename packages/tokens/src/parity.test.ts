@@ -33,6 +33,7 @@ const CSS_ONLY = [
   'shadow-1',
   'shadow-2',
   'shadow-3',
+  'rim',
   'glass-bg',
   'glass-line',
   'glass-blur',

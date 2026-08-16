@@ -47,17 +47,17 @@ const light: Palette = {
 }
 
 const dark: Palette = {
-  'surface-0': '#0F1419',
-  'surface-1': '#171D24',
-  'surface-2': '#212932',
-  line: '#2C353F',
-  'text-hi': '#E8EDF2',
-  'text-lo': '#8B98A5',
-  inr: '#E0A458',
-  aed: '#4FB0A5',
-  good: '#7BC96F',
-  warn: '#E66761',
-  horizon: '#7E8EC6',
+  'surface-0': '#090C11',
+  'surface-1': '#12171F',
+  'surface-2': '#1C232E',
+  line: '#2B3441',
+  'text-hi': '#EEF2F7',
+  'text-lo': '#9AA7B6',
+  inr: '#F0AC5E',
+  aed: '#4FC0B0',
+  good: '#6FCB68',
+  warn: '#F0736B',
+  horizon: '#8B9BDB',
 }
 
 export const palette: Readonly<Record<ThemeName, Palette>> = { light, dark }

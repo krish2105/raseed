@@ -40,17 +40,24 @@ describe('contrast', () => {
   })
 
   it('picks ink by luminance, not by theme', () => {
-    // A bright fill needs dark ink whichever theme drew it.
-    expect(readableInk('#E0A458', 'dark')).toBe('#12181F')
-    expect(readableInk('#7BC96F', 'dark')).toBe('#12181F')
+    // Read from the palette rather than pasted literals: this assertion broke on the dark
+    // redesign purely because it had #E8EDF2 typed into it, which tested the old hex rather
+    // than the behaviour. The behaviour is "bright fill gets dark ink, whichever theme".
+    const DARK_INK = PALETTES.light['text-hi']
+    const LIGHT_INK = PALETTES.dark['text-hi']
+
+    expect(readableInk(PALETTES.dark.inr, 'dark')).toBe(DARK_INK)
+    expect(readableInk(PALETTES.dark.good, 'dark')).toBe(DARK_INK)
     // A deep fill needs light ink.
-    expect(readableInk('#24756C', 'light')).toBe('#E8EDF2')
+    expect(readableInk(PALETTES.light.aed, 'light')).toBe(LIGHT_INK)
   })
 
   it('always returns the better of the two inks', () => {
-    for (const fill of ['#000000', '#FFFFFF', '#E0A458', '#24756C', '#808080']) {
+    const DARK_INK = PALETTES.light['text-hi']
+    const LIGHT_INK = PALETTES.dark['text-hi']
+    for (const fill of ['#000000', '#FFFFFF', PALETTES.dark.inr, PALETTES.light.aed, '#808080']) {
       const ink = readableInk(fill)
-      const other = ink === '#12181F' ? '#E8EDF2' : '#12181F'
+      const other = ink === DARK_INK ? LIGHT_INK : DARK_INK
       expect(contrastRatio(fill, ink)).toBeGreaterThanOrEqual(contrastRatio(fill, other))
     }
   })

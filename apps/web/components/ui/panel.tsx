@@ -27,7 +27,7 @@ export function Panel({ title, hint, children, className, aedShare }: PanelProps
   return (
     <section
       className={cn(
-        'relative overflow-hidden rounded-xl border border-line bg-surface-1',
+        'elev-1 relative overflow-hidden rounded-xl border border-line bg-surface-1',
         className,
       )}
     >

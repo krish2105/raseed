@@ -41,7 +41,7 @@ export function AmountCard({ label, amount, className, ...props }: AmountCardPro
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border border-line bg-surface-1 p-6',
+        'elev-1 relative overflow-hidden rounded-xl border border-line bg-surface-1 p-6',
         className,
       )}
       {...props}
