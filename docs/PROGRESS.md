@@ -2,7 +2,7 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: #26** — S10/S12/S14/S16 partially landed early (charts, Sankey, variance, query bar)
+**Current session: #27** — audit, then the queue: dark redesign, WebGL corridor, Tier 0 charts, mobile Numbers, edit on both surfaces — S10/S12/S14/S16 partially landed early (charts, Sankey, variance, query bar)
 
 ---
 
@@ -35,7 +35,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [~] **#13** Mobile P4 — merchant resolver and alias learning are live and on the write path;
   **reversal pairing is not built** — `pairReversals` is never imported by mobile and
   `reversal_of_id` is written NULL (`db/queries.ts:166`). Re-marked from [x] by the 17 Aug audit
-- [~] **#14** Web P4 — treemap, variance, ledger, currency done; net-worth timeline + calendar heatmap remain
+- [x] **#14** Web P4 — Tier 0 complete: net-worth timeline and calendar heatmap shipped
 - [~] **#15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips) and **mobile** (`/trip`: `planTrip` over habits read from the ledger, Numbeo price ratios, unconstrained plan with the budget asked separately). Goals ship alongside it (`/goals`: new `goals` table, `savingsPlan` against real monthly surplus, copy through the tone gate). The Live Activity remains
 - [x] **#16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
 - [~] **#17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
@@ -44,8 +44,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [~] **#20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
 - [~] **#21** Web **P9** — landing route and Lenis are live (`app/page.tsx`,
   `components/landing/`); **Lighthouse ≥95 never measured**, which is the actual done-when
-- [~] **#22** Web **P10** — deploy, nuqs share links and the a11y sweep are done;
-  **data export is not built**, and it is a DPDP right, not a nice-to-have
+- [x] **#22** Web **P10** — deploy, nuqs share links, a11y sweep and **data export** all done
 - [~] **#23** Mobile P8 — receipt OCR is live (`/receipt`, Apple Vision, column-major blocks handled); voice capture remains
 - [ ] **#24** Both — buffer, eval regression, hardening
 
@@ -69,7 +68,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
   Production build/start and webpack dev are all clean; only Turbopack dev fails.
   Retest with `pnpm --filter web run dev:turbo` on the next Next release.
 
-- **59 Playwright specs** run against a production build in CI (`pnpm --filter web e2e`): flows, plus axe-core WCAG 2 AA on all 8 routes in **both** themes, 360px overflow and keyboard traversal.
+- **65 Playwright specs** run against a production build in CI (`pnpm --filter web e2e`): flows, plus axe-core WCAG 2 AA on all 8 routes in **both** themes, 360px overflow and keyboard traversal.
 - **Web is deployed** — https://raseed-eosin.vercel.app, public, auto-deploys from `main`.
   Vercel project root directory is `apps/web`; do not unset it or deploys fail at upload.
 

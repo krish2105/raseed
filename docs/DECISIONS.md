@@ -1378,3 +1378,37 @@ worker, and a dashboard that renders with every figure dead is worse than no CSP
 
 Left for Krishna, unchanged: Supabase provisioning, `eas login`, Apple enrolment, and the ruling
 on whether the 3D globe returns as WebGL against three documents that cut it.
+
+### Second wave — dark redesign, WebGL, and the rest of the queue
+
+**Dark mode was lit wrong, not coloured wrong.** The shadows were `color-mix`ed from
+`--text-hi`, which in dark mode is near-white — so every raised card wore a pale halo, and a
+glow reads as fog rather than height. The three surfaces also sat within eight points of
+lightness, so nothing separated from anything. Rebuilt as a real elevation system: ground
+dropped to `#090C11`, black shadows that cast down, and a new `--rim` token putting a hairline
+of light along the top edge. That rim is what lets a near-black ground work — cards separate by
+light rather than by being paler. Every ink/surface pair measured before committing; worst is
+5.54:1 against a 4.5 floor.
+
+**WebGL, on Krishna's explicit ruling.** Three documents cut the 3D globe and were right about
+a globe; this ships the version that earns it — a corridor where every particle is a transfer
+that actually happened, count tracking volume and speed tracking efficiency. Raw GL, one draw
+call, no three.js, because 600KB on a dashboard whose thesis is fast local work is the wrong
+trade. The CSS-3D version became the fallback rather than being deleted.
+
+**A CSP found a third party nobody knew about.** Writing one blocked `cdn.jsdelivr.net` —
+DuckDB was fetching its worker and `.wasm` from a CDN via `getJsDelivrBundles()`, invisible to
+the source grep the audit relied on. Now self-hosted with an e2e asserting zero third-party
+requests. The CSP itself is written but **not applied**: it silently breaks WASM instantiation
+inside the blob worker, and a dashboard that renders with every figure dead is worse than no
+CSP. A test asserts no CSP is claimed, so enabling it without checking analytics fails the suite.
+
+**Also shipped:** the query bar's `LIMIT 5000` and 3s deadline (P5's named done-whens, never
+built); net-worth timeline and calendar heatmap, closing Tier 0; a `/numbers` screen on the
+phone, which had no analysis surface at all despite owning the engines; edit on web to match
+the phone.
+
+**One bug worth remembering.** `netMovementSince` referenced a table called `transactions`; the
+DuckDB raw table is `raw_transactions`. The query failed, and the tile rendered a skeleton for
+ever — through a typecheck, a build and a screenshot. Both new tiles now render their error.
+A panel that fails silently is indistinguishable from one that is slow.

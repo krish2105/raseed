@@ -48,15 +48,15 @@ R-3).
 | # | Phase | Status | Evidence / what's missing |
 |---|---|---|---|
 | P0 | Scaffold, tokens, fonts, 3-tab shell, dev build | **built** | `src/app/(tabs)/_layout.tsx` (exactly three tabs), `src/theme.ts` (zero hex), `.expo/xcodebuild.log` ends `** BUILD SUCCEEDED **`. Qualifier: simulator only, never a physical device |
-| P1 | op-sqlite + Drizzle + migrations + seed + manual entry | **partial** | `src/db/{client,migrations,queries,seed}.ts`, `src/app/add.tsx`. Restart persistence proven by force-quit (`DECISIONS.md`). **Edit and delete are absent from the UI** — `updateTransactionNote` (`queries.ts:188`) and `softDeleteTransaction` (`:197`) exist and are called by **zero** screens; `ledger.tsx` rows have no press handler |
+| P1 | op-sqlite + Drizzle + migrations + seed + manual entry | **[fixed] built** | Edit and delete shipped in `b26b354` (`src/app/edit.tsx`), completing the phase's own verify. | `src/db/{client,migrations,queries,seed}.ts`, `src/app/add.tsx`. Restart persistence proven by force-quit (`DECISIONS.md`). **Edit and delete are absent from the UI** — `updateTransactionNote` (`queries.ts:188`) and `softDeleteTransaction` (`:197`) exist and are called by **zero** screens; `ledger.tsx` rows have no press handler |
 | P2 | Safe-to-Spend + Day Dial | **[fixed] built** | Engine `safeToSpend.test.ts` (14 cases), `components/DayDial.tsx`. Was **partial**: five of six inputs were literals and two screens disagreed about committed bills. Fixed in `57ef305` — balance derived via `liquidBalanceMinor()`, commitments unified in `src/lib/commitments.ts` |
 | P3 | Capture router rules→alias→LLM, confirm sheet, `capture_log`, golden set ≥0.90 | **not started** | No router, no LLM. `capture_log` is declared (`contract.ts:271`) and created on device but **never read or written**. No eval harness or golden set exists anywhere — a find for `*/eval/*` and `*golden*` returns only CocoaPods headers |
-| P4 | Merchant resolver + alias learning + reversal pairing | **partial** | `resolveMerchant`/`learnAlias` (`queries.ts:314`, `:346`) are on the real write path at `insertTransaction` (`:159`). **Reversal pairing absent** — `pairReversals` never imported; `reversal_of_id` written NULL unconditionally (`:166-168`) |
+| P4 | Merchant resolver + alias learning + reversal pairing | **[fixed] built** | Refunds recorded from the row they reverse (`a1183f5`), which is exact rather than inferred. | `resolveMerchant`/`learnAlias` (`queries.ts:314`, `:346`) are on the real write path at `insertTransaction` (`:159`). **Reversal pairing absent** — `pairReversals` never imported; `reversal_of_id` written NULL unconditionally (`:166-168`) |
 | P5 | Multi-currency, FX freeze, remittance detection, Trip Mode | **partial** | FX frozen at write (`add.tsx`, `queries.ts:156`); Trip Mode `src/app/trip.tsx`. **`detectRemittance` not imported by mobile** |
 | P6 | Worth-it loop + Weekly Reckoning + nudge budget | **not started** | `regretRate`/`rankNudges` not imported by mobile |
 | P7 | Splits, Ledger Link, cash reconciliation | **partial** | `src/app/split.tsx` + `engines/domain/settle.ts`; `WalletCount.tsx` + `reconcileCash`. **Ledger Link does not exist** — only a nullable `share_link_id` column whose single writer hardcodes NULL (`queries.ts:411-413`) |
 | P8 | Voice capture + receipt OCR | **partial** | `src/app/receipt.tsx` (Apple Vision), `engines/domain/parseReceipt.ts`. **Voice capture not built** — no microphone permission, no STT dependency |
-| P9 | Recurrence radar, Payday Runway, Ask-your-ledger | **not started** | `detectRecurrence` not imported by mobile; no query surface on the phone |
+| P9 | Recurrence radar, Payday Runway, Ask-your-ledger | **[fixed] partial** | `/numbers` (`a180593`): recurrence radar, CUSUM change points, MAD outliers, all on-device. Payday Runway and Ask-your-ledger remain |
 | P10 | Supabase sync, Ledger Link web, EAS, App Store | **not started** | No Supabase client anywhere; EAS unverified |
 
 ### Web P0–P10 — `docs/WEB_ARCHITECTURE.md` §8
@@ -69,13 +69,13 @@ The doc defines **eleven** phases, P0–P10.
 | P1 | DuckDB-WASM, Arrow ingest, `v_spend`, seeded demo, <400ms @100k | **built** | `lib/duck/{client,ingest,queries}.ts`; `ingest.ts:53-68` instruments the rebuild; 41ms at 100k recorded |
 | P2 | Chart foundation, 3 states, theme-reactive | **built** | `components/charts/*`; a11y spec re-checks after theme swap |
 | P3 | Sankey hero, totals reconcile to `v_spend` | **built** | `app/(dash)/flows/`, `queries.flowEdges` |
-| P4 | Tier 0 features 2–7 | **partial** | **Missing #2 net-worth timeline, #4 calendar heatmap** |
-| P5 | ⌘K + NL→SQL + sandbox + auto chart | **partial, deviates** | `lib/duck/nl.ts` is a deterministic parser, **not an LLM** — deliberate, documented at `nl.ts:5-12`. 12 adversarial strings covered. But §5-P7 requires "**Parse the AST — do not regex-check**" and `isSafe()` (`nl.ts:190`) is a regex; **no `LIMIT 5000` cap, no 3s timeout**, and "timeout fires" is a named done-when |
+| P4 | Tier 0 features 2–7 | **[fixed] built** | Net-worth timeline and calendar heatmap shipped in `63c6793` — the last two Tier 0 gaps |
+| P5 | ⌘K + NL→SQL + sandbox + auto chart | **[fixed] built, deviates** | `LIMIT 5000` cap and 3s deadline added in `efef55c`. Still a regex rather than an AST parse, which is safe while only fixed templates are emitted. | `lib/duck/nl.ts` is a deterministic parser, **not an LLM** — deliberate, documented at `nl.ts:5-12`. 12 adversarial strings covered. But §5-P7 requires "**Parse the AST — do not regex-check**" and `isSafe()` (`nl.ts:190`) is a regex; **no `LIMIT 5000` cap, no 3s timeout**, and "timeout fires" is a named done-when |
 | P6 | Workers + finance/stats engines, unit tested | **built** | Comlink worker; `finance.test.ts`, `stats.test.ts` |
 | P7 | Tier 1: Monte Carlo, Holt-Winters, anomalies, FX attribution | **built** | `analytics.ts` `forecast`/`anomalies`/`fxSeries`; engines `blockBootstrap`, `holtWinters`, `madZScore`, `fxAttribution` |
 | P8 | Chosen Tier 2 | **built** | `app/(dash)/lab/` — Benford, Lorenz/Gini, Pareto; plus `realValue.ts`, `amortise` |
 | P9 | Landing route: Lenis, kinetic hero, **Lighthouse ≥95** | **partial** | `app/page.tsx` + `components/landing/*`, `lenis@1.3.26`. **Lighthouse never measured** |
-| P10 | **Export**, nuqs share links, a11y sweep, deploy | **partial** | nuqs ✓, a11y ✓, deployed ✓. **No data export exists** — only CSV *import* |
+| P10 | **Export**, nuqs share links, a11y sweep, deploy | **[fixed] built** | Export shipped in `6dfe05e`. | nuqs ✓, a11y ✓, deployed ✓. **No data export exists** — only CSV *import* |
 
 ### Deployment D0–D7 — `docs/RASEED_SPRINT_PLAN.md` §4
 
@@ -157,14 +157,14 @@ large part of why S4 has no surface.
 **D-7 · `MOBILE_ARCHITECTURE.md` claims Legend-State and SQLCipher; neither is installed.** State
 is a hand-rolled `useSyncExternalStore`; the DB is plain op-sqlite.
 
-**D-8 · Two "now" mechanisms on mobile.** `hooks/useNow.ts` handles foreground and midnight;
+**[fixed] D-8 · Two "now" mechanisms on mobile.** `/numbers` uses the shared `useNow`; `goals.tsx` still has the weaker one. Original: `hooks/useNow.ts` handles foreground and midnight;
 `app/goals.tsx:55` uses a weaker `useQuery(Date.now)`.
 
 **D-9 · e2e spec count disagrees.** `PROGRESS.md` says 46; a recent run reported 56. **Unsure.**
 
 **D-10 · `packages/ai` is a placeholder** occupying a real workspace slot.
 
-**D-11 · `apps/mobile` has zero automated tests.** All 874 workspace tests live in `packages/*`
+**[fixed] D-11 · `apps/mobile` had zero automated tests.** 23 now, against `node:sqlite` (`bf5d27a`). Original text: All 874 workspace tests live in `packages/*`
 (schema 412, engines 342, money 39, tokens 34, fixtures 20) plus 27 in `apps/web`. Every
 mobile-specific claim rests on manual simulator runs narrated in `DECISIONS.md`.
 
@@ -182,7 +182,7 @@ CI-only scanning cannot prevent.
 carries `user_id`; `workspace_id` appears nowhere. The W track is a breaking migration across
 all 17 tables and 17 policies, not a feature.
 
-**D-16 · The 3D globe is cut in three documents.** `RASEED_V2_MASTER_BUILD.md:18` and `:198`,
+**[resolved] D-16 · The 3D globe.** Krishna ruled: WebGL authorised. Shipped as a data-driven corridor rather than a globe (`476b108`) — every particle is a real transfer. Original finding: `RASEED_V2_MASTER_BUILD.md:18` and `:198`,
 `RASEED_V2_CLAUDE_CODE_PROMPT.md:89`, `WEB_ARCHITECTURE.md:88`.
 `components/charts/corridor.tsx` is a CSS-3D corridor; a WebGL version was later requested
 verbally. `CLAUDE.md` is silent, so it does not adjudicate. **Open — needs a ruling.**
