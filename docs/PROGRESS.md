@@ -26,7 +26,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [x] **S12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`
 - [ ] **S13** Mobile P4 — merchant resolver, alias learning, reversal pairing
 - [~] **S14** Web P4 — treemap, variance, ledger, currency done; net-worth timeline + calendar heatmap remain
-- [ ] **S15** Mobile P5 — multi-currency, remittance detection, Trip Mode
+- [~] **S15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips); the mobile envelope and Live Activity remain
 - [x] **S16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
 - [~] **S17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
 - [x] **S18** Web P6 — Comlink worker; Arrow encoding moved off the main thread (837ms → 16ms longest block, measured)
@@ -57,7 +57,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
   Production build/start and webpack dev are all clean; only Turbopack dev fails.
   Retest with `pnpm --filter web run dev:turbo` on the next Next release.
 
-- **40 Playwright specs** run against a production build in CI (`pnpm --filter web e2e`): flows, plus axe-core WCAG 2 AA on all 8 routes in **both** themes, 360px overflow and keyboard traversal.
+- **43 Playwright specs** run against a production build in CI (`pnpm --filter web e2e`): flows, plus axe-core WCAG 2 AA on all 8 routes in **both** themes, 360px overflow and keyboard traversal.
 - **Web is deployed** — https://raseed-eosin.vercel.app, public, auto-deploys from `main`.
   Vercel project root directory is `apps/web`; do not unset it or deploys fail at upload.
 

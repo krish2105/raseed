@@ -731,3 +731,35 @@ investigation rather than a feature — logged here with the evidence instead of
 Worth naming: the Ledger tab was showing the new row immediately while Today was not, which
 is what made this look like a screen-level refresh problem for far longer than it should
 have. The two tabs differ only in their WHERE clause.
+
+---
+
+## S15 — Trip Mode, inferred rather than declared (2026-08-16)
+
+Nobody remembers to press "I'm travelling". But a trip leaves an unmistakable shape in the
+ledger: a run of days where the money moves in dirhams **and the spending you would normally
+do at home stops.**
+
+That second clause is the whole feature. Without it, every cross-border online order becomes
+a one-day "trip" and the tab is noise. `detectTrips` requires the away share of the window to
+clear 60% and the run to last at least two days, tolerating a two-day gap — a quiet Tuesday
+abroad is a lazy day, not a flight home. Eleven tests, including the two negative cases that
+matter: a single AED purchase on an otherwise ordinary day, and a two-day run where the bulk
+of the money still moved at home. Both correctly return no trip.
+
+**Home spend is summed over the whole window, including the quiet days inside a gap.** Rent
+does not stop because you are in Dubai, and excluding it would flatter the trip.
+
+**"An ordinary day" is the median of days you were home, not the mean of everything.**
+Including trip days is circular — a big trip raises the bar it is measured against — and a
+mean lets one rent day set the standard for a Tuesday. That baseline is what makes
+`tripExcess` meaningful: the interesting number is what travel cost you *beyond existing*,
+not the gross total. Reporting the gross is how travel apps make every trip look ruinous.
+
+**The trip query is deliberately not lens-aware.** A trip is a fact about where you were;
+re-reading it through the AED lens would not change which days you were in Dubai. Dirhams
+convert at the rate frozen on each row at its own date, so a trip costs what it cost then.
+
+On the seeded ledger: 13 trips in 18 months, an ordinary day of ₹1,975.76, and ₹1,84,436 of
+travel cost above staying home. Spot-checked — the 20–22 Jun trip's ₹12,350.53 all-in less
+three ordinary days (₹5,927.28) is exactly the ₹6,423.25 excess shown.

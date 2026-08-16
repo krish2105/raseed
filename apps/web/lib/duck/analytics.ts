@@ -3,9 +3,12 @@ import {
   lorenzCurve,
   budgetVariance,
   detectRemittance,
+  detectTrips,
   gini,
   madZScore,
   pareto,
+  tripExcess,
+  type Trip,
 } from '@raseed/engines'
 import { money, type Currency, type Money } from '@raseed/money'
 import { DEMO_END_AT, query } from './ingest'
@@ -482,5 +485,66 @@ export async function audit(lens: Lens): Promise<AuditReport> {
       value: asMoney(p.value, lens),
       cumulativeShare: p.cumulativeShare,
     })),
+  }
+}
+
+// ── trips ───────────────────────────────────────────────────────────────────
+
+export interface TripRow extends Trip {
+  /** The trip's away spend, as money you can format. */
+  away: Money
+  /** Everything it cost, in home currency. */
+  total: Money
+  /** What it cost beyond an ordinary stretch of days at your usual rate. */
+  excess: Money
+  /** Home-currency-per-day during the trip. */
+  burn: Money
+}
+
+/**
+ * Trips, inferred rather than declared, and priced against your ordinary days.
+ *
+ * The baseline is the median of NON-trip daily spend, not the mean of everything. Including
+ * the trip days in the baseline is circular — a big trip raises the bar it is measured
+ * against — and the mean lets one rent day set the standard for a Tuesday.
+ */
+export async function trips(days = 540): Promise<{ trips: TripRow[]; baselineDaily: Money }> {
+  const rows = await query<{
+    day: string
+    away_minor: number
+    away_in_home_minor: number
+    home_minor: number
+  }>(Q.tripDays(NOW - days * DAY))
+
+  const observations = rows.map((r) => ({
+    day: String(r.day).slice(0, 10),
+    awayMinor: r.away_minor,
+    awayInHomeMinor: r.away_in_home_minor,
+    homeMinor: r.home_minor,
+  }))
+
+  const found = detectTrips(observations)
+  const onTrip = new Set(
+    found.flatMap((t) => observations.filter((o) => o.day >= t.startDay && o.day <= t.endDay))
+      .map((o) => o.day),
+  )
+
+  const ordinary = observations
+    .filter((o) => !onTrip.has(o.day))
+    .map((o) => o.homeMinor + o.awayInHomeMinor)
+    .sort((a, b) => a - b)
+  const baseline = ordinary.length === 0 ? 0 : ordinary[Math.floor(ordinary.length / 2)]!
+
+  return {
+    baselineDaily: money(Math.round(baseline), 'INR'),
+    trips: found
+      .map((t) => ({
+        ...t,
+        away: money(t.awayMinor, 'AED'),
+        total: money(t.totalInHomeMinor, 'INR'),
+        excess: money(tripExcess(t, baseline), 'INR'),
+        burn: money(Math.round(t.totalInHomeMinor / t.days), 'INR'),
+      }))
+      .reverse(), // most recent first
   }
 }

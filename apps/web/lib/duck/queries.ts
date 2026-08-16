@@ -182,6 +182,23 @@ export const Q = {
      WHERE occurred_at >= ${sinceMs}
      GROUP BY 1 ORDER BY 1;`,
 
+  /**
+   * Per-day spend split by currency, for trip detection.
+   *
+   * `home_amount_minor` is used for the converted column, never a live rate — it was frozen
+   * on each row at its own transaction date, so a trip's cost is what it cost then.
+   * Deliberately not lens-aware: a trip is a fact about where you were, and re-reading it
+   * through the AED lens would not change which days you were in Dubai.
+   */
+  tripDays: (sinceMs: number) =>
+    `SELECT CAST(epoch_ms(occurred_at) AS DATE)::VARCHAR AS day,
+            SUM(CASE WHEN currency = 'AED' THEN amount_minor ELSE 0 END)::BIGINT       AS away_minor,
+            SUM(CASE WHEN currency = 'AED' THEN home_amount_minor ELSE 0 END)::BIGINT  AS away_in_home_minor,
+            SUM(CASE WHEN currency = 'INR' THEN home_amount_minor ELSE 0 END)::BIGINT  AS home_minor
+     FROM v_spend
+     WHERE occurred_at >= ${sinceMs}
+     GROUP BY 1 ORDER BY 1;`,
+
   /** Monthly totals for the forecast and the net-worth line. */
   monthlyTotals: (lens: Lens) =>
     `SELECT DATE_TRUNC('month', CAST(epoch_ms(occurred_at) AS DATE))::VARCHAR AS month,

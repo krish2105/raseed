@@ -6,6 +6,7 @@ export const ROUTES = [
   '/categories',
   '/forecast',
   '/currency',
+  '/trips',
   '/reckoning',
   '/ledger',
   '/lab',
