@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Link } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { format, money } from '@raseed/money'
@@ -43,6 +44,16 @@ export default function YouScreen() {
         <Text style={s.title}>You</Text>
 
         {cashCategoryId !== '' && <WalletCount categoryId={cashCategoryId} />}
+
+        <Link href="/split" asChild>
+          <Pressable accessibilityRole="button" style={s.entry}>
+            <View style={s.entryText}>
+              <Text style={s.entryTitle}>Split &amp; settle up</Text>
+              <Text style={s.entryHint}>Who owes you, and the fewest payments that clear it</Text>
+            </View>
+            <Text style={s.entryChevron}>›</Text>
+          </Pressable>
+        </Link>
 
         <Text style={s.section}>Accounts</Text>
         <View style={s.card}>
@@ -114,6 +125,21 @@ const styles = (c: Palette) =>
       marginTop: space[4],
     },
 
+    entry: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space[3],
+      backgroundColor: c['surface-1'],
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius.lg,
+      padding: space[4],
+      marginTop: space[4],
+    },
+    entryText: { flex: 1 },
+    entryTitle: { color: c['text-hi'], fontFamily: font.bodyMedium, fontSize: 15 },
+    entryHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginTop: 2 },
+    entryChevron: { color: c['text-lo'], fontFamily: font.body, fontSize: 22 },
     card: {
       backgroundColor: c['surface-1'],
       borderColor: c.line,

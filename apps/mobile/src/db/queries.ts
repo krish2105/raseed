@@ -358,3 +358,109 @@ export function learnAlias(merchantId: string, rawText: string, norm?: string): 
     ],
   )
 }
+
+// ── people and splits ───────────────────────────────────────────────────────
+
+export interface PersonRow {
+  id: string
+  name: string
+  currency: Currency
+}
+
+export function listPeople(): PersonRow[] {
+  return rows<{ id: string; name: string; currency: string }>(
+    'SELECT id, name, currency FROM people WHERE deleted = 0 ORDER BY name;',
+  ).map((p) => ({ id: p.id, name: p.name, currency: p.currency as Currency }))
+}
+
+export function addPerson(name: string, currency: Currency = 'INR'): PersonRow {
+  const id = `person-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  getConnection().executeSync(
+    `INSERT INTO people (id, name, handle, currency, user_id, updated_at, deleted)
+     VALUES (?, ?, NULL, ?, ?, ?, 0);`,
+    [id, name.trim(), currency, USER, Date.now()],
+  )
+  return { id, name: name.trim(), currency }
+}
+
+/** Soft delete only. A person who owes you money must not vanish from history. */
+export function removePerson(id: string): void {
+  getConnection().executeSync('UPDATE people SET deleted = 1, updated_at = ? WHERE id = ?;', [
+    Date.now(),
+    id,
+  ])
+}
+
+/**
+ * Record who shared a transaction you paid for.
+ *
+ * `owed_minor` is what each *other* person owes you. Your own share is already the
+ * transaction amount, so you are not a participant — storing yourself would double-count
+ * you in every balance.
+ */
+export function recordSplit(input: {
+  transactionId: string
+  method: 'equal' | 'share' | 'percent' | 'itemised'
+  owed: readonly { personId: string; owedMinor: number; currency: Currency }[]
+}): string {
+  const splitId = `split-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  const now = Date.now()
+  const db = getConnection()
+
+  db.executeSync(
+    `INSERT INTO splits (id, transaction_id, method, share_link_id, user_id, updated_at, deleted)
+     VALUES (?, ?, ?, NULL, ?, ?, 0);`,
+    [splitId, input.transactionId, input.method, USER, now],
+  )
+
+  input.owed.forEach((o, i) => {
+    db.executeSync(
+      `INSERT INTO split_participants
+         (id, split_id, person_id, owed_minor, currency, settled_txn_id, user_id, updated_at, deleted)
+       VALUES (?, ?, ?, ?, ?, NULL, ?, ?, 0);`,
+      [`${splitId}-${i}`, splitId, o.personId, o.owedMinor, o.currency, USER, now],
+    )
+  })
+
+  return splitId
+}
+
+export interface OwedRow {
+  personId: string
+  name: string
+  minor: number
+  currency: Currency
+}
+
+/**
+ * What each person still owes you, unsettled only.
+ *
+ * A settled participant keeps its row — the history of who paid you back is worth more than
+ * a tidy table — so the filter is on `settled_txn_id`, not on deletion.
+ */
+export function outstandingByPerson(): OwedRow[] {
+  return rows<{ person_id: string; name: string; owed: number; currency: string }>(
+    `SELECT sp.person_id, p.name, SUM(sp.owed_minor) AS owed, sp.currency
+       FROM split_participants sp
+       JOIN people p ON p.id = sp.person_id
+      WHERE sp.deleted = 0 AND sp.settled_txn_id IS NULL AND p.deleted = 0
+      GROUP BY sp.person_id, sp.currency
+      HAVING SUM(sp.owed_minor) <> 0
+      ORDER BY owed DESC;`,
+  ).map((r) => ({
+    personId: r.person_id,
+    name: r.name,
+    minor: r.owed,
+    currency: r.currency as Currency,
+  }))
+}
+
+/** Mark everything one person owes as settled. */
+export function settleUp(personId: string): void {
+  getConnection().executeSync(
+    `UPDATE split_participants
+        SET settled_txn_id = 'settled-by-hand', updated_at = ?
+      WHERE person_id = ? AND settled_txn_id IS NULL AND deleted = 0;`,
+    [Date.now(), personId],
+  )
+}

@@ -1152,3 +1152,41 @@ The rule recorded there — an exception needs the package to be build-time only
 reachable patch, *and* for the attack to require access already lost by other means — is
 what stops that file becoming a place where inconvenient findings go to be forgotten. The
 Expo SDK upgrade is the natural point to re-check, because Metro moves with it.
+
+---
+
+## Splits on the phone (2026-08-17)
+
+**A pushed screen, not a fourth tab.** `(tabs)/_layout.tsx` carries a decision that the tab
+bar is capped at three — *"navigation is not the product"* — and it is right. Splits are
+something you check occasionally, not glance at daily, so it lives behind an entry on **You**.
+Overriding a recorded decision because a new feature wants prominence is how tab bars become
+menus.
+
+**Splitting by people, not by a number.** The old sheet split N ways; the new one splits with
+*named people*, and that is the whole difference. Splitting by a count tells you what you
+paid. Splitting by people tells you who owes you — and only the second can ever be settled.
+You are always weight index 0, so `shares[0]` is yours and the rest line up with the people
+picked, in order.
+
+**Both settlement views are offered.** `simplifyDebts` for the fewest payments, and the direct
+list for legibility, because greedy simplification can pair two people who never shared a
+bill.
+
+### Three bugs found by using it
+
+**Liquid Glass rendered a dark slab in a light app.** An untinted `GlassView` is a *dark*
+material regardless of theme, and against this app's dark ink that produced grey text on a
+grey card — unreadable, and it shipped on the first screen that forgot to pass a tint. The
+tint now defaults to `surface-1` inside the `Glass` component itself, so no future caller can
+reproduce it by omission. Exactly the kind of contrast failure the web audit was built to
+catch, on the surface that has no axe.
+
+**A person was saved as "P".** `onSubmitEditing` closed over `name`, and typing quickly then
+hitting return fires before the last `setName` lands. It now reads `e.nativeEvent.text`,
+which is the value the field actually holds and is immune to the race.
+
+**"2 payments instead of 2."** Nonsense on its face, and the reason is worth stating rather
+than hiding: while you are the only person who ever pays, every debt already points at you
+and there is nothing to reroute. The copy now says that, and simplification only advertises a
+saving when there is one.

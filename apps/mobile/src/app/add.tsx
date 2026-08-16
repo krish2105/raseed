@@ -13,11 +13,19 @@ import { router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { format, fromMajor, type Currency, type Money } from '@raseed/money'
-import { splitEvenly } from '@raseed/engines'
+import { splitBill } from '@raseed/engines'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { commitAfterDismiss, insertTransaction, listAccounts, listCategories, useQuery } from '@/db'
+import {
+  commitAfterDismiss,
+  insertTransaction,
+  listAccounts,
+  listCategories,
+  listPeople,
+  recordSplit,
+  useQuery,
+} from '@/db'
 
 /** INR per AED, frozen onto the row at write time. Session 15 replaces this with a rate cache. */
 const AED_TO_INR = 23.45
@@ -32,13 +40,14 @@ export default function AddScreen() {
 
   const accounts = useQuery(listAccounts)
   const categories = useQuery(listCategories)
+  const people = useQuery(listPeople)
 
   const [amountText, setAmountText] = useState('')
   const [merchant, setMerchant] = useState('')
   const [currency, setCurrency] = useState<Currency>('INR')
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '')
-  const [ways, setWays] = useState(1)
+  const [withPeople, setWithPeople] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
   // Parse on every keystroke so the button state is honest, but surface the error only
@@ -57,10 +66,15 @@ export default function AddScreen() {
   /**
    * The whole bill splits; only your share is your spend.
    *
-   * The same function the dashboard calls, from `@raseed/engines` — so a bill split on the
-   * phone and the same bill split on the web cannot produce two different numbers.
+   * You are always the first weight, so `shares[0]` is yours and the rest map to the people
+   * you picked — which is what lets the split be *recorded against names* rather than just
+   * divided by a number. Splitting by a count tells you what you paid; splitting by people
+   * tells you who owes you, and only the second one can ever be settled.
    */
-  const split = parsed && ways > 1 ? splitEvenly(parsed, ways) : null
+  const split =
+    parsed && withPeople.length > 0
+      ? splitBill({ total: parsed, weights: [1, ...withPeople.map(() => 1)] })
+      : null
 
   function save() {
     if (!parsed) {
@@ -78,14 +92,26 @@ export default function AddScreen() {
       merchantText: merchant.trim(),
       fxRate: currency === 'AED' ? AED_TO_INR : 1,
       note: split
-        ? `Your share, 1 of ${ways}. Paid ${format(parsed)}, ${format(split.owedToYou)} owed to you.`
+        ? `Your share, 1 of ${withPeople.length + 1}. Paid ${format(parsed)}, ${format(split.owedToYou)} owed to you.`
         : undefined,
     }
+
+    const owed = split
+      ? withPeople.map((personId, i) => ({
+          personId,
+          // shares[0] is yours; the rest line up with `withPeople` in order.
+          owedMinor: split.shares[i + 1]?.minor ?? 0,
+          currency,
+        }))
+      : []
 
     // Dismiss first, commit second. See `commitAfterDismiss` — writing while this modal is
     // still up leaves the screen underneath one write behind, permanently.
     router.back()
-    commitAfterDismiss(() => insertTransaction(draft))
+    commitAfterDismiss(() => {
+      const id = insertTransaction(draft)
+      if (owed.length > 0) recordSplit({ transactionId: id, method: 'equal', owed })
+    })
   }
 
   return (
@@ -153,27 +179,40 @@ export default function AddScreen() {
             />
           </View>
 
-          <Text style={s.label}>Split</Text>
-          <View style={s.chips}>
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <Pressable
-                key={n}
-                onPress={() => setWays(n)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: ways === n }}
-                style={[s.chip, ways === n && s.chipActive]}
-              >
-                <Text style={[s.chipText, ways === n && s.chipTextActive]}>
-                  {n === 1 ? 'Just me' : `${n} ways`}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <Text style={s.label}>Split with</Text>
+          {people.length === 0 ? (
+            <Text style={s.splitNote}>
+              Nobody added yet. You → Split &amp; settle up to add people, then they show up
+              here.
+            </Text>
+          ) : (
+            <View style={s.chips}>
+              {people.map((p) => {
+                const on = withPeople.includes(p.id)
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() =>
+                      setWithPeople((prev) =>
+                        on ? prev.filter((x) => x !== p.id) : [...prev, p.id],
+                      )
+                    }
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: on }}
+                    style={[s.chip, on && s.chipActive]}
+                  >
+                    <Text style={[s.chipText, on && s.chipTextActive]}>{p.name}</Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          )}
 
           {split && parsed && (
             <Text style={s.splitNote}>
               Your share is {format(split.yourShare)} of {format(parsed)} — only that counts as
-              your spend. {format(split.owedToYou)} is owed to you.
+              your spend. {format(split.owedToYou)} is owed to you, and it will show up under
+              Split until it is settled.
               {split.shares.some((sh) => sh.minor !== split.shares[0]!.minor) &&
                 ` It does not divide evenly, so the shares are ${split.shares
                   .map((sh) => sh.minor)

@@ -41,7 +41,17 @@ export function Glass({
   }
 
   return (
-    <GlassView style={[s.glass, style]} glassEffectStyle="regular" tintColor={tint}>
+    <GlassView
+      style={[s.glass, style]}
+      glassEffectStyle="regular"
+      // The tint defaults to the app's own surface, and that default is load-bearing.
+      //
+      // An untinted `GlassView` renders as a DARK material even in a light app. Combined
+      // with the dark ink this app uses on light surfaces, that put grey text on a grey
+      // slab — unreadable, and shipped on the first screen that forgot to pass a tint.
+      // Defaulting here means no future caller can reproduce it by omission.
+      tintColor={tint ?? colors['surface-1']}
+    >
       {children}
     </GlassView>
   )
