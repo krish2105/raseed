@@ -2,7 +2,7 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: 2**
+**Current session: 3**
 
 ---
 
@@ -10,7 +10,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 
 - [x] **S0** Monorepo scaffold — both apps import a shared package; breaking it fails both typechecks
 - [x] **S1** `@raseed/money` + `@raseed/tokens` — `allocate` gives 34/33/33; tokens render in both apps
-- [ ] **S2** `@raseed/schema` + Supabase migrations + RLS — parity test catches deliberate drift; cross-user read returns zero rows
+- [x] **S2** `@raseed/schema` + Supabase migrations + RLS — parity test catches deliberate drift; cross-user read returns zero rows
 - [ ] **S3** `@raseed/engines` domain half — safeToSpend, pairReversals, detectRecurrence, detectRemittance, normaliseMerchant, rankNudges, regretRate, all unit tested
 - [ ] **S4** `@raseed/engines` finance/stats + `@raseed/fixtures` — known-answer tests pass; same seed twice gives identical output
 
@@ -49,6 +49,10 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - **ESLint pinned to 9.x** — ESLint 10 breaks `eslint-plugin-react`, which both `eslint-config-next`
   and `eslint-config-expo` depend on. Same for TypeScript, pinned to 6.0.3 until `typescript-eslint`
   supports TS 7. **Revisit when the plugin ecosystem catches up.**
+
+- **Supabase cloud not linked** — schema, migration and RLS are authored and verified
+  against PGlite. Applying to a real project needs `supabase login` + `link` + `db push`,
+  which needs Krishna's credentials. **One command when he's back.**
 
 ## Deferred decisions
 

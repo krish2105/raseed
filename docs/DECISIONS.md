@@ -94,3 +94,40 @@ enforced by a test rather than a note.
 
 **Android removed.** iOS + web only, per instruction. `android` block dropped from app.json,
 adaptive-icon assets and the `android` script deleted. EAS profiles remain platform-agnostic.
+
+---
+
+## Session 2 — @raseed/schema + Supabase migrations + RLS (2026-08-16)
+
+**RLS verified against real Postgres via PGlite, not Docker and not the cloud.**
+Docker was ruled out and no Supabase credentials were available. PGlite is Postgres
+compiled to WASM running in-process, and RLS is core Postgres rather than a Supabase
+add-on — so the policies exercised in `rls.test.ts` are the ones that will run in
+production. `auth.uid()` is shimmed to read `request.jwt.claim.sub`, the way PostgREST
+sets it. Stated assumption, not a hidden one: this does not prove GoTrue populates that
+claim identically.
+
+**`v_spend` needed `security_invoker = true`, and the test is what found it.**
+A Postgres view executes as its OWNER, so RLS on the underlying table is bypassed and the
+view returned every user's rows. This is the classic Supabase view leak. Removing the
+option re-breaks the test on demand, so the fix is provably load-bearing rather than
+cargo-culted.
+
+**contract.ts is the truth; everything else is generated and committed.**
+`scripts/generate.mts` emits sqlite.ts, pg.ts, zod.ts and the migration. It is an authoring
+tool, not a build step — the output is committed. `parity.test.ts` introspects the real
+Drizzle column objects (not the source text), so a wrong column helper is caught, not just
+a typo. Verified against three injected drifts: nullability desync, type desync, and a
+column deleted from one dialect. All three fail the suite.
+
+**`integer` maps to pg `bigint`, not `integer`.**
+`occurred_at` holds epoch milliseconds, which overflows a 32-bit pg integer 24 days after
+1970. Easy to miss because SQLite's INTEGER is already 64-bit and would never complain.
+
+**FKs live in the migration, not in the Drizzle definitions.**
+`transactions.reversal_of_id` is self-referential and Drizzle's `.references()` cannot
+express that without a circular type. The database enforces them either way.
+
+**Still outstanding:** the migration has never been applied to a real Supabase project.
+`supabase link` + `db push` needs Krishna's login. Everything is authored and tested; only
+the cloud apply is pending.
