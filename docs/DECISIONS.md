@@ -244,3 +244,29 @@ animates `transform` only.
 
 **Every rail route exists**, with an honest placeholder naming the session that fills it
 and what it will contain — rather than an empty chart frame that looks broken.
+
+---
+
+## Vercel deploy (2026-08-16)
+
+**Live: https://raseed-eosin.vercel.app** — public, no login, as the spec requires ("a
+portfolio piece behind a login is a portfolio piece nobody sees").
+
+**The root directory has to be `apps/web`.** Three deploys failed at "Deploying outputs"
+with `Cannot patch preview comments when immutable static file upload is enabled. Upgrade
+to next@v16.3.0-canary.32 or newer` — while running Next 16.3.1, which is newer. The build
+succeeded every time; only the upload failed. Cause: with no root directory set, Vercel
+looks for `next` in the repo-root package.json, finds nothing, and its version check fails
+open. Setting `rootDirectory: apps/web` lets it read the app's own manifest. This is what
+MONOREPO_PLAN §7 said all along.
+
+**Project settings own the build, not vercel.json.** With the root directory set, Vercel's
+native pnpm-workspace detection installs from the repo root so `@raseed/*` resolve, and
+runs `next build` in apps/web. The root `vercel.json` was removed because its overrides
+fought those settings.
+
+**`turbo-ignore` is on** (`npx turbo-ignore web --fallback=HEAD^`), so a mobile-only commit
+does not burn a Hobby build.
+
+**`.vercelignore` excludes node_modules and apps/mobile** — the first CLI deploy tried to
+upload 19,221 files and was rejected at the 15,000 limit.
