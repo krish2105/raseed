@@ -187,6 +187,26 @@ FROM v_spend WHERE ${clause};`,
  */
 const BANNED = /\b(ATTACH|INSTALL|LOAD|COPY|PRAGMA|CREATE|DROP|ALTER|UPDATE|DELETE|INSERT|EXPORT)\b/i
 
+/**
+ * The row cap the spec names (`WEB_ARCHITECTURE` §5 P7).
+ *
+ * DuckDB will happily return a million rows into the main thread and the tab will stop
+ * responding while it builds the array. The cap is a liveness guarantee, not a security one —
+ * but "the browser froze" is the failure users actually hit.
+ */
+export const ROW_CAP = 5000
+
+/** Add `LIMIT` when the statement has none. An existing tighter limit is left alone. */
+export function withRowCap(sql: string, cap = ROW_CAP): string {
+  const trimmed = sql.trim().replace(/;\s*$/, '')
+  const existing = /\bLIMIT\s+(\d+)\s*$/i.exec(trimmed)
+  if (existing) {
+    // Never widen a limit the query already chose — the templates use 12 and 400 on purpose.
+    return Number(existing[1]) <= cap ? `${trimmed};` : `${trimmed.replace(/\bLIMIT\s+\d+\s*$/i, `LIMIT ${cap}`)};`
+  }
+  return `${trimmed} LIMIT ${cap};`
+}
+
 export function isSafe(sql: string): { ok: true } | { ok: false; reason: string } {
   const trimmed = sql.trim()
   if (!/^SELECT\b/i.test(trimmed) && !/^WITH\b/i.test(trimmed)) {

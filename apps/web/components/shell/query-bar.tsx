@@ -8,7 +8,10 @@ import { useDuck } from '@/lib/duck/provider'
 import { useCurrencyLens } from '@/components/shell/currency-lens'
 import { query } from '@/lib/duck/ingest'
 import { lensCurrency } from '@/lib/duck/queries'
-import { EXAMPLES, isSafe, parseQuestion, type ParsedQuery } from '@/lib/duck/nl'
+import { EXAMPLES, isSafe, parseQuestion, withRowCap, type ParsedQuery } from '@/lib/duck/nl'
+
+/** WEB_ARCHITECTURE §5-P7 names three seconds. */
+const QUERY_TIMEOUT_MS = 3000
 import { cn } from '@/lib/utils'
 
 interface Row {
@@ -75,7 +78,20 @@ export function QueryBar() {
 
       setRunning(true)
       try {
-        setRows(await query<Row>(plan.sql))
+        // The two guards WEB_ARCHITECTURE §5-P7 names and this bar never had: a hard row cap
+        // so a query cannot drag a million rows into the main thread, and a deadline so a
+        // pathological one cannot hang the dialog with a spinner and no way out.
+        //
+        // The deadline does not cancel the DuckDB work — WASM has no interrupt here — it
+        // stops the UI waiting on it. That distinction is worth stating rather than implying
+        // the query was killed.
+        const rows = await Promise.race([
+          query<Row>(withRowCap(plan.sql)),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`That query took longer than ${QUERY_TIMEOUT_MS / 1000}s, so I stopped waiting. Try a narrower period.`)), QUERY_TIMEOUT_MS),
+          ),
+        ])
+        setRows(rows)
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : String(cause))
       } finally {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSafe, parseQuestion } from '../nl'
+import { EXAMPLES, isSafe, parseQuestion, withRowCap } from '../nl'
 
 /**
  * The S16 done-when criterion: the sandbox rejects twelve adversarial strings.
@@ -72,5 +72,39 @@ describe('the parser only ever emits safe SQL', () => {
   it('returns null rather than guessing at nonsense', () => {
     expect(parseQuestion('asdfghjkl', 'INR')).toBeNull()
     expect(parseQuestion('', 'INR')).toBeNull()
+  })
+})
+
+describe('row cap', () => {
+  it('adds a LIMIT to a statement that has none', () => {
+    expect(withRowCap('SELECT * FROM v_spend')).toBe('SELECT * FROM v_spend LIMIT 5000;')
+  })
+
+  /** The templates use 12 and 400 deliberately; a cap must never widen them. */
+  it('leaves a tighter existing limit alone', () => {
+    expect(withRowCap('SELECT * FROM v_spend LIMIT 12')).toBe('SELECT * FROM v_spend LIMIT 12;')
+  })
+
+  it('tightens a limit that exceeds the cap', () => {
+    expect(withRowCap('SELECT * FROM v_spend LIMIT 999999')).toBe(
+      'SELECT * FROM v_spend LIMIT 5000;',
+    )
+  })
+
+  it('does not double the semicolon', () => {
+    expect(withRowCap('SELECT 1;')).toBe('SELECT 1 LIMIT 5000;')
+    expect(withRowCap('SELECT 1 LIMIT 5;')).toBe('SELECT 1 LIMIT 5;')
+  })
+
+  /** Every template the parser can emit must survive capping unchanged in meaning. */
+  it('caps every generated query without breaking it', () => {
+    for (const q of EXAMPLES) {
+      const plan = parseQuestion(q, 'INR')
+      if (!plan) continue
+      const capped = withRowCap(plan.sql)
+      expect(isSafe(capped).ok, `${q} -> ${capped}`).toBe(true)
+      expect(capped.endsWith(';')).toBe(true)
+      expect((capped.match(/;/g) ?? []).length).toBe(1)
+    }
   })
 })
