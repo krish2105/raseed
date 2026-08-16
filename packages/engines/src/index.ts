@@ -23,6 +23,7 @@ export * from './domain/narrate'
 export * from './domain/settle'
 export * from './domain/planTrip'
 export * from './domain/parseStatement'
+export * from './domain/parseReceipt'
 
 export * from './finance'
 export * from './stats'

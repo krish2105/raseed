@@ -1057,3 +1057,44 @@ low-severity transitive advisory trains everyone to ignore the gate, which is wo
 having one. `.gitleaks.toml` allowlists the Supabase **anon** key, which is public by design
 and appears in client bundles by necessity, and adds an explicit rule for the **service_role**
 key, which must never be committed.
+
+---
+
+## Receipts: confidence is the product, and the purity rule is now a gate (2026-08-16)
+
+**A receipt reader that quietly gets a total wrong is worse than one that admits it could not
+read the photo.** A wrong total enters the ledger and is never questioned again. So
+`parseReceipt` checks the bill against itself — does subtotal + tax + service + tip equal the
+printed total? — and that single reconciliation is the most useful signal in the whole parse.
+When it holds, the read is almost certainly right. When it does not, `discrepancy` says by how
+much and the confidence drops below the threshold at which the app would dare propose
+anything without a human looking.
+
+Details that decide whether it works on real paper:
+
+- **"Sub-Total" contains "Total".** Testing order is load-bearing, and getting it wrong makes
+  every bill's total the subtotal — off by exactly the tax, on every receipt, forever.
+- **A "Change" line is money coming back** and must never become the bill. Same for "Cash"
+  and "Card".
+- **CGST and SGST sum rather than overwrite.** An Indian restaurant bill has two tax lines,
+  and taking the last one halves the tax on every one of them.
+- **Tax-registration formats identify the country.** A **TRN** exists only in the UAE and a
+  **GSTIN** only in India, so a receipt printing either has told you its currency even when
+  it never prints a symbol — which UAE bills frequently do not.
+
+Two bugs the tests caught immediately, both from the same fixture: a fifteen-digit TRN was
+read as a price of 100,234,567,800,003.00 and `money()` threw, taking the whole parse down.
+Now a long unbroken digit run is treated as an identifier, and there is a plausibility cap —
+because a parser that crashes on a tax id crashes on most real receipts.
+
+**`splitByItems` shares tax and service in proportion to what each person ate**, which is the
+reason full itemisation was worth the trouble: three people where one had the wine should not
+split it evenly, and the VAT on that wine belongs to whoever drank it. The remainder goes to
+the largest share so the split still equals the bill exactly.
+
+**The engines purity rule is now enforced by ESLint rather than promised by `CLAUDE.md`.**
+No React, no I/O, no database, no `Date.now()`, no `Math.random()` — with a message on each
+saying what to do instead. It is the most load-bearing invariant in the repo: both apps
+import these functions, and the moment one reaches for a clock, a number on the phone and the
+same number on the dashboard can legitimately differ. Verified by writing a file that breaks
+all of it and watching three errors appear, then deleting it.
