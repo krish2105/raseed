@@ -1013,3 +1013,47 @@ take. Naming the shortfall is more useful than insisting the deadline works.
 A test caught me choosing the wrong branch rather than the wrong behaviour: at a ₹30,000
 budget the fixed costs alone are ₹39,800, so the planner correctly reported the trip
 impossible instead of trimming. The test wanted ₹45,000.
+
+---
+
+## Statement import, device deployment, and the gates Finy had that we did not (2026-08-16)
+
+**Reading a bank CSV you have never seen before.** There is no standard. HDFC, Emirates NBD,
+Wise and every card issuer emit different columns in different orders with different date
+formats and different ideas about how to signal a debit. So `parseStatement` **infers** the
+shape and reports what it inferred with a confidence, for the import screen to show and the
+user to correct. It proposes; the sheet commits. Nothing in it writes.
+
+Four things it gets right that a naive parser does not:
+
+- **`03/04/2026` is often genuinely undecidable.** 3 April or 4 March depends on which side
+  of the world the bank is on, and a statement where every date falls in the first twelve
+  days of its month simply does not say. Guessing misfiles a third of the rows into the wrong
+  month, and **nothing about the result looks wrong**. So ambiguity is detected across the
+  whole file and returned as `needsDateConfirmation`. The UI must ask.
+- **Separate debit/credit columns beat a single signed one.** When a bank supplies both, the
+  signed column is frequently unsigned and the direction lives only in which column is filled.
+- **The header is not line 1.** Banks put an account summary above it; treating line 1 as the
+  header imports the letterhead.
+- **Exact header match beats a contained one**, so a "Debit Card Number" column cannot win
+  the debit slot.
+
+Skipped lines are returned with a reason rather than dropped. And `findDuplicates` ships
+*with* import rather than after it — the same transaction arriving as a statement line and a
+manual entry must collapse, or every figure stated afterwards is wrong. It tolerates a day
+either side, because statement dates and app-entry dates rarely agree exactly.
+
+**The phone is light; the dashboard keeps both.** A deliberate split, not an oversight. The
+dashboard is a screen you sit at for a long stretch, often in a dim room, and dark earns its
+place there. The phone comes out in daylight, in a queue, for four seconds — and following
+the system setting would give a dark app to everyone who runs their phone dark for
+messaging, which is most people, in the context where dark helps least.
+
+**Two CI gates adopted from the Finy README, which this repo did not have:** a gitleaks
+secret scan over history, and a dependency audit at high severity. A leaked key is not a bug
+you fix in a follow-up commit — history is public the moment the repo is, and rotation is the
+only remedy. The audit deliberately fails on high and critical only: failing on every
+low-severity transitive advisory trains everyone to ignore the gate, which is worse than not
+having one. `.gitleaks.toml` allowlists the Supabase **anon** key, which is public by design
+and appears in client bundles by necessity, and adds an explicit rule for the **service_role**
+key, which must never be committed.

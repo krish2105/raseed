@@ -22,6 +22,7 @@ export * from './domain/tone'
 export * from './domain/narrate'
 export * from './domain/settle'
 export * from './domain/planTrip'
+export * from './domain/parseStatement'
 
 export * from './finance'
 export * from './stats'
