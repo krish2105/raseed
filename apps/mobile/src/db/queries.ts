@@ -656,3 +656,42 @@ export function removeGoal(id: string): void {
     id,
   ])
 }
+
+/**
+ * What you actually hold right now, across every account, in home currency.
+ *
+ * Opening balances plus every confirmed movement since. This used to be a literal
+ * `96000.00` typed into the Today screen, which meant Safe-to-Spend was arithmetic over a
+ * number nobody had ever earned or spent — the dial moved when you added an expense, but the
+ * balance it divided into never did.
+ *
+ * Reads `transactions` rather than `v_spend` deliberately: the view is the *spend* predicate,
+ * and a balance has to count income and transfers too. That is not an inlined spend filter,
+ * it is a different question.
+ *
+ * **AED accounts are excluded, and that is a real limitation rather than an oversight.**
+ * Summing AED minor units into an INR total would be a money-invariant violation, and
+ * converting would need a live rate — which this app does not have and, per `CLAUDE.md`, does
+ * not want: FX is frozen per transaction, never recomputed. So a Dubai balance does not count
+ * toward the Indian daily allowance today. Correct arithmetic, incomplete picture; the fix is
+ * a rate cache, not a cast.
+ */
+export function liquidBalanceMinor(): number {
+  const opening = (
+    getConnection().executeSync(
+      `SELECT COALESCE(SUM(opening_minor), 0) AS v FROM accounts
+        WHERE deleted = 0 AND archived_at IS NULL AND currency = 'INR';`,
+    ).rows as unknown as { v: number }[]
+  )[0]?.v ?? 0
+
+  const movement = (
+    getConnection().executeSync(
+      `SELECT COALESCE(SUM(CASE WHEN direction = 'in' THEN home_amount_minor
+                               ELSE -home_amount_minor END), 0) AS v
+         FROM transactions
+        WHERE deleted = 0 AND status = 'confirmed';`,
+    ).rows as unknown as { v: number }[]
+  )[0]?.v ?? 0
+
+  return opening + movement
+}

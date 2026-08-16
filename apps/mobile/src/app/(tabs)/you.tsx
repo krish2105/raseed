@@ -8,12 +8,8 @@ import { radius, space, type Palette } from '@raseed/tokens'
 import { font, useTheme } from '@/theme'
 import { countSpend, listAccounts, listCategories, useQuery } from '@/db'
 import { WalletCount } from '@/components/WalletCount'
+import { COMMITMENTS } from '@/lib/commitments'
 
-const UPCOMING = [
-  { label: 'Rent', when: 'in 3 days', currency: 'INR' as const, minor: 2_200_000 },
-  { label: 'Netflix', when: 'in 11 days', currency: 'INR' as const, minor: 79_900 },
-  { label: 'Jio', when: 'in 14 days', currency: 'INR' as const, minor: 39_900 },
-]
 
 export default function YouScreen() {
   /**
@@ -99,7 +95,7 @@ export default function YouScreen() {
 
         <Text style={s.section}>Committed, before payday</Text>
         <View style={s.card}>
-          {UPCOMING.map((u, i) => (
+          {COMMITMENTS.map((u, i) => (
             <View key={u.label} style={[s.row, i === 0 && s.rowFirst]}>
               <View style={s.rowText}>
                 <Text style={s.rowName}>{u.label}</Text>

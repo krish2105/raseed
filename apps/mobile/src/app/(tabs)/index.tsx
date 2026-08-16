@@ -5,11 +5,12 @@ import { Link } from 'expo-router'
 import { Camera, Plus } from 'lucide-react-native'
 
 import { safeToSpend, type Fact } from '@raseed/engines'
-import { format, fromMajor } from '@raseed/money'
+import { format, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { spendBetween, spendTotal, useQuery } from '@/db'
+import { liquidBalanceMinor, spendBetween, spendTotal, useQuery } from '@/db'
+import { DAYS_TO_PAYDAY, SAFETY_BUFFER, committedBills } from '@/lib/commitments'
 import { useNow } from '@/hooks/useNow'
 import { DayDial } from '@/components/DayDial'
 import { Companion } from '@/components/Companion'
@@ -42,17 +43,20 @@ export default function TodayScreen() {
   const entries = useQuery(() => spendBetween(startOfToday, startOfToday + DAY))
   const spentToday = useQuery(() => spendTotal(startOfToday, startOfToday + DAY))
 
-  // Balances and bills become editable rows in `You` at a later session; the figures below
-  // are the only remaining hardcoded inputs on this screen.
+  // The balance is real: opening balances plus every confirmed movement. It used to be the
+  // literal 96000.00, which made the dial arithmetic over a number that never moved no matter
+  // what you spent. Commitments, buffer and payday are still placeholders, but they live in
+  // one file now rather than disagreeing across two screens — see lib/commitments.ts.
+  const balanceMinor = useQuery(liquidBalanceMinor)
   const sts = safeToSpend({
-    liquidBalance: fromMajor('96000.00', 'INR'),
-    committedBills: [fromMajor('22000.00', 'INR')],
-    pendingSweeps: [fromMajor('4000.00', 'INR')],
-    safetyBuffer: fromMajor('3000.00', 'INR'),
-    rawCarryover: fromMajor('310.00', 'INR'),
+    liquidBalance: money(balanceMinor, 'INR'),
+    committedBills: committedBills(),
+    pendingSweeps: [],
+    safetyBuffer: SAFETY_BUFFER,
+    rawCarryover: money(0, 'INR'),
     spentToday,
     today: now,
-    nextIncomeAt: now + 9 * DAY,
+    nextIncomeAt: now + DAYS_TO_PAYDAY * DAY,
   })
 
   const allowance = Math.max(1, sts.baseDaily.minor + sts.carryover.minor)
