@@ -31,3 +31,7 @@ coverage/
 *.tsbuildinfo
 .vercel
 .env*
+
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/

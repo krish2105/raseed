@@ -28,3 +28,10 @@ jobs:
       # Session 0's whole point is that breaking a shared package fails BOTH apps —
       # fail-fast would hide the second one.
       - run: pnpm exec turbo typecheck lint test --continue
+
+      # Playwright drives a real production build: `next build && next start`. The bugs
+      # worth catching here live in the production path — the worker chunk only exists
+      # there, and a dev-only pass would prove nothing about either.
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - run: pnpm --filter web e2e

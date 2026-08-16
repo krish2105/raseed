@@ -598,3 +598,36 @@ seeded entry. It defaults to Eating out now.
 S19 is the **mobile** ship gate in the plan and only the web half is built. The maths lives
 in `@raseed/engines` with its tests, so the phone inherits the logic rather than reimplements
 it, but the mobile split sheet and wallet prompt are not written.
+
+---
+
+## End-to-end tests, and proving they fail (2026-08-16)
+
+Twenty Playwright specs against a real `next build && next start`, not `next dev`. The worker
+chunk only exists in the production bundle and prerendering is what exercises the Suspense
+boundaries, so a dev-only run would have proved nothing about either.
+
+**Every spec was checked by reintroducing the bug it covers.** A test that has never failed
+is a test nobody knows works.
+
+That exercise immediately corrected something I had written in a code comment. I claimed the
+`nonce` in the provider's request object was load-bearing. It is not — I reintroduced the
+bug by freezing the nonce and the suite still passed green, because `{ rows, nonce }` still
+allocates a **fresh object** every call and object identity is what re-runs the effect. Only
+reverting to a primitive `useState<number | undefined>` turned it red. The comment now says
+what is actually true, and why the nonce stays anyway: to stop the next reader "simplifying"
+it back to a number.
+
+**The Add button is the readiness probe.** It is disabled unless `status === 'ready'`, so
+waiting on it doubles as a regression check on the exact state machine that got stuck.
+
+**Two assertions were wrong before the code was.** The split test asserted the row did not
+contain "₹1,000.00" — but the note legitimately reads "Paid ₹1,000.00", which is the whole
+point of having a note. And the lens test snapshotted `main` once, which passes the moment
+the first panel repaints while others are still re-querying, reading as a lens leak that was
+really a race. Playwright's auto-retrying `not.toContainText` asserts the stronger thing:
+that *every* panel re-read.
+
+**One worker, no parallelism.** Every spec writes to the same localStorage origin; running
+them concurrently would make them fight over the ledger and produce exactly the kind of
+flake that gets a suite skipped.

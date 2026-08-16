@@ -14,6 +14,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['**/__tests__/**/*.test.ts', '**/*.test.ts'],
-    exclude: ['**/node_modules/**', '**/.next/**'],
+    // Playwright specs are driven by `pnpm e2e`; Vitest must not try to run them.
+    exclude: ['**/node_modules/**', '**/.next/**', '**/e2e/**'],
   },
 })

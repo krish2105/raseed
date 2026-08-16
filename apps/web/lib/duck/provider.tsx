@@ -33,13 +33,18 @@ export function DuckProvider({ children }: { children: ReactNode }) {
   const [version, setVersion] = useState(0)
 
   /**
-   * The nonce is load-bearing, not decoration.
+   * A fresh object per request, so the effect cannot be skipped.
    *
-   * `reload()` is almost always called with no argument, so keying the effect on the row
-   * count alone meant setting `undefined` over `undefined`: React bails out on the
-   * identical value, the effect never re-runs, and `status` stays `'loading'` for the rest
-   * of the session. Adding an expense left every figure stale and disabled the Add button
-   * behind it. A fresh object each time makes the re-ingest unconditional.
+   * `reload()` is almost always called with no argument. Keying the effect on the row count
+   * alone meant setting `undefined` over `undefined`: React bails out on an identical
+   * primitive, the effect never re-runs, and `status` stays `'loading'` for the rest of the
+   * session — Add and ⌘K disabled, every added expense missing from the figures until a
+   * manual refresh.
+   *
+   * The **object identity** is what fixes it; the nonce only makes that intent legible to
+   * the next reader, who would otherwise be tempted to "simplify" this back to a number.
+   * Confirmed by reintroducing the primitive and watching `capture.spec.ts` go red — a
+   * version that merely stopped incrementing the nonce still passed.
    */
   const [request, setRequest] = useState<{ rows?: number; nonce: number }>({ nonce: 0 })
 
