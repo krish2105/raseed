@@ -1,11 +1,13 @@
-import { ComingSoon } from '@/components/ui/coming-soon'
+import { Suspense } from 'react'
+import { PageLoading } from '@/components/ui/page-loading'
+import { LedgerClient } from './ledger-client'
 
 export const metadata = { title: 'Ledger · RASEED' }
 
 export default function Page() {
   return (
-    <ComingSoon title="Ledger" session="session 8">
-      The full transaction table, virtualised for 100k rows, reading Arrow columns straight out of DuckDB-WASM.
-    </ComingSoon>
+    <Suspense fallback={<PageLoading />}>
+      <LedgerClient />
+    </Suspense>
   )
 }

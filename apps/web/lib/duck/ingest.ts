@@ -1,6 +1,7 @@
 import * as arrow from 'apache-arrow'
 import type { AsyncDuckDB } from '@duckdb/duckdb-wasm'
 import { generateLedger, type FixtureLedger, type FixtureTransaction } from '@raseed/fixtures'
+import { localTransactions } from '@/lib/store/local-ledger'
 import { getDuckDB } from './client'
 import { ALL_VIEWS, RAW_TABLE } from './queries'
 
@@ -56,6 +57,10 @@ function transactionsTable(rows: readonly FixtureTransaction[]): arrow.Table {
     ),
     fx_rate: arrow.vectorFromArray(
       rows.map((t) => t.fx_rate),
+      new arrow.Float64(),
+    ),
+    fx_inr_per_aed: arrow.vectorFromArray(
+      rows.map((t) => t.fx_inr_per_aed),
       new arrow.Float64(),
     ),
     account_id: utf8(rows.map((t) => t.account_id)),
@@ -125,7 +130,11 @@ async function run(db: AsyncDuckDB, sql: string): Promise<void> {
 export async function ingestDemo(rows?: number): Promise<IngestTiming> {
   const db = await getDuckDB()
   const ledger = generateLedger({ endAt: DEMO_END_AT })
-  const transactions = rows ? inflate(ledger, rows) : ledger.transactions
+
+  // Anything you added in this browser is layered on top of the seeded demo. The benchmark
+  // path deliberately skips it so the row count it reports is exactly what was asked for.
+  const base = rows ? inflate(ledger, rows) : [...ledger.transactions, ...localTransactions()]
+  const transactions = base
 
   const t0 = performance.now()
   const txnTable = transactionsTable(transactions)

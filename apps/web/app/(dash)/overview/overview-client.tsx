@@ -4,38 +4,41 @@ import { format } from '@raseed/money'
 import { Panel } from '@/components/ui/panel'
 import { Figure } from '@/components/ui/figure'
 import { CategoryBars } from '@/components/charts/category-bars'
+import { Sparkline } from '@/components/charts/sparkline'
 import { AmountCard } from '@/components/ui/amount-card'
+import { CfoBriefing } from '@/components/insight/cfo-briefing'
 import { BarsSkeleton, FigureSkeleton, RowsSkeleton, Skeleton } from '@/components/ui/skeleton'
 import { PanelError } from '@/components/ui/panel-error'
 import { useDuck, useDuckQuery } from '@/lib/duck/provider'
+import { useCurrencyLens } from '@/components/shell/currency-lens'
 import {
   anomalies,
   byCategory,
   byMerchant,
   concentration,
   currencyMix,
+  dailySeries,
   headline,
   recurring,
 } from '@/lib/duck/analytics'
 
 /**
- * Every number on this page comes out of DuckDB-WASM in the browser. No analytics SQL is
- * ever run against Postgres — that is the whole architectural bet, and running one query
- * server-side would quietly collapse it.
+ * Every number here comes out of DuckDB-WASM in this tab, expressed through the currency
+ * lens in the URL. No analytics SQL ever runs against Postgres.
  */
 export function OverviewClient() {
   const { status, timing, error } = useDuck()
+  const [lens] = useCurrencyLens()
 
-  const { data: head, error: headError } = useDuckQuery(headline)
-  const { data: categories, error: categoriesError } = useDuckQuery(() => byCategory(30))
-  const { data: merchants, error: merchantsError } = useDuckQuery(() => byMerchant(90))
-  const { data: conc, error: concError } = useDuckQuery(concentration)
-  const { data: anomalyCount, error: anomalyError } = useDuckQuery(() => anomalies(90))
-  const { data: mix } = useDuckQuery(() => currencyMix(30))
-  const { data: subs, error: subsError } = useDuckQuery(recurring)
+  const head = useDuckQuery(() => headline(lens), [lens])
+  const categories = useDuckQuery(() => byCategory(30, lens), [lens])
+  const merchants = useDuckQuery(() => byMerchant(90, lens), [lens])
+  const conc = useDuckQuery(() => concentration(lens), [lens])
+  const outliers = useDuckQuery(() => anomalies(90, lens), [lens])
+  const mix = useDuckQuery(() => currencyMix(30))
+  const subs = useDuckQuery(recurring)
+  const series = useDuckQuery(() => dailySeries(60, lens), [lens])
 
-  // Errors show what actually failed. An analytics failure rendered as an empty chart is
-  // indistinguishable from "you have no data", which is the worse of the two.
   if (status === 'error') {
     return (
       <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
@@ -51,17 +54,18 @@ export function OverviewClient() {
     )
   }
 
-  const aedShare = mix?.AED
+  const aedShare = mix.data?.AED
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
       <header className="mb-6">
         <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">Overview</h1>
         <p className="mt-1.5 text-sm text-text-lo">
-          {head ? (
+          {head.data ? (
             <>
-              {head.spendCount.toLocaleString('en-IN')} spend rows of{' '}
-              {head.rowCount.toLocaleString('en-IN')}, computed in DuckDB-WASM in this tab.
+              {head.data.spendCount.toLocaleString('en-IN')} spend rows of{' '}
+              {head.data.rowCount.toLocaleString('en-IN')}, computed in DuckDB-WASM in this tab
+              {lens !== 'native' && <> · reading in {lens}</>}.
             </>
           ) : (
             'Loading the analytics engine…'
@@ -69,11 +73,13 @@ export function OverviewClient() {
         </p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {head ? (
+      <CfoBriefing />
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {head.data ? (
           <>
-            <AmountCard label="Spent, last 30 days" amount={head.spend30} className="sm:col-span-2" />
-            <AmountCard label="Income, last 30 days" amount={head.income30} className="sm:col-span-2" />
+            <AmountCard label="Spent, last 30 days" amount={head.data.spend30} className="sm:col-span-2" />
+            <AmountCard label="Income, last 30 days" amount={head.data.income30} className="sm:col-span-2" />
           </>
         ) : (
           <>
@@ -83,12 +89,12 @@ export function OverviewClient() {
         )}
 
         <Panel aedShare={aedShare}>
-          {headError ? (
-            <PanelError message={headError} />
-          ) : head ? (
+          {head.error ? (
+            <PanelError message={head.error} />
+          ) : head.data ? (
             <Figure
               label="Savings rate"
-              value={`${(head.savingsRate * 100).toFixed(1)}%`}
+              value={`${(head.data.savingsRate * 100).toFixed(1)}%`}
               hint="(income − spend) ÷ income"
             />
           ) : (
@@ -97,14 +103,15 @@ export function OverviewClient() {
         </Panel>
 
         <Panel aedShare={aedShare}>
-          {headError ? (
-            <PanelError message={headError} />
-          ) : head ? (
+          {head.error ? (
+            <PanelError message={head.error} />
+          ) : head.data ? (
             <Figure
-              label="Spend vs prior 30d"
-              value={format(head.spend30, { compactZeroFraction: true })}
-              delta={head.spendDelta}
+              label="Average day"
+              value={format(head.data.dailyAverage, { compactZeroFraction: true })}
+              delta={head.data.spendDelta}
               goodDirection="down"
+              hint="vs prior 30 days"
             />
           ) : (
             <FigureSkeleton />
@@ -112,13 +119,13 @@ export function OverviewClient() {
         </Panel>
 
         <Panel>
-          {concError ? (
-            <PanelError message={concError} />
-          ) : conc ? (
+          {conc.error ? (
+            <PanelError message={conc.error} />
+          ) : conc.data ? (
             <Figure
               label="Merchant concentration"
-              value={conc.gini.toFixed(2)}
-              hint={`Gini · ${conc.vitalFew} merchants are 80% of spend`}
+              value={conc.data.gini.toFixed(2)}
+              hint={`Gini · ${conc.data.vitalFew} of ${conc.data.total} are 80% of spend`}
             />
           ) : (
             <FigureSkeleton />
@@ -126,12 +133,12 @@ export function OverviewClient() {
         </Panel>
 
         <Panel>
-          {anomalyError ? (
-            <PanelError message={anomalyError} />
-          ) : anomalyCount !== null ? (
+          {outliers.error ? (
+            <PanelError message={outliers.error} />
+          ) : outliers.data ? (
             <Figure
               label="Anomalous days"
-              value={String(anomalyCount)}
+              value={String(outliers.data.length)}
               hint="robust MAD z > 3.5, trailing 90d"
             />
           ) : (
@@ -140,34 +147,44 @@ export function OverviewClient() {
         </Panel>
       </div>
 
+      <Panel title="Daily spend" hint="last 60 days" className="mt-3" aedShare={aedShare}>
+        {series.error ? (
+          <PanelError message={series.error} />
+        ) : series.data ? (
+          <Sparkline
+            points={series.data.map((p) => ({ label: p.day, value: p.total.minor }))}
+            currency={series.data[0]?.total.currency ?? 'INR'}
+            height={120}
+          />
+        ) : (
+          <Skeleton className="h-[120px] w-full" />
+        )}
+      </Panel>
+
       <div className="mt-3 grid gap-3 lg:grid-cols-5">
         <Panel title="Where it went" hint="last 30 days" className="lg:col-span-3" aedShare={aedShare}>
-          {categoriesError ? (
-            <PanelError message={categoriesError} />
-          ) : categories ? (
-            categories.length > 0 ? (
-              <CategoryBars data={categories.slice(0, 8)} />
+          {categories.error ? (
+            <PanelError message={categories.error} />
+          ) : categories.data ? (
+            categories.data.length > 0 ? (
+              <CategoryBars data={categories.data.slice(0, 8)} />
             ) : (
               <p className="py-8 text-center text-sm text-text-lo">
-                No spend in this window. Add transactions on the phone, or drop a CSV.
+                No spend in this window. Add one with the button in the top bar.
               </p>
             )
           ) : (
             <BarsSkeleton />
           )}
-          <p className="mt-4 text-xs text-text-lo">
-            Warm bars are needs, cool are wants. Colours resolve from CSS variables, so they
-            follow the theme.
-          </p>
         </Panel>
 
         <div className="flex flex-col gap-3 lg:col-span-2">
           <Panel title="Top merchants" hint="last 90 days">
-            {merchantsError ? (
-              <PanelError message={merchantsError} />
-            ) : merchants ? (
+            {merchants.error ? (
+              <PanelError message={merchants.error} />
+            ) : merchants.data ? (
               <ul className="flex flex-col divide-y divide-line">
-                {merchants.slice(0, 6).map((m) => (
+                {merchants.data.slice(0, 6).map((m) => (
                   <li key={m.merchantId} className="flex items-center justify-between gap-3 py-2">
                     <span className="flex min-w-0 items-center gap-2">
                       <span
@@ -188,13 +205,13 @@ export function OverviewClient() {
             )}
           </Panel>
 
-          <Panel title="Recurring candidates" hint="interval CV < 0.15">
-            {subsError ? (
-              <PanelError message={subsError} />
-            ) : subs ? (
-              subs.length > 0 ? (
+          <Panel title="Recurring" hint="interval CV < 0.15">
+            {subs.error ? (
+              <PanelError message={subs.error} />
+            ) : subs.data ? (
+              subs.data.length > 0 ? (
                 <ul className="flex flex-col divide-y divide-line">
-                  {subs.slice(0, 4).map((s) => (
+                  {subs.data.slice(0, 4).map((s) => (
                     <li key={s.merchantId} className="flex items-center justify-between gap-3 py-2">
                       <span className="min-w-0">
                         <span className="block truncate text-sm">{s.name}</span>
@@ -236,13 +253,6 @@ export function OverviewClient() {
               </div>
             ))}
           </dl>
-          <p className="mt-4 text-xs text-text-lo">
-            Measured in this tab, this load. The 100k-row budget test lives in{' '}
-            <a href="/lab" className="underline underline-offset-2 hover:text-text-hi">
-              Lab
-            </a>
-            .
-          </p>
         </Panel>
       )}
     </div>

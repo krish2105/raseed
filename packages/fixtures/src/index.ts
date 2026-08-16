@@ -18,6 +18,12 @@ export interface FixtureTransaction {
   currency: 'INR' | 'AED'
   home_amount_minor: number
   fx_rate: number
+  /**
+   * INR per AED, frozen at this transaction's date — present on EVERY row, not just AED
+   * ones. The currency lens needs it to express an INR-native amount in AED without
+   * recomputing anything: the rate travels with the row.
+   */
+  fx_inr_per_aed: number
   account_id: string
   merchant_id: string | null
   category_id: string
@@ -151,8 +157,16 @@ export function generateLedger(options: GenerateOptions): FixtureLedger {
     return round4(FX_BASE * (1 + 0.06 * progress + 0.01 * Math.sin(progress * 12)))
   }
 
-  const push = (t: Omit<FixtureTransaction, 'user_id' | 'updated_at' | 'deleted'>) => {
-    transactions.push({ ...t, user_id: USER, updated_at: t.occurred_at, deleted: false })
+  const push = (
+    t: Omit<FixtureTransaction, 'user_id' | 'updated_at' | 'deleted' | 'fx_inr_per_aed'>,
+  ) => {
+    transactions.push({
+      ...t,
+      fx_inr_per_aed: fxAt(t.occurred_at),
+      user_id: USER,
+      updated_at: t.occurred_at,
+      deleted: false,
+    })
   }
 
   const spend = (

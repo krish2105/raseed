@@ -157,6 +157,23 @@ export function holtWinters(
   return { fitted, forecast, level, trend, seasonal: [...seasonal] }
 }
 
+/**
+ * Symmetric MAPE, bounded 0-200%.
+ *
+ * Plain MAPE divides by the actual, so a near-zero day sends the error to thousands of
+ * percent and the metric stops meaning anything — which is exactly what daily personal
+ * spend looks like. sMAPE divides by the average of actual and forecast, so it stays
+ * bounded and comparable on intermittent series.
+ */
+export function smape(actual: readonly number[], predicted: readonly number[]): number {
+  const pairs = actual
+    .map((a, i) => [a, predicted[i]] as const)
+    .filter((p): p is readonly [number, number] => p[1] !== undefined)
+    .filter(([a, p]) => Math.abs(a) + Math.abs(p) > 0)
+  if (pairs.length === 0) return Number.NaN
+  return mean(pairs.map(([a, p]) => (2 * Math.abs(a - p)) / (Math.abs(a) + Math.abs(p))))
+}
+
 /** Mean absolute percentage error, ignoring zero actuals. */
 export function mape(actual: readonly number[], predicted: readonly number[]): number {
   const pairs = actual

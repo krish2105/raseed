@@ -16,6 +16,7 @@ import {
   pareto,
   quantile,
   runwayFan,
+  smape,
   seasonalDecompose,
 } from './index'
 
@@ -309,5 +310,27 @@ describe('seasonalDecompose', () => {
 
   it('refuses fewer than two seasons', () => {
     expect(() => seasonalDecompose([1, 2, 3], 7)).toThrow(/two seasons/)
+  })
+})
+
+describe('smape', () => {
+  it('is zero for a perfect forecast', () => {
+    expect(smape([10, 20, 30], [10, 20, 30])).toBe(0)
+  })
+
+  // The reason it exists: MAPE divides by the actual, so a near-zero day explodes it.
+  it('stays bounded where MAPE explodes on a near-zero actual', () => {
+    const actual = [100, 100, 1]
+    const predicted = [100, 100, 60]
+    expect(mape(actual, predicted)).toBeGreaterThan(19) // ~5900%
+    expect(smape(actual, predicted)).toBeLessThanOrEqual(2)
+  })
+
+  it('is capped at 2 (200%) when signs are opposite', () => {
+    expect(smape([10], [-10])).toBeCloseTo(2, 6)
+  })
+
+  it('is symmetric in its arguments', () => {
+    expect(smape([10, 20], [12, 18])).toBeCloseTo(smape([12, 18], [10, 20]), 10)
   })
 })

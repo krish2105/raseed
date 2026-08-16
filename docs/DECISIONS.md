@@ -422,3 +422,39 @@ left `data` null, which renders as a skeleton, which is indistinguishable from a
 It now returns `{ data, error }` and every panel renders `PanelError` with the real message.
 A permanently-pulsing skeleton is a worse failure than a red box, because nobody
 investigates it.
+
+---
+
+## The currency lens actually converts, and four tabs became real (2026-08-16)
+
+**The lens was cosmetic and is now load-bearing.** `?lens=AED` selected the chip and changed
+nothing — every figure still read `home_amount_minor`, which is INR. Fixed by giving every
+fixture row `fx_inr_per_aed`, frozen at its own transaction date, and expressing the lens as
+a SQL fragment: INR reads the home column, AED divides by that row's frozen rate, native
+reads the amount in the currency it was actually spent in. It swaps which column is read; it
+never recomputes history. Verified: with `lens=AED` there is not one `₹` left on the page.
+
+**Holt-Winters accuracy is weekly sMAPE, not daily MAPE.** Daily MAPE read 197.7% — not
+because the forecast was bad, but because MAPE divides by the actual and personal spend has
+near-zero days. `smape` is bounded at 200% and is the standard choice for intermittent
+series; weekly buckets are also the question anyone actually asks. Added to `@raseed/engines`
+with a test that shows MAPE exploding past 1900% on the same input where sMAPE stays under 2.
+
+**Every dashboard route needed its own Suspense boundary.** `useSearchParams` (via nuqs)
+forces a client bailout during static prerender, so the build failed on `/flows` and
+`/categories` the moment the pages read the lens directly rather than only through the top
+bar. Each page now wraps its client component with a skeleton fallback sized to the real
+layout.
+
+**The Sankey is hand-built SVG, not d3-sankey.** The layout here is a fixed three-column
+flow, so a general-purpose layout solver would be more dependency than geometry. Ribbon
+heights are proportional to value, so the picture cannot disagree with the totals.
+
+**The ⌘K bar is a deterministic rules parser, not an LLM.** It cannot answer everything, but
+it never invents a number and it needs no API key. The generated SQL is always shown, and the
+sandbox rejects anything that is not a single SELECT.
+
+**Web writes go to localStorage and are layered into the ingest.** A visitor's additions live
+only in their own browser and never touch anyone else's data, which is what makes a public
+demo with write access safe. The benchmark path deliberately skips them so the row count it
+reports is exactly what was requested.

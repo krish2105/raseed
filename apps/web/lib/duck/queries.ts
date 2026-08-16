@@ -10,6 +10,36 @@ import { spendPredicate } from '@raseed/schema/contract'
 
 export const RAW_TABLE = 'raw_transactions'
 
+export type Lens = 'INR' | 'AED' | 'native'
+
+/**
+ * The currency lens, as a SQL expression.
+ *
+ * It swaps which column is read — it never recomputes history. `fx_inr_per_aed` is frozen
+ * on every row at its own transaction date, so an INR-native amount expressed in AED uses
+ * the rate that applied the day it happened, not today's.
+ *
+ *   INR    → the home column as stored
+ *   AED    → home ÷ that row's frozen INR/AED rate
+ *   native → the amount in the currency it was actually spent in
+ */
+export function lensAmount(lens: Lens, alias = ''): string {
+  const p = alias ? `${alias}.` : ''
+  switch (lens) {
+    case 'AED':
+      return `(${p}home_amount_minor / NULLIF(${p}fx_inr_per_aed, 0))`
+    case 'native':
+      return `${p}amount_minor`
+    default:
+      return `${p}home_amount_minor`
+  }
+}
+
+/** The currency an aggregate is denominated in, for @raseed/money. */
+export function lensCurrency(lens: Lens): 'INR' | 'AED' {
+  return lens === 'AED' ? 'AED' : 'INR'
+}
+
 /**
  * The spend predicate, rendered from `@raseed/schema`'s contract — the same string the
  * Supabase migration and the mobile SQLite view are built from. Three engines, one
@@ -105,37 +135,37 @@ export const Q = {
   rowCount: `SELECT COUNT(*)::BIGINT AS n FROM ${RAW_TABLE};`,
   spendCount: 'SELECT COUNT(*)::BIGINT AS n FROM v_spend;',
 
-  /** Home-currency spend in a trailing window, in whole minor units. */
-  spendSince: (sinceMs: number) =>
-    `SELECT COALESCE(SUM(home_amount_minor), 0)::BIGINT AS total
+  /** Spend in a trailing window, expressed through the lens, in whole minor units. */
+  spendSince: (sinceMs: number, lens: Lens) =>
+    `SELECT COALESCE(SUM(${lensAmount(lens)}), 0)::BIGINT AS total
      FROM v_spend WHERE occurred_at >= ${sinceMs};`,
 
-  spendBetween: (fromMs: number, toMs: number) =>
-    `SELECT COALESCE(SUM(home_amount_minor), 0)::BIGINT AS total
+  spendBetween: (fromMs: number, toMs: number, lens: Lens) =>
+    `SELECT COALESCE(SUM(${lensAmount(lens)}), 0)::BIGINT AS total
      FROM v_spend WHERE occurred_at >= ${fromMs} AND occurred_at < ${toMs};`,
 
-  incomeSince: (sinceMs: number) =>
-    `SELECT COALESCE(SUM(home_amount_minor), 0)::BIGINT AS total
+  incomeSince: (sinceMs: number, lens: Lens) =>
+    `SELECT COALESCE(SUM(${lensAmount(lens)}), 0)::BIGINT AS total
      FROM v_income WHERE occurred_at >= ${sinceMs};`,
 
-  byCategorySince: (sinceMs: number) =>
+  byCategorySince: (sinceMs: number, lens: Lens) =>
     `SELECT
        s.category_id,
        COALESCE(c.name, 'Uncategorised') AS name,
        COALESCE(c.kind, 'want')          AS kind,
-       SUM(s.home_amount_minor)::BIGINT  AS home_minor
+       SUM(${lensAmount(lens, 's')})::BIGINT AS home_minor
      FROM v_spend s
      LEFT JOIN categories c ON c.id = s.category_id
      WHERE s.occurred_at >= ${sinceMs}
      GROUP BY 1, 2, 3
      ORDER BY home_minor DESC;`,
 
-  byMerchantSince: (sinceMs: number) =>
+  byMerchantSince: (sinceMs: number, lens: Lens) =>
     `SELECT
        s.merchant_id,
        COALESCE(m.canonical_name, 'Unknown') AS name,
        COALESCE(m.country, 'IN')             AS country,
-       SUM(s.home_amount_minor)::BIGINT      AS home_minor,
+       SUM(${lensAmount(lens, 's')})::BIGINT AS home_minor,
        COUNT(*)::BIGINT                      AS txn_count
      FROM v_spend s
      LEFT JOIN merchants m ON m.id = s.merchant_id
@@ -143,12 +173,74 @@ export const Q = {
      GROUP BY 1, 2, 3
      ORDER BY home_minor DESC;`,
 
-  /** Daily totals for the trailing window — feeds the MAD anomaly detector. */
-  dailyTotalsSince: (sinceMs: number) =>
-    `SELECT day, SUM(home_minor)::BIGINT AS home_minor
-     FROM v_daily
-     WHERE day >= CAST(epoch_ms(${sinceMs}) AS DATE)
-     GROUP BY day ORDER BY day;`,
+  /** Daily totals for the trailing window — feeds the MAD anomaly detector and the charts. */
+  dailyTotalsSince: (sinceMs: number, lens: Lens) =>
+    `SELECT CAST(epoch_ms(occurred_at) AS DATE) AS day,
+            SUM(${lensAmount(lens)})::BIGINT     AS home_minor,
+            COUNT(*)::BIGINT                     AS txn_count
+     FROM v_spend
+     WHERE occurred_at >= ${sinceMs}
+     GROUP BY 1 ORDER BY 1;`,
+
+  /** Monthly totals for the forecast and the net-worth line. */
+  monthlyTotals: (lens: Lens) =>
+    `SELECT DATE_TRUNC('month', CAST(epoch_ms(occurred_at) AS DATE)) AS month,
+            SUM(${lensAmount(lens)})::BIGINT AS home_minor
+     FROM v_spend GROUP BY 1 ORDER BY 1;`,
+
+  /** Sankey edges: income → kind → category, through the lens. */
+  flowEdges: (sinceMs: number, lens: Lens) =>
+    `SELECT COALESCE(c.kind, 'want')  AS kind,
+            COALESCE(c.name, 'Other') AS category,
+            SUM(${lensAmount(lens, 's')})::BIGINT AS value_minor
+     FROM v_spend s LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.occurred_at >= ${sinceMs}
+     GROUP BY 1, 2 HAVING SUM(${lensAmount(lens, 's')}) > 0
+     ORDER BY value_minor DESC;`,
+
+  /** Category totals for two adjacent windows — the rate x volume variance input. */
+  categoryVariance: (aFrom: number, aTo: number, bFrom: number, bTo: number, lens: Lens) =>
+    `WITH a AS (
+       SELECT category_id, SUM(${lensAmount(lens)})::BIGINT AS minor, COUNT(*)::BIGINT AS n
+       FROM v_spend WHERE occurred_at >= ${aFrom} AND occurred_at < ${aTo} GROUP BY 1
+     ), b AS (
+       SELECT category_id, SUM(${lensAmount(lens)})::BIGINT AS minor, COUNT(*)::BIGINT AS n
+       FROM v_spend WHERE occurred_at >= ${bFrom} AND occurred_at < ${bTo} GROUP BY 1
+     )
+     SELECT COALESCE(a.category_id, b.category_id) AS category_id,
+            COALESCE(c.name, 'Uncategorised')      AS name,
+            COALESCE(a.minor, 0)::BIGINT AS before_minor, COALESCE(a.n, 0)::BIGINT AS before_n,
+            COALESCE(b.minor, 0)::BIGINT AS after_minor,  COALESCE(b.n, 0)::BIGINT AS after_n
+     FROM a FULL OUTER JOIN b ON a.category_id = b.category_id
+     LEFT JOIN categories c ON c.id = COALESCE(a.category_id, b.category_id)
+     ORDER BY after_minor DESC;`,
+
+  /** The ledger table. */
+  ledgerPage: (limit: number, offset: number, lens: Lens) =>
+    `SELECT s.id, s.occurred_at, s.currency, s.amount_minor,
+            ${lensAmount(lens, 's')}::BIGINT AS lens_minor,
+            COALESCE(m.canonical_name, 'Unknown')  AS merchant,
+            COALESCE(c.name, 'Uncategorised')      AS category,
+            COALESCE(c.kind, 'want')               AS kind
+     FROM v_spend s
+     LEFT JOIN merchants m ON m.id = s.merchant_id
+     LEFT JOIN categories c ON c.id = s.category_id
+     ORDER BY s.occurred_at DESC LIMIT ${limit} OFFSET ${offset};`,
+
+  /** Remittance legs, for the efficiency ledger. */
+  remittances: `
+    SELECT id, occurred_at, direction, currency, amount_minor, fx_inr_per_aed, transfer_group_id
+    FROM ${RAW_TABLE}
+    WHERE txn_type = 'transfer' AND deleted = false AND transfer_group_id IS NOT NULL
+    ORDER BY occurred_at;`,
+
+  /** Opening balance and net flow per month, for FX attribution. */
+  fxAttributionInput: `
+    SELECT DATE_TRUNC('month', CAST(epoch_ms(occurred_at) AS DATE)) AS month,
+           SUM(CASE WHEN currency = 'AED' THEN amount_minor ELSE 0 END)::BIGINT AS aed_minor,
+           AVG(fx_inr_per_aed) AS rate
+    FROM ${RAW_TABLE} WHERE deleted = false
+    GROUP BY 1 ORDER BY 1;`,
 
   /** Share of the window's spend denominated in AED — drives the panel edge colour. */
   currencyMixSince: (sinceMs: number) =>
