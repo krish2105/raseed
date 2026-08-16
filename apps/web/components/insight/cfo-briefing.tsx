@@ -89,7 +89,11 @@ export function CfoBriefing() {
     headline: `${(p * 100).toFixed(0)}% chance the next 14 days stay inside budget`,
     detail: fc.data!.fellBack
       ? 'Not enough history for a seasonal forecast yet, so this uses a trailing median.'
-      : `Block-bootstrap over your own daily spend, 2,000 paths. P90 is ${format(fc.data!.p90, { compactZeroFraction: true })}${Number.isFinite(fc.data!.accuracy) ? `; weekly holdout error ${(fc.data!.accuracy * 100).toFixed(0)}%` : ''}.`,
+      : // The path count is read from the worker's own result, never restated. It said
+        // "2,000 paths" here while the worker ran 10,000 — a figure the user could check
+        // against the forecast page, which prints the real one. A number in prose is still
+        // a number, and this one was wrong for as long as it was hardcoded.
+        `Block-bootstrap over your own daily spend, ${fc.data!.paths.toLocaleString('en-IN')} paths. P90 is ${format(fc.data!.p90, { compactZeroFraction: true })}${Number.isFinite(fc.data!.accuracy) ? `; weekly holdout error ${(fc.data!.accuracy * 100).toFixed(0)}%` : ''}.`,
   })
 
   // 4. Anomalies, only when there are any.
