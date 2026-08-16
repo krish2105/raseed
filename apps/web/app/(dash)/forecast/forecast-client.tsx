@@ -38,6 +38,15 @@ export function ForecastClient() {
           from a moving-block bootstrap. Blocks, not IID — daily spend is autocorrelated, and
           IID sampling produces a fan that is far too narrow and quietly understates the risk.
         </p>
+        {fc.data && (
+          <p className="mt-2 font-mono text-xs text-text-lo" data-testid="compute-provenance">
+            {fc.data.paths.toLocaleString('en-IN')} paths in{' '}
+            <span className="tabular">{fc.data.computeMs}ms</span>
+            {fc.data.offMainThread
+              ? ' — in a worker, so the page never blocked'
+              : ' — inline; this browser refused a worker'}
+          </p>
+        )}
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -61,7 +70,7 @@ export function ForecastClient() {
               <Figure
                 label="Stays in budget"
                 value={`${(fc.data.probabilityWithinPool * 100).toFixed(0)}%`}
-                hint="2,000 bootstrap paths"
+                hint={`${fc.data.paths.toLocaleString('en-IN')} bootstrap paths`}
               />
             </Panel>
             <Panel>

@@ -492,3 +492,51 @@ boundary is guarded for the day a model is allowed to write the SQL.
 
 **Only rows you added can be deleted.** The seeded demo is shared across every visitor, so it
 is read-only and shows no delete control at all rather than a button that fails.
+
+---
+
+## S18 — the worker, and the invariant that named the wrong workload (2026-08-16)
+
+`WEB_ARCHITECTURE.md` says: "Heavy math — Web Workers + Comlink. Monte Carlo with 10,000
+paths blocks the main thread. Non-negotiable." So I moved the forecast maths into a worker
+and measured it.
+
+**It takes 7ms.** Ten thousand paths over a fourteen-day horizon is 140,000 samples, and
+Holt-Winters over 180 points is nothing. The invariant is right that heavy work must not run
+on the main thread; it is wrong about which work is heavy. Writing that down rather than
+quietly banking a win.
+
+**The real blocker was the Arrow encoding: 837ms at 100,000 rows.** Building the typed
+vectors is pure JS on the main thread, and for a solid second nothing paints, no click lands
+and the theme toggle does nothing. The Lab's own copy had been admitting this for two
+sessions ("moving it to a worker is what Session 18 is for") — shipped text describing work
+that had not happened.
+
+So the worker does both. Measured after, with a probe worker pinging the main thread every
+8ms — worker timers ignore page visibility, which `requestAnimationFrame` does not, and an
+rAF-based measurement in a backgrounded tab reads zero and looks like a pass:
+
+| | before | after |
+|---|---|---|
+| Arrow build | 837ms **on the main thread** | 986ms **in the worker** |
+| Insert | 78ms | 34ms |
+| Longest main-thread block | ~840ms | **16ms** (one frame, 2,500 samples, none over 200ms) |
+
+**IPC bytes, not an `arrow.Table`.** A Table is a graph of typed-array views; structured
+clone would deep-copy every one and hand back most of the time the worker just saved.
+`tableToIPC` gives one ArrayBuffer per table, transferred with zero copies, and the main
+thread calls `insertArrowFromIPCStream`. That is also why insert got faster.
+
+**One worker, two methods.** Two workers would mean two module instantiations and two copies
+of `apache-arrow` to separate a 10ms job from an 840ms one that never run concurrently.
+
+**Every call falls back to running inline.** Same function, so the two paths cannot disagree
+on a number. A browser that refuses workers should cost you frames, not the page. The
+forecast page states which path ran rather than assuming.
+
+**localStorage is the boundary.** It does not exist in a worker, so the main thread collects
+your added rows and passes them in. That constraint is what made the split clean.
+
+**The `add-expense` category list is now read at render** — no memo, no version counter.
+`exhaustive-deps` was right that a counter it cannot reason about is a smell; re-reading a
+handful of names on each keystroke costs nothing and deletes a state variable.

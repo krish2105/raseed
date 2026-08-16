@@ -4,16 +4,12 @@ import {
   budgetVariance,
   detectRemittance,
   gini,
-  holtWinters,
   madZScore,
-  smape,
-  mulberry32,
   pareto,
-  blockBootstrap,
-  runwayFan,
 } from '@raseed/engines'
 import { money, type Currency, type Money } from '@raseed/money'
 import { DEMO_END_AT, query } from './ingest'
+import { runForecast } from '../workers/client'
 import { Q, lensCurrency, type Lens } from './queries'
 
 /**
@@ -297,73 +293,44 @@ export interface Forecast {
   probabilityWithinPool: number
   /** True when there was not enough history and this is a trailing median instead. */
   fellBack: boolean
+  /** How many bootstrap paths the fan was drawn from. Shown, not assumed. */
+  paths: number
+  /** Wall-clock of the statistics alone, measured inside the worker. */
+  computeMs: number
+  /** False only if this browser refused to spawn the worker and the maths ran inline. */
+  offMainThread: boolean
 }
 
 /**
- * Holt-Winters over daily spend with a weekly season, plus a block-bootstrap fan.
+ * The forecast, assembled.
  *
- * Block bootstrap, not IID: daily spend is autocorrelated — a heavy Saturday follows a
- * heavy Friday — and IID sampling produces a fan that is far too narrow and quietly
- * understates the risk.
+ * DuckDB aggregates the daily series; the statistics run in a worker (`lib/workers`); this
+ * function only joins the two and puts the currency back on. Splitting it that way is what
+ * lets a 10,000-path bootstrap happen without the page stuttering.
  */
 export async function forecast(lens: Lens, horizon = 14, poolMinor?: number): Promise<Forecast> {
   const series = await dailySeries(180, lens)
-  const values = series.map((p) => p.total.minor)
   const history = series.map((p) => ({ day: p.day, minor: p.total.minor }))
 
-  const SEASON = 7
-  const enough = values.length >= SEASON * 3
-  const rng = mulberry32(20_260_816)
-
-  let fitted: number[] = []
-  let points: number[] = []
-  let error = Number.NaN
-  let fellBack = false
-
-  /** Sum a daily series into consecutive 7-day buckets. */
-  const weekly = (xs: readonly number[]): number[] => {
-    const out: number[] = []
-    for (let i = 0; i + SEASON <= xs.length; i += SEASON) {
-      out.push(xs.slice(i, i + SEASON).reduce((a, b) => a + b, 0))
-    }
-    return out
-  }
-
-  if (enough) {
-    const holdout = Math.min(14, Math.floor(values.length / 5))
-    const train = values.slice(0, values.length - holdout)
-    const actual = values.slice(values.length - holdout)
-
-    const check = holtWinters(train, SEASON, holdout)
-    error = smape(weekly(actual), weekly(check.forecast))
-
-    const full = holtWinters(values, SEASON, horizon)
-    fitted = full.fitted
-    points = full.forecast
-  } else {
-    // Under three seasons Holt-Winters is not trustworthy. Say so rather than draw a
-    // confident wrong line.
-    fellBack = true
-    const sorted = [...values].sort((a, b) => a - b)
-    const median = sorted[Math.floor(sorted.length / 2)] ?? 0
-    points = Array.from({ length: horizon }, () => median)
-    fitted = values
-  }
-
-  const paths = blockBootstrap(values.length > 0 ? values : [0], horizon, 2000, rng, 7)
-  const pool = poolMinor ?? points.reduce((a, b) => a + b, 0) * 1.2
-  const fan = runwayFan(paths, pool)
+  const out = await runForecast({
+    values: series.map((p) => p.total.minor),
+    horizon,
+    poolMinor,
+  })
 
   return {
     history,
-    fitted,
-    forecast: points,
-    accuracy: error,
-    p10: asMoney(fan.p10, lens),
-    p50: asMoney(fan.p50, lens),
-    p90: asMoney(fan.p90, lens),
-    probabilityWithinPool: fan.probabilityWithinPool,
-    fellBack,
+    fitted: out.fitted,
+    forecast: out.forecast,
+    accuracy: out.accuracy,
+    p10: asMoney(out.p10, lens),
+    p50: asMoney(out.p50, lens),
+    p90: asMoney(out.p90, lens),
+    probabilityWithinPool: out.probabilityWithinPool,
+    fellBack: out.fellBack,
+    paths: out.paths,
+    computeMs: out.computeMs,
+    offMainThread: out.offMainThread,
   }
 }
 

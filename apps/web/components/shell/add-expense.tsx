@@ -28,15 +28,14 @@ export function AddExpense() {
   const [currency, setCurrency] = useState<Currency>('INR')
   const [categoryId, setCategoryId] = useState(SEEDED[0]!.id)
   const [newCategory, setNewCategory] = useState('')
-  const [categoryVersion, setCategoryVersion] = useState(0)
 
-  // Read during render rather than in an effect. localStorage is unavailable during SSR,
-  // but this dialog only mounts after a click — which is always post-hydration — so the
-  // read is safe and setState-in-an-effect (which the compiler rejects) is unnecessary.
-  const custom = useMemo(
-    () => (open ? customCategories() : []),
-    [open, categoryVersion],
-  )
+  // Read during render, with no memo and no version counter.
+  //
+  // localStorage is unavailable during SSR, but this dialog only mounts after a click —
+  // always post-hydration — so the read is safe. It re-runs on every keystroke, which for a
+  // handful of category names is nothing, and it means adding one shows up immediately
+  // without a cache-busting counter that `exhaustive-deps` correctly cannot make sense of.
+  const custom = open ? customCategories() : []
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
@@ -228,8 +227,8 @@ export function AddExpense() {
                       if (e.key !== 'Enter' || !newCategory.trim()) return
                       e.preventDefault()
                       const created = addCategory(newCategory, 'want')
-                      setCategoryVersion((v) => v + 1)
-                      setCategoryId(created.id)
+                      setCategoryId(created.id) // re-renders, so the new chip appears
+
                       setNewCategory('')
                     }}
                     placeholder="New category, then Enter"

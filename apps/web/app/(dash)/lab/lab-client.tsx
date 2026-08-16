@@ -159,7 +159,7 @@ export function LabClient() {
             <table className="w-full min-w-[560px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line text-left">
-                  {['Rows', 'Arrow build', 'Insert', 'View rebuild', 'Verdict'].map((h) => (
+                  {['Rows', 'Generate', 'Arrow build', 'Insert', 'View rebuild', 'Verdict'].map((h) => (
                     <th key={h} className="pb-2 text-xs font-medium text-text-lo">
                       {h}
                     </th>
@@ -172,6 +172,7 @@ export function LabClient() {
                   .map((r) => (
                     <tr key={r.rows} className="border-b border-line last:border-0">
                       <td className="tabular py-2.5 font-mono">{r.rows.toLocaleString('en-IN')}</td>
+                      <td className="tabular py-2.5 font-mono text-text-lo">{r.generateMs}ms</td>
                       <td className="tabular py-2.5 font-mono text-text-lo">{r.buildMs}ms</td>
                       <td className="tabular py-2.5 font-mono text-text-lo">{r.insertMs}ms</td>
                       <td className="tabular py-2.5 font-mono">{r.rebuildMs}ms</td>
@@ -191,9 +192,12 @@ export function LabClient() {
         )}
 
         <p className="mt-4 text-xs leading-relaxed text-text-lo">
-          Arrow build is JS work on the main thread and is the slow part — moving it to a
-          worker is what Session 18 is for. Running a benchmark replaces the loaded ledger;
-          reload to return to the 18-month demo.
+          Generate and Arrow build{' '}
+          {results.every((r) => r.offMainThread) ? 'run in a worker' : 'ran inline'} — together
+          they were 837ms of blocked main thread at 100,000 rows before that move, which is a
+          full second of dead clicks. Insert and view rebuild have to be here, because the
+          DuckDB connection is. Running a benchmark replaces the loaded ledger; reload to
+          return to the 18-month demo.
         </p>
       </Panel>
     </div>

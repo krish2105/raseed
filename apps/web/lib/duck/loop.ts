@@ -166,7 +166,6 @@ export async function nudges(lens: Lens, sentThisWeek: number): Promise<Nudge[]>
     byCategory(30, lens),
   ])
 
-  const currency = lensCurrency(lens)
   const candidates: (NudgeCandidate & { title: string; body: string })[] = []
 
   if (head.spendDelta > 0.1) {

@@ -29,7 +29,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [ ] **S15** Mobile P5 — multi-currency, remittance detection, Trip Mode
 - [x] **S16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
 - [~] **S17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
-- [ ] **S18** Web P6 — Comlink workers, engines wired
+- [x] **S18** Web P6 — Comlink worker; Arrow encoding moved off the main thread (837ms → 16ms longest block, measured)
 - [ ] **S19** 🚩 **Mobile P7 — splits + cash. SHIP GATE. Decide the store question here.**
 - [~] **S20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
 - [ ] **S21** Web P8 — landing route, Lenis, Lighthouse ≥95
