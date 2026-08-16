@@ -75,9 +75,18 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 
 - **Backend is optional and not deployed** — nothing in the app needs one. Render/Supabase
   steps are in `docs/RUNBOOK_BACKEND.md`; both need Krishna's credentials.
-- **Editing an added expense** is still delete-and-re-add on web; the phone has the same gap.
+- ✅ **Editing an expense** — built on the phone (`app/edit.tsx`, tap any ledger row): amount,
+  merchant, category, account, plus soft delete and "this was refunded". Web still has delete
+  only; an edit form there is the remaining half.
 - **Receipt OCR is header + items**; assigning items to people for a per-item split is built in the engine (`splitByItems`) but not yet on a screen.
 - **Splits are one-directional** — you pay, others owe you. An expense someone else paid is not yet recordable.
+- ✅ **Refunds** — recordable from the row they reverse, so both halves leave `v_spend` at once.
+- ✅ **Data export** — CSV and JSON on `/ledger`, unfiltered by `v_spend` because an export is
+  your data rather than a view.
+- ✅ **Mobile has tests** — 23, against `node:sqlite` using the contract-generated DDL. It had none.
+- **CSP is written but not applied** (`apps/web/next.config.ts`) — it silently breaks WASM
+  instantiation inside the blob worker. Everything else in S6 ships. See `docs/AUDIT.md`.
+- **DuckDB is now self-hosted**, not from jsDelivr. An e2e asserts zero third-party requests.
 - ✅ **Mobile stale-read fixed** — it was React Compiler memoisation, and the earlier disproof of that theory was invalid. See DECISIONS.md.
 
 ## Deferred decisions
