@@ -154,3 +154,46 @@ describe('contrast', () => {
     }
   }
 })
+
+/**
+ * The two dark blocks must be byte-identical in effect.
+ *
+ * Three-state theming means dark is declared twice: once under
+ * `@media (prefers-color-scheme: dark)` for people who never touched the toggle, and once
+ * under `[data-theme='dark']` for people who chose it. A visitor cannot tell which one they
+ * are getting, so any difference between them is a bug that only some users see.
+ *
+ * This is not hypothetical. The dark redesign updated the media block and left the explicit
+ * one on the old values, so choosing dark from the toggle kept the white-halo shadows and the
+ * light rim while system-dark got the fix. Nothing caught it — the existing tests check that
+ * every token EXISTS in every block, never that the two dark blocks AGREE.
+ */
+describe('the two dark blocks', () => {
+  const media = block(":root:not([data-theme='light'])")
+  const explicit = block(":root[data-theme='dark']")
+
+  it('declare the same set of tokens', () => {
+    expect(Object.keys(explicit).sort()).toEqual(Object.keys(media).sort())
+  })
+
+  it.each(Object.keys(block(":root:not([data-theme='light'])")))(
+    '%s has the same value in both',
+    (token) => {
+      expect(explicit[token], `--${token} differs between system-dark and chosen-dark`).toBe(
+        media[token],
+      )
+    },
+  )
+})
+
+/** Light has the same pair, for the same reason. */
+describe('the two light blocks', () => {
+  const root = block(':root {')
+  const explicit = block(":root[data-theme='light']")
+
+  it.each(Object.keys(block(':root {')))('%s has the same value in both', (token) => {
+    expect(explicit[token], `--${token} differs between default-light and chosen-light`).toBe(
+      root[token],
+    )
+  })
+})
