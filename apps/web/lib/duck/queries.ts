@@ -28,11 +28,17 @@ CREATE OR REPLACE VIEW v_income AS
 SELECT * FROM ${RAW_TABLE}
 WHERE txn_type = 'income' AND status = 'confirmed' AND deleted = false;`
 
-/** date × currency × category rollup. Everything time-bucketed reads from here. */
+/**
+ * date × currency × category rollup. Everything time-bucketed reads from here.
+ *
+ * `epoch_ms()`, not `to_timestamp()`: the latter returns TIMESTAMP WITH TIME ZONE, and
+ * DuckDB has no TIMESTAMPTZ -> DATE cast, so the view creates fine and then throws the
+ * moment anything selects from it.
+ */
 export const V_DAILY = `
 CREATE OR REPLACE VIEW v_daily AS
 SELECT
-  CAST(TO_TIMESTAMP(occurred_at / 1000) AS DATE) AS day,
+  CAST(epoch_ms(occurred_at) AS DATE) AS day,
   currency,
   category_id,
   SUM(home_amount_minor)::BIGINT AS home_minor,
@@ -141,7 +147,7 @@ export const Q = {
   dailyTotalsSince: (sinceMs: number) =>
     `SELECT day, SUM(home_minor)::BIGINT AS home_minor
      FROM v_daily
-     WHERE day >= CAST(TO_TIMESTAMP(${sinceMs} / 1000) AS DATE)
+     WHERE day >= CAST(epoch_ms(${sinceMs}) AS DATE)
      GROUP BY day ORDER BY day;`,
 
   /** Share of the window's spend denominated in AED — drives the panel edge colour. */

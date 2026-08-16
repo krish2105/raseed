@@ -84,25 +84,48 @@ export function useDuck(): DuckState {
   return context
 }
 
+export interface DuckQueryResult<T> {
+  data: T | null
+  /** Non-null when this specific query failed. */
+  error: string | null
+}
+
 /**
  * Runs `read` once DuckDB is ready, and again whenever the data version changes.
- * Returns `null` while loading so callers can render a skeleton at final dimensions.
+ *
+ * `data` is null while loading so callers can render a skeleton at final dimensions — but
+ * a rejected query MUST set `error`, otherwise a failing panel renders a skeleton forever
+ * and looks like a slow load rather than a broken one. That is exactly how the
+ * TIMESTAMPTZ→DATE cast bug hid: the console had the error, the UI just kept pulsing.
  */
-export function useDuckQuery<T>(read: () => Promise<T>, deps: readonly unknown[] = []): T | null {
+export function useDuckQuery<T>(
+  read: () => Promise<T>,
+  deps: readonly unknown[] = [],
+): DuckQueryResult<T> {
   const { status, version } = useDuck()
   const [data, setData] = useState<T | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (status !== 'ready') return
     let cancelled = false
-    void read().then((result) => {
-      if (!cancelled) setData(result)
-    })
+
+    read()
+      .then((result) => {
+        if (cancelled) return
+        setData(result)
+        setError(null)
+      })
+      .catch((cause: unknown) => {
+        if (cancelled) return
+        setError(cause instanceof Error ? cause.message : String(cause))
+      })
+
     return () => {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, version, ...deps])
 
-  return data
+  return { data, error }
 }

@@ -6,6 +6,7 @@ import { Figure } from '@/components/ui/figure'
 import { CategoryBars } from '@/components/charts/category-bars'
 import { AmountCard } from '@/components/ui/amount-card'
 import { BarsSkeleton, FigureSkeleton, RowsSkeleton, Skeleton } from '@/components/ui/skeleton'
+import { PanelError } from '@/components/ui/panel-error'
 import { useDuck, useDuckQuery } from '@/lib/duck/provider'
 import {
   anomalies,
@@ -25,13 +26,13 @@ import {
 export function OverviewClient() {
   const { status, timing, error } = useDuck()
 
-  const head = useDuckQuery(headline)
-  const categories = useDuckQuery(() => byCategory(30))
-  const merchants = useDuckQuery(() => byMerchant(90))
-  const conc = useDuckQuery(concentration)
-  const anomalyCount = useDuckQuery(() => anomalies(90))
-  const mix = useDuckQuery(() => currencyMix(30))
-  const subs = useDuckQuery(recurring)
+  const { data: head, error: headError } = useDuckQuery(headline)
+  const { data: categories, error: categoriesError } = useDuckQuery(() => byCategory(30))
+  const { data: merchants, error: merchantsError } = useDuckQuery(() => byMerchant(90))
+  const { data: conc, error: concError } = useDuckQuery(concentration)
+  const { data: anomalyCount, error: anomalyError } = useDuckQuery(() => anomalies(90))
+  const { data: mix } = useDuckQuery(() => currencyMix(30))
+  const { data: subs, error: subsError } = useDuckQuery(recurring)
 
   // Errors show what actually failed. An analytics failure rendered as an empty chart is
   // indistinguishable from "you have no data", which is the worse of the two.
@@ -82,7 +83,9 @@ export function OverviewClient() {
         )}
 
         <Panel aedShare={aedShare}>
-          {head ? (
+          {headError ? (
+            <PanelError message={headError} />
+          ) : head ? (
             <Figure
               label="Savings rate"
               value={`${(head.savingsRate * 100).toFixed(1)}%`}
@@ -94,7 +97,9 @@ export function OverviewClient() {
         </Panel>
 
         <Panel aedShare={aedShare}>
-          {head ? (
+          {headError ? (
+            <PanelError message={headError} />
+          ) : head ? (
             <Figure
               label="Spend vs prior 30d"
               value={format(head.spend30, { compactZeroFraction: true })}
@@ -107,7 +112,9 @@ export function OverviewClient() {
         </Panel>
 
         <Panel>
-          {conc ? (
+          {concError ? (
+            <PanelError message={concError} />
+          ) : conc ? (
             <Figure
               label="Merchant concentration"
               value={conc.gini.toFixed(2)}
@@ -119,7 +126,9 @@ export function OverviewClient() {
         </Panel>
 
         <Panel>
-          {anomalyCount !== null ? (
+          {anomalyError ? (
+            <PanelError message={anomalyError} />
+          ) : anomalyCount !== null ? (
             <Figure
               label="Anomalous days"
               value={String(anomalyCount)}
@@ -133,7 +142,9 @@ export function OverviewClient() {
 
       <div className="mt-3 grid gap-3 lg:grid-cols-5">
         <Panel title="Where it went" hint="last 30 days" className="lg:col-span-3" aedShare={aedShare}>
-          {categories ? (
+          {categoriesError ? (
+            <PanelError message={categoriesError} />
+          ) : categories ? (
             categories.length > 0 ? (
               <CategoryBars data={categories.slice(0, 8)} />
             ) : (
@@ -152,7 +163,9 @@ export function OverviewClient() {
 
         <div className="flex flex-col gap-3 lg:col-span-2">
           <Panel title="Top merchants" hint="last 90 days">
-            {merchants ? (
+            {merchantsError ? (
+              <PanelError message={merchantsError} />
+            ) : merchants ? (
               <ul className="flex flex-col divide-y divide-line">
                 {merchants.slice(0, 6).map((m) => (
                   <li key={m.merchantId} className="flex items-center justify-between gap-3 py-2">
@@ -176,7 +189,9 @@ export function OverviewClient() {
           </Panel>
 
           <Panel title="Recurring candidates" hint="interval CV < 0.15">
-            {subs ? (
+            {subsError ? (
+              <PanelError message={subsError} />
+            ) : subs ? (
               subs.length > 0 ? (
                 <ul className="flex flex-col divide-y divide-line">
                   {subs.slice(0, 4).map((s) => (

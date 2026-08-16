@@ -408,3 +408,17 @@ headline, so `DuckProvider` wraps `(dash)` and nothing else, and it loads after 
 **Three states everywhere:** skeletons at final dimensions, empty states with a real
 instruction, and errors that print the actual failure. An analytics failure rendered as an
 empty chart is indistinguishable from "you have no data", which is the worse of the two.
+
+**Two more bugs the browser found after the first S8 commit:**
+
+`v_daily` used `to_timestamp()`, which returns TIMESTAMP WITH TIME ZONE — and DuckDB has no
+TIMESTAMPTZ -> DATE cast. The view created without complaint and threw the moment anything
+selected from it, so the anomaly panel sat on a skeleton forever while the console carried
+`Conversion Error: Unimplemented type for cast`. `epoch_ms()` returns a plain TIMESTAMP and
+fixes it.
+
+That bug was only *invisible* because `useDuckQuery` swallowed rejections: a failed query
+left `data` null, which renders as a skeleton, which is indistinguishable from a slow load.
+It now returns `{ data, error }` and every panel renders `PanelError` with the real message.
+A permanently-pulsing skeleton is a worse failure than a red box, because nobody
+investigates it.
