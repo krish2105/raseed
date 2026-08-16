@@ -18,7 +18,7 @@ import {
   remittances,
   trips,
 } from '@/lib/duck/analytics'
-import { Corridor } from '@/components/charts/corridor'
+import { CorridorAuto } from '@/components/charts/corridor-auto'
 import { cn } from '@/lib/utils'
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`
@@ -452,14 +452,16 @@ export function TowerClient() {
             <p className="leading-relaxed">
               Drawn with CSS 3D rather than WebGL. `three` plus `react-three-fiber` is around
               600KB over the wire for two nodes and some arcs, and on a finance dashboard the
-              first paint matters more than the technique. Real perspective, real parallax,
-              4KB of markup. Move the pointer over it — the tilt is capped at 6°, enough to
-              read as depth and small enough that nothing becomes a moving target.
+              first paint matters more than the technique. This is real WebGL: one draw call,
+              a few hundred lines of raw GL, no three.js — because 600KB on a dashboard whose
+              whole point is fast local work would be the wrong trade. Every particle is a
+              transfer you actually made; the stream runs slower the more the corridor costs
+              you. Without WebGL it falls back to the CSS-3D version, same data, same caption.
             </p>
           }
         >
           {remit.data ? (
-            <Corridor
+            <CorridorAuto
               className="h-full"
               flows={remit.data.slice(0, 5).map((x) => ({
                 label: new Date(x.occurredAt).toLocaleDateString('en-IN', {
