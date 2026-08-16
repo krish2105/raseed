@@ -82,7 +82,10 @@ beforeAll(async () => {
       `)
     })
   }
-})
+  // Booting WASM Postgres and running the entire migration takes well over vitest's
+  // 10s default hook timeout on a shared CI runner. Generous on purpose: a flaky test
+  // trains you to ignore red.
+}, 120_000)
 
 describe('RLS isolates users', () => {
   it('user A sees only their own transaction', async () => {
@@ -204,4 +207,4 @@ describe('v_spend', () => {
     expect(rows.map((r) => r.id)).toEqual(['txn-b'])
     expect(rows.map((r) => r.id)).not.toContain('txn-a')
   })
-})
+}, 60_000)
