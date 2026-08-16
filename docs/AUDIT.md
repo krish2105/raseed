@@ -18,7 +18,14 @@ the RLS SQL in `packages/schema/scripts/generate.mts` and the PGlite shim at
 `packages/schema/src/rls.test.ts:46`. `@supabase/supabase-js` is a dependency of no package and
 no app. There is no sign-in screen, no session handling, no middleware, no API route.
 
-**There is no outbound network call of any kind.** A repo-wide grep for
+**There is no outbound network call of any kind.** — **CORRECTED 17 Aug, same night.** This
+was wrong. It rested on grepping *source* for `fetch`/`axios`/LLM SDKs, which missed a CDN
+fetch made *inside a library call*: `apps/web/lib/duck/client.ts:19` called
+`duckdb.getJsDelivrBundles()`, so every visitor's browser fetched the DuckDB worker and .wasm
+from `cdn.jsdelivr.net`. Found by writing a CSP, which blocked it. Fixed in `41388a9` — the
+bundles are now self-hosted and an e2e asserts zero third-party requests. **The lesson is the
+audit's own: a grep proves what a grep can see.** The original wording follows, corrected only
+here. A repo-wide grep for
 `fetch(|axios|XMLHttpRequest|generativelanguage|gemini|groq|openai|anthropic` across every
 `.ts`/`.tsx` in `apps/` and `packages/` returns five hits, all of them URLs in comments or a
 GitHub link in the landing page. No LLM, no analytics, no Sentry, no PostHog.
@@ -97,7 +104,7 @@ project, so no staging (D1). The migration has no down-path — zero `drop polic
 | S3 | SQLCipher, app-lock, `FLAG_SECURE`, switcher blur | **not started** | `expo-secure-store`, `expo-local-authentication`, SQLCipher are not dependencies |
 | S4 | Redaction pipeline | **not started — no surface** | §3 R-2 |
 | S5 | Ledger Link hardening | **not started — no surface** | Ledger Link is not built |
-| S6 | CSP, HSTS, frame/referrer/permissions | **not started** | `next.config.ts` sets only `transpilePackages`; no `headers()`, no `middleware.ts`. **Live in production today** |
+| S6 | CSP, HSTS, frame/referrer/permissions | **partial** (`41388a9`) | HSTS, X-Frame-Options, nosniff, Referrer-Policy and Permissions-Policy ship. **CSP is written but not applied** — it silently breaks WebAssembly instantiation inside the blob-URL worker; bisected, no violation reported. A test asserts no CSP is claimed, so enabling it without checking analytics fails the suite rather than shipping a dead dashboard |
 | S7 | Secret discipline | **partial** | gitleaks + `pnpm audit --audit-level high` both run in CI; `.gitleaks.toml` has a `service_role` JWT rule. **No Dependabot**; no path-scoped `service_role` grep; gitleaks runs only **after** a push — no pre-commit hook |
 | S8 | Retention & purge | **not started** | `capture_log` never written; no purge job |
 | S9 | Consent ledger, privacy dashboard, deletion, export | **not started** | None of the four |

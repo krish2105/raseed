@@ -1342,3 +1342,39 @@ Open and needing a ruling: three documents cut the 3D globe permanently
 (`RASEED_V2_MASTER_BUILD.md:18`, `:198`, `RASEED_V2_CLAUDE_CODE_PROMPT.md:89`,
 `WEB_ARCHITECTURE.md:88`), and a WebGL version was later requested verbally. `CLAUDE.md` is
 silent, so it does not adjudicate. Not built pending that decision.
+
+### Overnight build following the audit — 17 August 2026
+
+Worked the queue in `docs/AUDIT.md` while Krishna slept, committing and pushing after each item.
+
+**Two `CLAUDE.md` violations closed.** The stray root `ios/` + `app.json` carrying two wrong
+bundle identifiers (`e16ee58`), and the spend predicate defined a second time in
+`apps/web/lib/demo.ts` (`a8a1542`). The predicate now renders from the contract in both SQL and
+TypeScript, with `spend-parity.test.ts` proving they select identical rows — verified by
+breaking the TypeScript side and watching three assertions fail with the leaked row named.
+
+**Safe-to-Spend stopped dividing a real ledger into an invented balance** (`57ef305`). Five of
+six inputs were literals; the balance is now derived. Two screens had disagreed about committed
+bills — Today used ₹22,000, You showed ₹23,198 — and now read one list.
+
+**Edit and delete a transaction** (`b26b354`), which P1's own done-when has always required and
+which had never been built on either surface. FX stays frozen on edit; delete is soft.
+
+**Recording a refund** (`a1183f5`). Entered from the row it reverses, so both halves leave
+`v_spend` on the same statement. Deliberately not `pairReversals` — inference would guess where
+an exact answer exists, and any inference window leaves the original counting as spend.
+
+**Data export** (`6dfe05e`) — the last of Web P10 and a DPDP right, not a feature. Unfiltered by
+`v_spend` on purpose: an export is your data, not a view.
+
+**The phone got its first 23 automated tests** (`bf5d27a`, `a1183f5`) against `node:sqlite`
+using the same contract-generated DDL. It had zero.
+
+**The audit was wrong about one thing, and the fix found it** (`41388a9`). "No outbound network
+call" came from grepping source; DuckDB was loading its worker from `cdn.jsdelivr.net` inside a
+library call. Now self-hosted, with an e2e asserting zero third-party requests. The CSP that
+exposed it is written but **not applied**: it silently breaks WASM instantiation in the blob
+worker, and a dashboard that renders with every figure dead is worse than no CSP.
+
+Left for Krishna, unchanged: Supabase provisioning, `eas login`, Apple enrolment, and the ruling
+on whether the 3D globe returns as WebGL against three documents that cut it.
