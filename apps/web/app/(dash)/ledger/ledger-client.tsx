@@ -9,6 +9,7 @@ import { PanelError } from '@/components/ui/panel-error'
 import { useDuck, useDuckQuery } from '@/lib/duck/provider'
 import { useCurrencyLens } from '@/components/shell/currency-lens'
 import { ledgerPage } from '@/lib/duck/analytics'
+import { ExportPanel } from '@/components/ledger/export-panel'
 import { removeLocal } from '@/lib/store/local-ledger'
 import { cn } from '@/lib/utils'
 
@@ -52,6 +53,8 @@ export function LedgerClient() {
           added in this browser can be removed; the seeded demo is shared and read-only.
         </p>
       </header>
+
+      <ExportPanel />
 
       <Panel>
         <div className="flex flex-wrap items-center gap-2">
