@@ -127,3 +127,83 @@ test.describe('adding money', () => {
     await expectNoFailedPanels(page)
   })
 })
+
+/**
+ * Editing a row you added.
+ *
+ * The phone got edit and delete first; the web had delete only, so a mistyped amount was
+ * permanent unless you deleted and re-entered it. This asserts the value actually changes in
+ * storage rather than just in the input.
+ */
+test.describe('editing a local row', () => {
+  test('changes the amount and the ledger re-derives', async ({ page }) => {
+    await resetStorage(page)
+    await page.goto('/ledger')
+    await waitForReady(page)
+
+    // Add a row to edit — the seeded demo is read-only by design.
+    await page.evaluate(() => {
+      const key = 'raseed.local-ledger.v1'
+      const row = {
+        id: 'local-edit-target',
+        occurred_at: Date.now(),
+        direction: 'out',
+        amount_minor: 50_000,
+        currency: 'INR',
+        home_amount_minor: 50_000,
+        fx_rate: 1,
+        fx_inr_per_aed: 23.45,
+        account_id: 'acct-hdfc',
+        merchant_id: null,
+        category_id: 'cat-food',
+        raw_text: 'TYPO MERCHANT',
+        source: 'manual',
+        txn_type: 'spend',
+        transfer_group_id: null,
+        reversal_of_id: null,
+        trip_id: null,
+        status: 'confirmed',
+        confidence: 1,
+        note: null,
+        user_id: 'local-user',
+        updated_at: Date.now(),
+        deleted: false,
+      }
+      localStorage.setItem(key, JSON.stringify([row]))
+    })
+    await page.reload()
+    await waitForReady(page)
+
+    const row = page.getByRole('row').filter({ hasText: 'TYPO MERCHANT' })
+    await expect(row).toHaveCount(1)
+
+    await row.getByRole('button', { name: /^Edit / }).click()
+
+    // Query at page level from here: once the merchant becomes an <input>, its value is no
+    // longer text content, so the row filter above stops matching it. Only one row is ever in
+    // edit mode, so this is unambiguous.
+    await page.getByRole('textbox', { name: /^Merchant for / }).fill('FIXED MERCHANT')
+    await page.getByRole('textbox', { name: /^Amount for / }).fill('750.00')
+    await page.getByRole('button', { name: /^Save / }).click()
+
+    // Storage is the source of truth; the table reads from it.
+    const stored = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('raseed.local-ledger.v1') ?? '[]'),
+    )
+    expect(stored[0].raw_text).toBe('FIXED MERCHANT')
+    expect(stored[0].amount_minor).toBe(75_000)
+    // FX must be carried, not recomputed — an edit is not a currency event.
+    expect(stored[0].fx_rate).toBe(1)
+    expect(stored[0].home_amount_minor).toBe(75_000)
+
+    await expect(page.getByRole('row').filter({ hasText: 'FIXED MERCHANT' })).toHaveCount(1)
+  })
+
+  test('leaves seeded demo rows uneditable', async ({ page }) => {
+    await resetStorage(page)
+    await page.goto('/ledger')
+    await waitForReady(page)
+    // Seeded rows expose no edit control at all.
+    await expect(page.getByRole('button', { name: /^Edit / })).toHaveCount(0)
+  })
+})

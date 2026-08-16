@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Check, Pencil, Trash2 } from 'lucide-react'
 import { format } from '@raseed/money'
 import { Panel } from '@/components/ui/panel'
 import { RowsSkeleton } from '@/components/ui/skeleton'
@@ -10,7 +10,7 @@ import { useDuck, useDuckQuery } from '@/lib/duck/provider'
 import { useCurrencyLens } from '@/components/shell/currency-lens'
 import { ledgerPage } from '@/lib/duck/analytics'
 import { ExportPanel } from '@/components/ledger/export-panel'
-import { removeLocal } from '@/lib/store/local-ledger'
+import { isLocal, removeLocal, updateLocal } from '@/lib/store/local-ledger'
 import { cn } from '@/lib/utils'
 
 const PAGE = 250
@@ -26,6 +26,13 @@ export function LedgerClient() {
   const { reload } = useDuck()
   const [search, setSearch] = useState('')
   const [kind, setKind] = useState<'all' | 'need' | 'want' | 'save'>('all')
+
+  // Which row is open for editing, and its uncommitted values. Only rows added in this
+  // browser are editable — the seeded demo is shared, and one visitor rewriting it would make
+  // every screenshot irreproducible.
+  const [editing, setEditing] = useState<string | null>(null)
+  const [draftMerchant, setDraftMerchant] = useState('')
+  const [draftAmount, setDraftAmount] = useState('')
 
   const rows = useDuckQuery(() => ledgerPage(PAGE, 0, lens), [lens])
 
@@ -143,8 +150,18 @@ export function LedgerClient() {
                           }}
                         />
                         <span className="min-w-0">
-                          <span className="block truncate">{r.merchant}</span>
-                          {r.note && (
+                          {editing === r.id ? (
+                            <input
+                              value={draftMerchant}
+                              onChange={(e) => setDraftMerchant(e.target.value)}
+                              aria-label={`Merchant for ${r.merchant}`}
+                              autoFocus
+                              className="w-full rounded border border-line bg-surface-0 px-1.5 py-0.5 text-sm text-text-hi focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                            />
+                          ) : (
+                            <span className="block truncate">{r.merchant}</span>
+                          )}
+                          {r.note && editing !== r.id && (
                             <span className="block truncate text-xs text-text-lo">{r.note}</span>
                           )}
                         </span>
@@ -152,7 +169,17 @@ export function LedgerClient() {
                     </td>
                     <td className="py-2.5 pr-3 text-text-lo">{r.category}</td>
                     <td className="tabular py-2.5 pr-3 font-mono text-xs text-text-lo">
-                      {format(r.native)}
+                      {editing === r.id ? (
+                        <input
+                          value={draftAmount}
+                          onChange={(e) => setDraftAmount(e.target.value)}
+                          inputMode="decimal"
+                          aria-label={`Amount for ${r.merchant}`}
+                          className="w-24 rounded border border-line bg-surface-0 px-1.5 py-0.5 text-right font-mono text-xs text-text-hi focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                        />
+                      ) : (
+                        format(r.native)
+                      )}
                     </td>
                     <td className="tabular py-2.5 text-right font-mono">
                       {format(r.lensAmount)}
@@ -160,18 +187,52 @@ export function LedgerClient() {
                     <td className="py-2.5 pl-3 text-right">
                       {/* Only rows you added here can be removed. The seeded demo is shared
                           and read-only, so there is nothing to delete and no button to press. */}
-                      {r.id.startsWith('local-') ? (
-                        <button
-                          type="button"
-                          aria-label={`Delete ${r.merchant}`}
-                          onClick={() => {
-                            removeLocal(r.id)
-                            reload()
-                          }}
-                          className="rounded p-1 text-text-lo transition-colors hover:text-warn focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                      {isLocal(r.id) ? (
+                        <span className="flex items-center justify-end gap-0.5">
+                          <button
+                            type="button"
+                            aria-label={
+                              editing === r.id ? `Save ${r.merchant}` : `Edit ${r.merchant}`
+                            }
+                            onClick={() => {
+                              if (editing === r.id) {
+                                // Blank merchant or an unparseable amount leaves the row
+                                // untouched rather than writing an empty label.
+                                const minor = Math.round(Number(draftAmount) * 100)
+                                if (draftMerchant.trim() && Number.isFinite(minor) && minor > 0) {
+                                  updateLocal(r.id, {
+                                    amountMinor: minor,
+                                    merchant: draftMerchant.trim(),
+                                  })
+                                  reload()
+                                }
+                                setEditing(null)
+                              } else {
+                                setEditing(r.id)
+                                setDraftMerchant(r.merchant)
+                                setDraftAmount((r.native.minor / 100).toFixed(2))
+                              }
+                            }}
+                            className="rounded p-1 text-text-lo transition-colors hover:text-inr focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                          >
+                            {editing === r.id ? (
+                              <Check className="h-3.5 w-3.5" />
+                            ) : (
+                              <Pencil className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Delete ${r.merchant}`}
+                            onClick={() => {
+                              removeLocal(r.id)
+                              reload()
+                            }}
+                            className="rounded p-1 text-text-lo transition-colors hover:text-warn focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
                       ) : (
                         <span className="sr-only">Seeded demo row</span>
                       )}

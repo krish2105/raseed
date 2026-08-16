@@ -111,6 +111,50 @@ export function addLocal(draft: LocalDraft): FixtureTransaction {
   return row
 }
 
+export interface LocalEdit {
+  amountMinor: number
+  merchant: string
+  /** Omit to keep the row's existing category. The ledger table shows a category name, not
+   *  an id, so the inline editor has no id to send and must not blank the field. */
+  categoryId?: string
+  note?: string | null
+}
+
+/**
+ * Correct a row you added in this browser.
+ *
+ * **`fx_rate` and `fx_inr_per_aed` are carried over untouched**; only `home_amount_minor` is
+ * recomputed, and from the rate already on the row. `CLAUDE.md` freezes FX at transaction
+ * date, so an edit must never re-price — fixing a merchant's spelling is not a currency event.
+ *
+ * Returns false when the id is not a local row. The seeded demo is shared and read-only: it is
+ * the same ledger every visitor sees, and letting one browser edit it would make screenshots
+ * irreproducible and the honest-limitations note on the landing page a lie.
+ */
+export function updateLocal(id: string, edit: LocalEdit): boolean {
+  const rows = read()
+  const idx = rows.findIndex((r) => r.id === id)
+  if (idx === -1) return false
+
+  const row = rows[idx]!
+  rows[idx] = {
+    ...row,
+    amount_minor: edit.amountMinor,
+    home_amount_minor: Math.round(edit.amountMinor * row.fx_rate),
+    raw_text: edit.merchant,
+    category_id: edit.categoryId ?? row.category_id,
+    note: edit.note === undefined ? row.note : edit.note,
+    updated_at: Date.now(),
+  }
+  write(rows)
+  return true
+}
+
+/** True when this row was added in this browser, i.e. when it can be edited or removed. */
+export function isLocal(id: string): boolean {
+  return id.startsWith('local-')
+}
+
 /** Soft delete only — never hard-delete a row. */
 export function removeLocal(id: string): void {
   write(read().map((r) => (r.id === id ? { ...r, deleted: true, updated_at: Date.now() } : r)))
