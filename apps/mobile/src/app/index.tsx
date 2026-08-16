@@ -1,122 +1,195 @@
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { aiPlaceholder } from '@raseed/ai'
 import { safeToSpend } from '@raseed/engines'
-import { generateLedger } from '@raseed/fixtures'
-import { allocate, format, formatMinor, fromMajor } from '@raseed/money'
-import { schemaPlaceholder } from '@raseed/schema'
-import { fontFamily, palette, radius, space, type Palette } from '@raseed/tokens'
+import { format, fromMajor } from '@raseed/money'
+import { radius, space, type Palette } from '@raseed/tokens'
 
+import { font, useTheme } from '@/theme'
+import { DEMO_NOW, todaySpend, todaysLedger } from '@/lib/demo'
+
+/**
+ * Today. One number, the day's ledger beneath it.
+ *
+ * The Skia Day Dial replaces the flat meter at Session 9. The arithmetic behind the number
+ * is already the real `safeToSpend` engine, not a mock.
+ */
 const sts = safeToSpend({
-  liquidBalance: fromMajor('30000.00', 'INR'),
-  committedBills: [fromMajor('12000.00', 'INR')],
-  pendingSweeps: [fromMajor('2000.00', 'INR')],
+  liquidBalance: fromMajor('42000.00', 'INR'),
+  committedBills: [fromMajor('22000.00', 'INR')],
+  pendingSweeps: [fromMajor('4000.00', 'INR')],
   safetyBuffer: fromMajor('3000.00', 'INR'),
-  rawCarryover: fromMajor('400.00', 'INR'),
-  spentToday: fromMajor('260.00', 'INR'),
-  today: 1_755_300_000_000,
-  nextIncomeAt: 1_755_300_000_000 + 10 * 86_400_000,
+  rawCarryover: fromMajor('310.00', 'INR'),
+  spentToday: todaySpend,
+  today: DEMO_NOW,
+  nextIncomeAt: DEMO_NOW + 9 * 86_400_000,
 })
 
-const inr = sts.amount
-const demo = generateLedger({ endAt: 1_755_300_000_000 })
-const aed = fromMajor('92.50', 'AED')
-const split = allocate(fromMajor('1.00', 'INR'), 3)
+const allowance = Math.max(1, sts.baseDaily.minor + sts.carryover.minor)
+const usedPct = Math.min(100, Math.max(0, (todaySpend.minor / allowance) * 100))
 
-const packages = [
-  { name: '@raseed/money', value: formatMinor(inr) },
-  { name: '@raseed/tokens', value: fontFamily.display },
-  { name: '@raseed/schema', value: schemaPlaceholder() },
-  { name: '@raseed/engines', value: `STS ${formatMinor(sts.amount)}` },
-  { name: '@raseed/ai', value: aiPlaceholder() },
-  { name: '@raseed/fixtures', value: `${demo.transactions.length} txns` },
-]
-
-export default function HomeScreen() {
-  // Colours come from @raseed/tokens, resolved per theme. No hex literal in this file.
-  const scheme = useColorScheme()
-  const t = palette[scheme === 'light' ? 'light' : 'dark']
-  const styles = makeStyles(t)
+export default function TodayScreen() {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  const accent = sts.overspent ? colors.warn : colors.inr
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>RASEED</Text>
-        <Text style={styles.subtitle}>Session 1 — money and tokens</Text>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <ScrollView contentContainerStyle={s.content}>
+        <Text style={s.eyebrow}>Today</Text>
 
-        <View style={styles.card}>
-          <View style={[styles.edge, { backgroundColor: t.inr }]} />
-          <Text style={styles.label}>Safe to spend today</Text>
-          <Text style={[styles.amount, { color: t.inr }]}>{format(inr)}</Text>
-        </View>
+        {/* The single job of this screen: what you can spend, in the currency you are in. */}
+        <View style={s.hero}>
+          <Text style={s.heroLabel}>You&apos;ve got</Text>
+          <Text style={[s.heroAmount, { color: accent }]}>
+            {format(sts.amount, { compactZeroFraction: true })}
+          </Text>
+          <Text style={s.heroHint}>for today · {sts.daysUntilIncome} days to payday</Text>
 
-        <View style={styles.card}>
-          <View style={[styles.edge, { backgroundColor: t.aed }]} />
-          <Text style={styles.label}>Safe to spend today</Text>
-          <Text style={[styles.amount, { color: t.aed }]}>{format(aed)}</Text>
-        </View>
-
-        <Text style={styles.section}>Splitting ₹1.00 three ways</Text>
-        <View style={styles.chips}>
-          {split.map((part, i) => (
-            <View key={i} style={styles.chip}>
-              <Text style={styles.chipText}>{format(part)}</Text>
-            </View>
-          ))}
-        </View>
-
-        <Text style={styles.section}>Shared packages resolved</Text>
-        {packages.map((pkg) => (
-          <View key={pkg.name} style={styles.row}>
-            <Text style={styles.rowName}>{pkg.name}</Text>
-            <Text style={styles.rowValue}>{pkg.value}</Text>
+          <View style={s.meterTrack}>
+            <View style={[s.meterFill, { backgroundColor: accent, width: `${usedPct}%` }]} />
           </View>
-        ))}
+          <View style={s.meterRow}>
+            <Text style={s.meterText}>{format(todaySpend)} spent</Text>
+            <Text style={s.meterText}>
+              {format(sts.baseDaily, { compactZeroFraction: true })}/day
+            </Text>
+          </View>
+        </View>
+
+        <Text style={s.section}>Today&apos;s ledger</Text>
+        <View style={s.card}>
+          {todaysLedger.length > 0 ? (
+            todaysLedger.map((t, i) => (
+              <View key={t.id} style={[s.row, i === 0 && s.rowFirst]}>
+                <View style={s.rowLeft}>
+                  <View
+                    style={[s.dot, { backgroundColor: t.currency === 'AED' ? colors.aed : colors.inr }]}
+                  />
+                  <View style={s.rowText}>
+                    <Text style={s.rowName} numberOfLines={1}>
+                      {t.merchant}
+                    </Text>
+                    <Text style={s.rowMeta}>{t.category}</Text>
+                  </View>
+                </View>
+                <Text style={s.rowAmount}>{format(t.amount)}</Text>
+              </View>
+            ))
+          ) : (
+            // Empty states are invitations, not apologies.
+            <Text style={s.empty}>Nothing logged yet. Tap the bar and type what you spent.</Text>
+          )}
+        </View>
+
+        <View style={s.captureStub}>
+          <Text style={s.captureText}>chai 20, auto 80, bigbasket 640</Text>
+          <Text style={s.captureHint}>Capture arrives in session 11</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   )
 }
 
-function makeStyles(t: Palette) {
-  return StyleSheet.create({
-    safe: { flex: 1, backgroundColor: t['surface-0'] },
-    content: { padding: space[5], gap: space[3] },
-    title: { color: t['text-hi'], fontSize: 28, fontWeight: '700' },
-    subtitle: { color: t['text-lo'], fontSize: 14, marginBottom: space[3] },
+const styles = (c: Palette) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: c['surface-0'] },
+    content: { padding: space[5], paddingBottom: space[10], gap: space[3] },
+
+    eyebrow: {
+      color: c['text-lo'],
+      fontFamily: font.body,
+      fontSize: 12,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
+
+    hero: {
+      backgroundColor: c['surface-1'],
+      borderColor: c.line,
+      borderWidth: 1,
+      borderRadius: radius.xl,
+      padding: space[5],
+      gap: space[2],
+    },
+    heroLabel: { color: c['text-lo'], fontFamily: font.body, fontSize: 14 },
+    heroAmount: {
+      fontFamily: font.displayBold,
+      fontSize: 52,
+      letterSpacing: -1.5,
+      fontVariant: ['tabular-nums'],
+    },
+    heroHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
+
+    meterTrack: {
+      height: 6,
+      borderRadius: radius.full,
+      backgroundColor: c['surface-2'],
+      overflow: 'hidden',
+      marginTop: space[2],
+    },
+    meterFill: { height: '100%', borderRadius: radius.full },
+    meterRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[2] },
+    meterText: {
+      color: c['text-lo'],
+      fontFamily: font.mono,
+      fontSize: 11,
+      fontVariant: ['tabular-nums'],
+    },
+
+    section: {
+      color: c['text-lo'],
+      fontFamily: font.bodyMedium,
+      fontSize: 13,
+      marginTop: space[3],
+    },
+
     card: {
-      backgroundColor: t['surface-1'],
-      borderColor: t.line,
+      backgroundColor: c['surface-1'],
+      borderColor: c.line,
       borderWidth: 1,
       borderRadius: radius.lg,
-      padding: space[4],
-      gap: space[1],
-      overflow: 'hidden',
+      paddingHorizontal: space[4],
     },
-    edge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 2 },
-    label: { color: t['text-lo'], fontSize: 13 },
-    amount: { fontSize: 30, fontWeight: '600', fontVariant: ['tabular-nums'] },
-    section: { color: t['text-lo'], fontSize: 13, marginTop: space[4] },
-    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-    chip: {
-      backgroundColor: t['surface-2'],
-      borderColor: t.line,
-      borderWidth: 1,
-      borderRadius: radius.sm,
-      paddingHorizontal: space[2],
-      paddingVertical: space[1],
-    },
-    chipText: { color: t['text-hi'], fontSize: 13, fontVariant: ['tabular-nums'] },
     row: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      borderBottomColor: t.line,
-      borderBottomWidth: 1,
+      justifyContent: 'space-between',
+      borderTopColor: c.line,
+      borderTopWidth: 1,
       paddingVertical: space[3],
       gap: space[3],
     },
-    rowName: { color: t['text-hi'], fontSize: 13 },
-    rowValue: { color: t['text-lo'], fontSize: 13, fontVariant: ['tabular-nums'] },
+    rowFirst: { borderTopWidth: 0 },
+    rowLeft: { flexDirection: 'row', alignItems: 'center', gap: space[3], flexShrink: 1 },
+    dot: { width: 6, height: 6, borderRadius: radius.full },
+    rowText: { flexShrink: 1 },
+    rowName: { color: c['text-hi'], fontFamily: font.body, fontSize: 15 },
+    rowMeta: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginTop: 1 },
+    rowAmount: {
+      color: c['text-hi'],
+      fontFamily: font.monoMedium,
+      fontSize: 15,
+      fontVariant: ['tabular-nums'],
+    },
+
+    empty: {
+      color: c['text-lo'],
+      fontFamily: font.body,
+      fontSize: 14,
+      paddingVertical: space[6],
+      textAlign: 'center',
+    },
+
+    captureStub: {
+      marginTop: space[4],
+      borderColor: c.line,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderRadius: radius.lg,
+      padding: space[4],
+      gap: space[1],
+    },
+    captureText: { color: c['text-lo'], fontFamily: font.mono, fontSize: 13 },
+    captureHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 11, opacity: 0.7 },
   })
-}

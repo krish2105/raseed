@@ -2,7 +2,7 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: 5 (S6 done out of order — web shell prioritised for deploy)**
+**Current session: 7**
 
 ---
 
@@ -16,7 +16,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 
 ## Tracks B & C — alternating
 
-- [ ] **S5** Mobile P0 — shell, tokens, fonts, three tabs
+- [x] **S5** Mobile P0 — shell, tokens, fonts, three tabs
 - [x] **S6** Web P0 — shell, three-state theme toggle, no hydration warning, no FOUC
 - [ ] **S7** Mobile P1 — op-sqlite, schema, manual entry, sync wiring
 - [ ] **S8** Web P1 — DuckDB-WASM, Arrow ingest, live + demo paths, view rebuild <400ms

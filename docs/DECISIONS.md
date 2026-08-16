@@ -270,3 +270,31 @@ does not burn a Hobby build.
 
 **`.vercelignore` excludes node_modules and apps/mobile** — the first CLI deploy tried to
 upload 19,221 files and was rejected at the 15,000 limit.
+
+---
+
+## Session 5 — Mobile P0 shell (2026-08-16)
+
+**Three tabs, maximum: Today / Ledger / You.** Navigation is not the product; the capture
+bar and the dial are. Anything that would want a fourth tab belongs inside one of these.
+
+**One `useTheme()` hook is the only place mobile resolves a colour.** It reads
+`@raseed/tokens` and follows the system scheme, so the phone and the dashboard share one
+palette — and `grep` for a hex literal outside the tokens package returns nothing across
+both apps.
+
+**Fonts come from `@expo-google-fonts/*`**, registered under short names (Bricolage, Geist,
+GeistMono) so the StyleSheet reads cleanly. The splash screen hides on `fontsLoaded ||
+fontError` — a font that fails to load must not leave the user staring at a splash forever.
+
+**Today's number is the real engine, not a mock.** `safeToSpend` runs with the fixture
+ledger's actual spend-so-far, so the meter, the carryover and the days-to-payday are all
+consistent with the same arithmetic the tests cover. The flat meter is a placeholder for
+the Skia Day Dial at Session 9; the maths does not change when the visual does.
+
+**The mobile spend predicate mirrors contract.ts**, defined once in `src/lib/demo.ts`.
+Session 7 swaps the fixture source for op-sqlite + Drizzle behind the same shapes, so the
+screens do not change.
+
+**Empty states are invitations.** "Nothing logged yet. Tap the bar and type what you spent."
+— not an apology, and not a shrug emoji.
