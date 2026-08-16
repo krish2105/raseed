@@ -864,3 +864,82 @@ export function recordRefund(originalId: string, amount?: Money): string | null 
   )
   return id
 }
+
+// ── analysis inputs ─────────────────────────────────────────────────────────
+
+export interface DaySpend {
+  /** Epoch ms at local midnight. */
+  day: number
+  minor: number
+}
+
+/**
+ * Home-currency spend per day, oldest first, with **empty days included as zero**.
+ *
+ * The zero-filling is the whole point. Change-point detection and MAD z-scores both read the
+ * series as evenly spaced; hand them only the days you happened to spend on and a fortnight
+ * away reads as a continuous run, so a real shift in behaviour disappears into the gap.
+ */
+export function dailySpend(days = 90): DaySpend[] {
+  const DAY = 86_400_000
+  const to = Math.floor(Date.now() / DAY) * DAY + DAY
+  const from = to - days * DAY
+
+  const rows = getConnection().executeSync(
+    `SELECT CAST(occurred_at / 86400000 AS INTEGER) AS epoch_day,
+            COALESCE(SUM(home_amount_minor), 0)     AS minor
+       FROM v_spend
+      WHERE occurred_at >= ? AND occurred_at < ?
+      GROUP BY 1 ORDER BY 1;`,
+    [from, to],
+  ).rows as unknown as { epoch_day: number; minor: number }[]
+
+  const byDay = new Map(rows.map((r) => [r.epoch_day, r.minor]))
+  const out: DaySpend[] = []
+  for (let d = Math.floor(from / DAY); d < Math.floor(to / DAY); d++) {
+    out.push({ day: d * DAY, minor: byDay.get(d) ?? 0 })
+  }
+  return out
+}
+
+export interface RecurrenceRow {
+  merchantId: string
+  merchantName: string
+  amountMinor: number
+  currency: Currency
+  occurredAt: number
+}
+
+/**
+ * Everything with a resolved merchant, for `detectRecurrence`.
+ *
+ * Rows whose merchant never resolved are excluded rather than grouped under their raw text:
+ * two spellings of the same shop would otherwise look like two subscriptions that each fire
+ * half as often, which is exactly the pattern the detector is built to reject.
+ */
+export function recurrenceCandidates(days = 400): RecurrenceRow[] {
+  const since = Date.now() - days * 86_400_000
+  return getConnection().executeSync(
+    `SELECT s.merchant_id, m.canonical_name, s.amount_minor, s.currency, s.occurred_at
+       FROM v_spend s
+       JOIN merchants m ON m.id = s.merchant_id
+      WHERE s.occurred_at >= ?
+      ORDER BY s.occurred_at;`,
+    [since],
+  ).rows.map((r) => {
+    const row = r as unknown as {
+      merchant_id: string
+      canonical_name: string
+      amount_minor: number
+      currency: Currency
+      occurred_at: number
+    }
+    return {
+      merchantId: row.merchant_id,
+      merchantName: row.canonical_name,
+      amountMinor: row.amount_minor,
+      currency: row.currency,
+      occurredAt: row.occurred_at,
+    }
+  })
+}

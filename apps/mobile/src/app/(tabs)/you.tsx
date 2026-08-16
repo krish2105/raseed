@@ -51,6 +51,18 @@ export default function YouScreen() {
           </Pressable>
         </Link>
 
+        <Link href="/numbers" asChild>
+          <Pressable accessibilityRole="button" style={s.entry}>
+            <View style={s.entryText}>
+              <Text style={s.entryTitle}>Numbers</Text>
+              <Text style={s.entryHint}>
+                What repeats, what changed, and which days were unusual
+              </Text>
+            </View>
+            <Text style={s.entryChevron}>›</Text>
+          </Pressable>
+        </Link>
+
         <Link href="/trip" asChild>
           <Pressable accessibilityRole="button" style={s.entry}>
             <View style={s.entryText}>
