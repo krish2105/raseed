@@ -39,7 +39,6 @@ export function DayDial({
   // The dial is the hero, so it scales with the screen instead of being pinned to one size.
   const dim = size ?? Math.min(260, Math.max(180, width - 96))
   const stroke = Math.round(dim * 0.075)
-  const radius = (dim - stroke) / 2
   const clamped = Math.min(1, Math.max(0, progress))
 
   const { track, filled } = useMemo(() => {
