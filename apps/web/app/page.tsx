@@ -1,16 +1,20 @@
 import { aiPlaceholder } from '@raseed/ai'
 import { enginesPlaceholder } from '@raseed/engines'
 import { fixturesPlaceholder } from '@raseed/fixtures'
-import { formatMinor } from '@raseed/money'
+import { allocate, format, fromMajor, formatMinor } from '@raseed/money'
 import { schemaPlaceholder } from '@raseed/schema'
-import { tokensPlaceholder } from '@raseed/tokens'
+import { fontFamily } from '@raseed/tokens'
 import { AmountCard } from '@/components/ui/amount-card'
 
-// Every shared package is imported and called here. This page exists to prove the
-// workspace wiring is real — if any @raseed/* import were fake, this would not build.
+const inr = fromMajor('740.00', 'INR')
+const aed = fromMajor('92.50', 'AED')
+
+// The S1 criterion, rendered rather than asserted: 100 minor units, three ways.
+const split = allocate(fromMajor('1.00', 'INR'), 3)
+
 const packages = [
-  { name: '@raseed/money', value: formatMinor(74000, 'INR') },
-  { name: '@raseed/tokens', value: tokensPlaceholder() },
+  { name: '@raseed/money', value: formatMinor(inr) },
+  { name: '@raseed/tokens', value: fontFamily.display },
   { name: '@raseed/schema', value: schemaPlaceholder() },
   { name: '@raseed/engines', value: enginesPlaceholder() },
   { name: '@raseed/ai', value: aiPlaceholder() },
@@ -23,14 +27,31 @@ export default function Home() {
       <header>
         <h1 className="font-display text-3xl font-semibold tracking-tight">RASEED</h1>
         <p className="mt-2 text-sm text-text-lo">
-          Session 0 — monorepo scaffold. Both amounts below are formatted by{' '}
-          <code className="font-mono">@raseed/money</code>.
+          Session 1 — <code className="font-mono">@raseed/money</code> and{' '}
+          <code className="font-mono">@raseed/tokens</code>. Every colour below resolves from a CSS
+          variable; every figure is formatted from integer minor units.
         </p>
       </header>
 
       <section className="mt-10 grid gap-4 sm:grid-cols-2">
-        <AmountCard label="Safe to spend today" minor={74000} currency="INR" />
-        <AmountCard label="Safe to spend today" minor={9250} currency="AED" />
+        <AmountCard label="Safe to spend today" amount={inr} />
+        <AmountCard label="Safe to spend today" amount={aed} />
+      </section>
+
+      <section className="mt-10 rounded-xl border border-line bg-surface-1 p-5">
+        <h2 className="text-sm font-medium">Splitting ₹1.00 three ways</h2>
+        <p className="mt-1 text-sm text-text-lo">
+          <code className="font-mono">allocate()</code> distributes the remainder a paisa at a time,
+          so the parts always sum back to the whole.
+        </p>
+        <div className="tabular mt-3 flex flex-wrap items-center gap-2 font-mono text-sm">
+          {split.map((part, i) => (
+            <span key={i} className="rounded-md border border-line bg-surface-2 px-2 py-1">
+              {format(part)}
+            </span>
+          ))}
+          <span className="text-text-lo">= {format(fromMajor('1.00', 'INR'))}</span>
+        </div>
       </section>
 
       <section className="mt-10">

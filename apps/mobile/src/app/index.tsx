@@ -1,18 +1,20 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { aiPlaceholder } from '@raseed/ai'
 import { enginesPlaceholder } from '@raseed/engines'
 import { fixturesPlaceholder } from '@raseed/fixtures'
-import { formatMinor } from '@raseed/money'
+import { allocate, format, formatMinor, fromMajor } from '@raseed/money'
 import { schemaPlaceholder } from '@raseed/schema'
-import { tokensPlaceholder } from '@raseed/tokens'
+import { fontFamily, palette, radius, space, type Palette } from '@raseed/tokens'
 
-// Same six imports as apps/web, same formatMinor call. If Metro could not resolve a
-// workspace package, this screen would not bundle.
+const inr = fromMajor('740.00', 'INR')
+const aed = fromMajor('92.50', 'AED')
+const split = allocate(fromMajor('1.00', 'INR'), 3)
+
 const packages = [
-  { name: '@raseed/money', value: formatMinor(74000, 'INR') },
-  { name: '@raseed/tokens', value: tokensPlaceholder() },
+  { name: '@raseed/money', value: formatMinor(inr) },
+  { name: '@raseed/tokens', value: fontFamily.display },
   { name: '@raseed/schema', value: schemaPlaceholder() },
   { name: '@raseed/engines', value: enginesPlaceholder() },
   { name: '@raseed/ai', value: aiPlaceholder() },
@@ -20,20 +22,36 @@ const packages = [
 ]
 
 export default function HomeScreen() {
+  // Colours come from @raseed/tokens, resolved per theme. No hex literal in this file.
+  const scheme = useColorScheme()
+  const t = palette[scheme === 'light' ? 'light' : 'dark']
+  const styles = makeStyles(t)
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>RASEED</Text>
-        <Text style={styles.subtitle}>Session 0 — monorepo scaffold</Text>
+        <Text style={styles.subtitle}>Session 1 — money and tokens</Text>
 
         <View style={styles.card}>
+          <View style={[styles.edge, { backgroundColor: t.inr }]} />
           <Text style={styles.label}>Safe to spend today</Text>
-          <Text style={[styles.amount, styles.inr]}>{formatMinor(74000, 'INR')}</Text>
+          <Text style={[styles.amount, { color: t.inr }]}>{format(inr)}</Text>
         </View>
 
         <View style={styles.card}>
+          <View style={[styles.edge, { backgroundColor: t.aed }]} />
           <Text style={styles.label}>Safe to spend today</Text>
-          <Text style={[styles.amount, styles.aed]}>{formatMinor(9250, 'AED')}</Text>
+          <Text style={[styles.amount, { color: t.aed }]}>{format(aed)}</Text>
+        </View>
+
+        <Text style={styles.section}>Splitting ₹1.00 three ways</Text>
+        <View style={styles.chips}>
+          {split.map((part, i) => (
+            <View key={i} style={styles.chip}>
+              <Text style={styles.chipText}>{format(part)}</Text>
+            </View>
+          ))}
         </View>
 
         <Text style={styles.section}>Shared packages resolved</Text>
@@ -48,35 +66,45 @@ export default function HomeScreen() {
   )
 }
 
-// Hex lives here only because @raseed/tokens is a placeholder until Session 1.
-// Values copied from MOBILE_ARCHITECTURE.md §6 so the swap is a substitution.
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0F1419' },
-  content: { padding: 20, gap: 12 },
-  title: { color: '#E8EDF2', fontSize: 28, fontWeight: '700' },
-  subtitle: { color: '#8B98A5', fontSize: 14, marginBottom: 12 },
-  card: {
-    backgroundColor: '#171D24',
-    borderColor: '#2C353F',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    gap: 6,
-  },
-  label: { color: '#8B98A5', fontSize: 13 },
-  amount: { fontSize: 30, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  inr: { color: '#E0A458' },
-  aed: { color: '#4FB0A5' },
-  section: { color: '#8B98A5', fontSize: 13, marginTop: 16 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomColor: '#2C353F',
-    borderBottomWidth: 1,
-    paddingVertical: 10,
-    gap: 12,
-  },
-  rowName: { color: '#E8EDF2', fontSize: 13 },
-  rowValue: { color: '#8B98A5', fontSize: 13, fontVariant: ['tabular-nums'] },
-})
+function makeStyles(t: Palette) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: t['surface-0'] },
+    content: { padding: space[5], gap: space[3] },
+    title: { color: t['text-hi'], fontSize: 28, fontWeight: '700' },
+    subtitle: { color: t['text-lo'], fontSize: 14, marginBottom: space[3] },
+    card: {
+      backgroundColor: t['surface-1'],
+      borderColor: t.line,
+      borderWidth: 1,
+      borderRadius: radius.lg,
+      padding: space[4],
+      gap: space[1],
+      overflow: 'hidden',
+    },
+    edge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 2 },
+    label: { color: t['text-lo'], fontSize: 13 },
+    amount: { fontSize: 30, fontWeight: '600', fontVariant: ['tabular-nums'] },
+    section: { color: t['text-lo'], fontSize: 13, marginTop: space[4] },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+    chip: {
+      backgroundColor: t['surface-2'],
+      borderColor: t.line,
+      borderWidth: 1,
+      borderRadius: radius.sm,
+      paddingHorizontal: space[2],
+      paddingVertical: space[1],
+    },
+    chipText: { color: t['text-hi'], fontSize: 13, fontVariant: ['tabular-nums'] },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderBottomColor: t.line,
+      borderBottomWidth: 1,
+      paddingVertical: space[3],
+      gap: space[3],
+    },
+    rowName: { color: t['text-hi'], fontSize: 13 },
+    rowValue: { color: t['text-lo'], fontSize: 13, fontVariant: ['tabular-nums'] },
+  })
+}

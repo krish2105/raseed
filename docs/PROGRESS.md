@@ -2,14 +2,14 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: 1**
+**Current session: 2**
 
 ---
 
 ## Track A — Shared core (must finish before B or C)
 
 - [x] **S0** Monorepo scaffold — both apps import a shared package; breaking it fails both typechecks
-- [ ] **S1** `@raseed/money` + `@raseed/tokens` — `allocate` gives 34/33/33; tokens render in both apps
+- [x] **S1** `@raseed/money` + `@raseed/tokens` — `allocate` gives 34/33/33; tokens render in both apps
 - [ ] **S2** `@raseed/schema` + Supabase migrations + RLS — parity test catches deliberate drift; cross-user read returns zero rows
 - [ ] **S3** `@raseed/engines` domain half — safeToSpend, pairReversals, detectRecurrence, detectRemittance, normaliseMerchant, rankNudges, regretRate, all unit tested
 - [ ] **S4** `@raseed/engines` finance/stats + `@raseed/fixtures` — known-answer tests pass; same seed twice gives identical output
@@ -43,16 +43,9 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 
 *Anything left unfinished or unresolved. Clear it or carry it forward — never let it sit for more than two sessions.*
 
-- **Hex debt outside tokens** — `apps/web/app/globals.css` (`:root` block) and the `StyleSheet` in
-  `apps/mobile/src/app/index.tsx` hold hex literals because `@raseed/tokens` is a placeholder.
-  Values are copied verbatim from the architecture docs so S1 is a straight substitution.
-  Must not spread beyond those two files. **Clear at S1.**
-- **Android + EAS unverified** — no JDK on the machine (`sdkmanager` is installed but holds only
+- **EAS unverified** (Android dropped from scope entirely — iOS + web only) — no JDK on the machine (`sdkmanager` is installed but holds only
   cmdline-tools); `eas-cli` not installed and `eas login` needs Krishna's credentials. iOS Simulator
   dev build is the only proven mobile target. **Own step, before S5.**
-- **Light-mode brass is large-text-only** — `--inr` `#B87A2E` on `--surface-1` measures 3.58:1.
-  Passes the 3:1 large-text bar (the amount figures) but fails 4.5:1 at body size. Never use the INR
-  accent for small text in light mode, or darken the token. **Decide at S1 when tokens are real.**
 - **ESLint pinned to 9.x** — ESLint 10 breaks `eslint-plugin-react`, which both `eslint-config-next`
   and `eslint-config-expo` depend on. Same for TypeScript, pinned to 6.0.3 until `typescript-eslint`
   supports TS 7. **Revisit when the plugin ecosystem catches up.**

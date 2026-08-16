@@ -1,0 +1,69 @@
+/**
+ * Generated-by-hand twin of tokens.ts. parity.test.ts fails if these drift.
+ *
+ * Three-state theming, matching next-themes with attribute="data-theme":
+ *   :root                                  -> light (the default)
+ *   prefers-color-scheme: dark, not forced -> dark  (the "system" setting)
+ *   [data-theme="dark"|"light"]            -> explicit choice always wins
+ *
+ * Never give a colour its only definition inside a media query: a viewer who has
+ * explicitly chosen light on a dark OS must still get every token.
+ */
+
+:root {
+  --surface-0: #F2F4F6;
+  --surface-1: #FFFFFF;
+  --surface-2: #E7EBEF;
+  --line: #D3DAE1;
+  --text-hi: #12181F;
+  --text-lo: #5A6773;
+  --inr: #A36821;
+  --aed: #2E7F76;
+  --good: #3E8536;
+  --warn: #B23A34;
+  --horizon: #5566A8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface-0: #0F1419;
+    --surface-1: #171D24;
+    --surface-2: #212932;
+    --line: #2C353F;
+    --text-hi: #E8EDF2;
+    --text-lo: #8B98A5;
+    --inr: #E0A458;
+    --aed: #4FB0A5;
+    --good: #7BC96F;
+    --warn: #DB5C56;
+    --horizon: #7C8CC4;
+  }
+}
+
+:root[data-theme='dark'] {
+  --surface-0: #0F1419;
+  --surface-1: #171D24;
+  --surface-2: #212932;
+  --line: #2C353F;
+  --text-hi: #E8EDF2;
+  --text-lo: #8B98A5;
+  --inr: #E0A458;
+  --aed: #4FB0A5;
+  --good: #7BC96F;
+  --warn: #DB5C56;
+  --horizon: #7C8CC4;
+}
+
+:root[data-theme='light'] {
+  --surface-0: #F2F4F6;
+  --surface-1: #FFFFFF;
+  --surface-2: #E7EBEF;
+  --line: #D3DAE1;
+  --text-hi: #12181F;
+  --text-lo: #5A6773;
+  --inr: #A36821;
+  --aed: #2E7F76;
+  --good: #3E8536;
+  --warn: #B23A34;
+  --horizon: #5566A8;
+}

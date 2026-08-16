@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import "@raseed/tokens/tokens.css";
 import "./globals.css";
 
 const geistSans = Geist({

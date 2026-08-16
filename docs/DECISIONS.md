@@ -65,3 +65,32 @@ package fails that task and Turborepo *skips* the dependent apps — which reads
 
 **Deferred:** Android (no JDK on the machine; `sdkmanager` present but only cmdline-tools) and EAS
 (`eas login` needs credentials). Neither is wired; both are their own step.
+
+---
+
+## Session 1 — @raseed/money + @raseed/tokens (2026-08-16)
+
+**`fromMajor` takes a string, not a number.**
+`fromMajor(0.1 + 0.2, 'INR')` would be a float bug at the call site. Taking a string makes
+the bug unrepresentable. Parsing is integer-only: pad the fraction to the currency exponent
+and concatenate, never multiply by 100.
+
+**`allocate` distributes the remainder one minor unit at a time, from the front.**
+`allocate(money(100,'INR'), 3)` is `[34, 33, 33]` — the S1 done-when criterion, asserted
+literally. A property test sweeps every amount 0-200 across 1-7 parts and asserts the parts
+always sum back to the original. Zero-ratio participants are skipped when handing out the
+remainder, so someone who owes nothing is never handed a stray paisa.
+
+**tokens.ts is the truth; tokens.css is a committed twin with a parity test.**
+No build step is allowed, so the CSS cannot be generated at install time. Instead
+`parity.test.ts` parses tokens.css and asserts every block matches the TS palette. Verified
+by injecting a one-hex-digit drift and watching it fail — the S2 lesson applied early.
+
+**Three colours were changed to pass contrast, found by test not by eye.**
+The parity suite holds every accent to 4.5:1 on surface-1 in BOTH themes. Light `inr`
+(4.33), light `good` (4.49) and dark `warn` (4.30) all failed. Solved numerically to
+`#A36821`, `#3E8536`, `#DB5C56`. The old light brass was the open thread from S0; it is now
+enforced by a test rather than a note.
+
+**Android removed.** iOS + web only, per instruction. `android` block dropped from app.json,
+adaptive-icon assets and the `android` script deleted. EAS profiles remain platform-agnostic.
