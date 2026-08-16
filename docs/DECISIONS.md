@@ -540,3 +540,61 @@ your added rows and passes them in. That constraint is what made the split clean
 **The `add-expense` category list is now read at render** — no memo, no version counter.
 `exhaustive-deps` was right that a counter it cannot reason about is a smell; re-reading a
 handful of names on each keystroke costs nothing and deletes a state variable.
+
+---
+
+## S19 — splits, cash, and a lock-up that had been shipping for two sessions (2026-08-16)
+
+**Your spend is your share.** Paying ₹4,000 for four is ₹1,000 of spending and ₹3,000 owed
+to you. Recording the ₹4,000 says you overspent on a night you did not, and every category,
+budget and forecast downstream inherits it. `splitBill` returns the shares, your share, and
+what you are owed — the last by subtraction from the total, never a second allocate, so the
+two numbers reconcile no matter how the remainder fell.
+
+Tested by walking **every amount from 1 to 200 paise, split 2 through 9 ways** — 1,600 cases
+checking the shares sum to the total exactly and no two differ by more than one paisa. The
+remainder is where splitting goes wrong, so the test enumerates rather than samples.
+
+**Cash reconciliation is the money every other tracker loses.** Card spend records itself;
+cash does not. ₹5,000 leaves an ATM and disappears over three weeks in autos and chai. The
+fix is not logging the autos — it is counting the wallet occasionally and letting the
+difference become one honest row. The first count is a baseline and writes nothing; after
+that expected = last count − cash spend since. A zero delta writes nothing at all, because a
+₹0.00 "Uncategorised cash" row makes the honest rows harder to trust.
+
+The adjustment row is stamped at the same instant as the count, and `cashSpentSince` filters
+strictly `occurred_at > at`. With `>=` the adjustment would count itself and the wallet
+would walk down by its own delta on every render.
+
+**`cat-cash` is kind `want`, and that is a guess.** Cash that leaves a wallet unrecorded is
+mostly autos, chai and tips, but nobody knows. It is named "Uncategorised cash" everywhere
+it appears so the guess stays visible instead of being laundered into a confident category.
+Adding an `unknown` kind would touch `contract.ts`, `v_spend`, both schemas and every
+need/want/save chart — too wide for one session, and recorded here rather than forgotten.
+
+### Three bugs the verification found
+
+**The app locked up after adding anything.** `reload()` set `requestedRows` to `undefined`
+when it was already `undefined`; React bails out on an identical value, so the effect never
+re-ran and `status` stayed `'loading'` for the rest of the session. The Add button and ⌘K
+went permanently disabled, and — worse and quieter — **every expense you added never reached
+the figures until a manual refresh.** This had been live since the add flow shipped. The
+re-ingest is now keyed on a fresh object with a nonce, so it is unconditional.
+
+Worth naming why it survived: the earlier check confirmed the row reached localStorage and
+that the panel updated. The panel updated from its own local state. Checking that the write
+landed is not the same as checking the read came back.
+
+**Every expense you added read "Unknown" in the ledger.** `raw_text` was never among the
+columns encoded into Arrow, so the only name available was a join on `merchant_id`, which a
+manual row does not have. `raw_text` and `note` now ride along, and the ledger shows the note
+under the merchant — so a ₹333.34 row explains that it is one third of ₹1,000.
+
+**Every unedited quick add was filed as Rent**, because the category defaulted to the first
+seeded entry. It defaults to Eating out now.
+
+### Still open
+
+S19 is the **mobile** ship gate in the plan and only the web half is built. The maths lives
+in `@raseed/engines` with its tests, so the phone inherits the logic rather than reimplements
+it, but the mobile split sheet and wallet prompt are not written.

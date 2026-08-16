@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Plus, X } from 'lucide-react'
-import { fromMajor, type Currency, type Money } from '@raseed/money'
+import { format, fromMajor, type Currency, type Money } from '@raseed/money'
+import { splitEvenly } from '@raseed/engines'
 import { CATEGORIES } from '@raseed/fixtures'
 import { useDuck } from '@/lib/duck/provider'
 import { addLocal } from '@/lib/store/local-ledger'
@@ -14,6 +15,10 @@ import { cn } from '@/lib/utils'
 const AED_TO_INR = 24.86
 
 const SEEDED = CATEGORIES.filter((c) => c.kind !== 'income')
+
+/** Most quick adds are a meal or a ride, not rent. Defaulting to the first seeded category
+ *  put "Rent" on every unedited entry. */
+const DEFAULT_CATEGORY = SEEDED.find((c) => c.id === 'cat-food')?.id ?? SEEDED[0]!.id
 
 /**
  * Add an expense from the dashboard.
@@ -26,8 +31,10 @@ export function AddExpense() {
   const [amount, setAmount] = useState('')
   const [merchant, setMerchant] = useState('')
   const [currency, setCurrency] = useState<Currency>('INR')
-  const [categoryId, setCategoryId] = useState(SEEDED[0]!.id)
+  const [categoryId, setCategoryId] = useState(DEFAULT_CATEGORY)
   const [newCategory, setNewCategory] = useState('')
+  const [ways, setWays] = useState(1)
+  const [cash, setCash] = useState(false)
 
   // Read during render, with no memo and no version counter.
   //
@@ -67,21 +74,34 @@ export function AddExpense() {
 
   const canSave = parsed !== null && merchant.trim().length > 0
 
+  /**
+   * The whole bill splits; only your share is your spend.
+   *
+   * Paying ₹4,000 for four people is ₹1,000 of spending and ₹3,000 owed to you. Recording
+   * the ₹4,000 tells you that you overspent on a night you did not, and every category,
+   * budget and forecast downstream inherits that.
+   */
+  const split = parsed && ways > 1 ? splitEvenly(parsed, ways) : null
+
   function save() {
     if (!parsed) return setError('Enter an amount, like 240 or 240.50')
     if (!merchant.trim()) return setError('Who did you pay?')
 
     addLocal({
-      amountMinor: parsed.minor,
+      amountMinor: split ? split.yourShare.minor : parsed.minor,
       currency,
       merchant: merchant.trim(),
       categoryId,
-      occurredAt: Date.now(),
       fxInrPerAed: AED_TO_INR,
+      paidInCash: cash,
+      note: split
+        ? `Your share, 1 of ${ways}. Paid ${format(parsed)}, ${format(split.owedToYou)} owed to you.`
+        : undefined,
     })
 
     setAmount('')
     setMerchant('')
+    setWays(1)
     setError(null)
     setSaved(true)
     reload() // re-ingest so every figure on the page updates
@@ -165,6 +185,22 @@ export function AddExpense() {
                       {c}
                     </button>
                   ))}
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={cash}
+                    onClick={() => setCash((v) => !v)}
+                    className={cn(
+                      'ml-auto rounded-md border px-2.5 py-1 text-xs transition-colors',
+                      'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                      cash
+                        ? 'border-warn bg-surface-2 text-warn'
+                        : 'border-line text-text-lo hover:text-text-hi',
+                    )}
+                  >
+                    Paid in cash
+                  </button>
                 </div>
 
                 <input
@@ -182,6 +218,48 @@ export function AddExpense() {
                     currency === 'INR' ? 'text-inr' : 'text-aed',
                   )}
                 />
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-text-lo">Split</span>
+                  <div
+                    role="radiogroup"
+                    aria-label="Split how many ways"
+                    className="flex gap-0.5 rounded-lg border border-line bg-surface-0 p-0.5"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={ways === n}
+                        onClick={() => setWays(n)}
+                        className={cn(
+                          'tabular rounded-md px-2 py-1 font-mono text-xs transition-colors',
+                          'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                          ways === n ? 'bg-surface-2 text-text-hi' : 'text-text-lo hover:text-text-hi',
+                        )}
+                      >
+                        {n === 1 ? 'just me' : n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {split && parsed && (
+                  <p className="mt-2 text-xs leading-relaxed text-text-lo" data-testid="split-note">
+                    Your share is{' '}
+                    <span className="tabular font-mono text-text-hi">
+                      {format(split.yourShare)}
+                    </span>{' '}
+                    of {format(parsed)} — only that counts as your spend.{' '}
+                    <span className="tabular font-mono">{format(split.owedToYou)}</span> is owed
+                    to you.
+                    {split.shares.some((sh) => sh.minor !== split.shares[0]!.minor) &&
+                      ` It does not divide evenly, so the shares are ${split.shares
+                        .map((sh) => sh.minor)
+                        .join('/')} paise — they add up exactly.`}
+                  </p>
+                )}
 
                 <label className="mt-4 block text-xs text-text-lo" htmlFor="ax-merchant">
                   Paid to

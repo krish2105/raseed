@@ -80,6 +80,8 @@ function transactionsTable(rows: readonly FixtureTransaction[]): arrow.Table {
       new arrow.Float64(),
     ),
     account_id: utf8(rows.map((t) => t.account_id)),
+    raw_text: utf8(rows.map((t) => t.raw_text)),
+    note: utf8(rows.map((t) => t.note)),
     merchant_id: utf8(rows.map((t) => t.merchant_id)),
     category_id: utf8(rows.map((t) => t.category_id)),
     txn_type: utf8(rows.map((t) => t.txn_type)),

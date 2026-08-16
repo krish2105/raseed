@@ -15,15 +15,26 @@ import type { FixtureTransaction } from '@raseed/fixtures'
 
 const KEY = 'raseed.local-ledger.v1'
 
+/** The wallet. Not a real account in the seeded demo — it exists so cash can be counted. */
+export const CASH_ACCOUNT = 'acct-cash'
+
 export interface LocalDraft {
   amountMinor: number
   currency: 'INR' | 'AED'
   merchant: string
   categoryId: string
-  occurredAt: number
+  /** Defaults to now. The store stamps the clock, exactly as it already does for `updated_at`. */
+  occurredAt?: number
   /** INR per AED, frozen at write time and never recomputed. */
   fxInrPerAed: number
   note?: string
+  /**
+   * Paid from your wallet rather than a card. Cash spend is what the wallet count on the
+   * Reckoning tab reconciles against — without this flag there is nothing to expect.
+   */
+  paidInCash?: boolean
+  /** 'in' for money arriving. Defaults to 'out', which is almost always what you mean. */
+  direction?: 'in' | 'out'
 }
 
 function read(): FixtureTransaction[] {
@@ -67,19 +78,23 @@ export function addLocal(draft: LocalDraft): FixtureTransaction {
 
   const row: FixtureTransaction = {
     id: `local-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
-    occurred_at: draft.occurredAt,
-    direction: 'out',
+    occurred_at: draft.occurredAt ?? Date.now(),
+    direction: draft.direction ?? 'out',
     amount_minor: draft.amountMinor,
     currency: draft.currency,
     home_amount_minor: Math.round(draft.amountMinor * rate),
     fx_rate: rate,
     fx_inr_per_aed: draft.fxInrPerAed,
-    account_id: draft.currency === 'AED' ? 'acct-enbd' : 'acct-hdfc',
+    account_id: draft.paidInCash
+      ? CASH_ACCOUNT
+      : draft.currency === 'AED'
+        ? 'acct-enbd'
+        : 'acct-hdfc',
     merchant_id: null,
     category_id: draft.categoryId,
     raw_text: draft.merchant,
     source: 'manual',
-    txn_type: 'spend',
+    txn_type: (draft.direction ?? 'out') === 'in' ? 'income' : 'spend',
     transfer_group_id: null,
     reversal_of_id: null,
     trip_id: null,
@@ -103,4 +118,17 @@ export function removeLocal(id: string): void {
 
 export function clearLocal(): void {
   write([])
+}
+
+/** Cash spend since a moment, in home minor units — what a wallet count is measured against. */
+export function cashSpentSince(at: number): number {
+  return read()
+    .filter(
+      (r) =>
+        !r.deleted &&
+        r.account_id === CASH_ACCOUNT &&
+        r.direction === 'out' &&
+        r.occurred_at > at,
+    )
+    .reduce((total, r) => total + r.home_amount_minor, 0)
 }

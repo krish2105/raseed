@@ -416,6 +416,8 @@ export interface LedgerRow {
   id: string
   occurredAt: number
   merchant: string
+  /** Why this number is what it is — a split share, or a wallet reconciliation. */
+  note: string
   category: string
   kind: string
   native: Money
@@ -430,6 +432,7 @@ export async function ledgerPage(limit: number, offset: number, lens: Lens): Pro
     amount_minor: number
     lens_minor: number
     merchant: string
+    note: string
     category: string
     kind: string
   }>(Q.ledgerPage(limit, offset, lens))
@@ -438,6 +441,7 @@ export async function ledgerPage(limit: number, offset: number, lens: Lens): Pro
     id: r.id,
     occurredAt: r.occurred_at,
     merchant: r.merchant,
+    note: r.note,
     category: r.category,
     kind: r.kind,
     native: money(r.amount_minor, r.currency),

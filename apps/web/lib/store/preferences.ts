@@ -109,3 +109,31 @@ export function markNudgeSent(id: string, at: number): void {
   const sent = log.week === week ? log.sent : []
   if (!sent.includes(id)) write(NUDGES_KEY, { week, sent: [...sent, id] })
 }
+
+// ── wallet counts ──────────────────────────────────────────────────────────
+
+const CASH_KEY = 'raseed.cash-counts.v1'
+
+export interface CashCount {
+  /** When you counted. */
+  at: number
+  /** What was in the wallet, in INR minor units. */
+  countedMinor: number
+}
+
+/** Newest last. */
+export function cashCounts(): CashCount[] {
+  return read<CashCount[]>(CASH_KEY, [])
+}
+
+export function lastCashCount(): CashCount | null {
+  const all = cashCounts()
+  return all[all.length - 1] ?? null
+}
+
+/** Stamps its own clock and returns the record, so the caller does not have to read one. */
+export function addCashCount(countedMinor: number): CashCount {
+  const count: CashCount = { at: Date.now(), countedMinor }
+  write(CASH_KEY, [...cashCounts(), count])
+  return count
+}

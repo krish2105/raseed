@@ -132,7 +132,12 @@ export function LedgerClient() {
                             background: r.native.currency === 'AED' ? 'var(--aed)' : 'var(--inr)',
                           }}
                         />
-                        <span className="truncate">{r.merchant}</span>
+                        <span className="min-w-0">
+                          <span className="block truncate">{r.merchant}</span>
+                          {r.note && (
+                            <span className="block truncate text-xs text-text-lo">{r.note}</span>
+                          )}
+                        </span>
                       </span>
                     </td>
                     <td className="py-2.5 pr-3 text-text-lo">{r.category}</td>

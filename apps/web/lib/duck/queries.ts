@@ -219,7 +219,10 @@ export const Q = {
   ledgerPage: (limit: number, offset: number, lens: Lens) =>
     `SELECT s.id, s.occurred_at, s.currency, s.amount_minor,
             ${lensAmount(lens, 's')}::BIGINT AS lens_minor,
-            COALESCE(m.canonical_name, 'Unknown')  AS merchant,
+            -- raw_text is what you typed. Without it every expense you add reads
+            -- 'Unknown', because a manual row has no merchant_id to join on.
+            COALESCE(m.canonical_name, NULLIF(s.raw_text, ''), 'Unknown') AS merchant,
+            COALESCE(s.note, '')                   AS note,
             COALESCE(c.name, 'Uncategorised')      AS category,
             COALESCE(c.kind, 'want')               AS kind
      FROM v_spend s

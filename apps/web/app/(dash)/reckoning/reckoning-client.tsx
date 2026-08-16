@@ -1,6 +1,7 @@
 'use client'
 
 import { Reckoning } from '@/components/insight/reckoning'
+import { WalletCount } from '@/components/insight/wallet'
 
 export function ReckoningClient() {
   return (
@@ -14,6 +15,10 @@ export function ReckoningClient() {
           few nudges that survived the budget.
         </p>
       </header>
+      <div className="mb-3">
+        <WalletCount />
+      </div>
+
       <Reckoning />
     </div>
   )

@@ -103,6 +103,10 @@ export const CATEGORIES: FixtureCategory[] = [
   { id: 'cat-shopping', name: 'Shopping', kind: 'want' },
   { id: 'cat-health', name: 'Health', kind: 'need' },
   { id: 'cat-savings', name: 'Savings', kind: 'save' },
+  // Where a wallet count's difference lands. 'want' is a guess — cash that leaves a wallet
+  // unrecorded is mostly autos, chai and tips — but the name says "uncategorised" wherever
+  // it appears, so the guess is visible rather than laundered into a confident category.
+  { id: 'cat-cash', name: 'Uncategorised cash', kind: 'want' },
   { id: 'cat-salary', name: 'Salary', kind: 'income' },
 ]
 

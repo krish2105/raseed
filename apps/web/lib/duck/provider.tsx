@@ -31,7 +31,17 @@ export function DuckProvider({ children }: { children: ReactNode }) {
   const [timing, setTiming] = useState<IngestTiming | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
-  const [requestedRows, setRequestedRows] = useState<number | undefined>(undefined)
+
+  /**
+   * The nonce is load-bearing, not decoration.
+   *
+   * `reload()` is almost always called with no argument, so keying the effect on the row
+   * count alone meant setting `undefined` over `undefined`: React bails out on the
+   * identical value, the effect never re-runs, and `status` stays `'loading'` for the rest
+   * of the session. Adding an expense left every figure stale and disabled the Add button
+   * behind it. A fresh object each time makes the re-ingest unconditional.
+   */
+  const [request, setRequest] = useState<{ rows?: number; nonce: number }>({ nonce: 0 })
 
   useEffect(() => {
     let cancelled = false
@@ -39,7 +49,7 @@ export function DuckProvider({ children }: { children: ReactNode }) {
     // No setState here: the initial state is already 'loading', and `reload` resets it from
     // the event handler. Setting it synchronously inside the effect triggers a cascading
     // render, which the compiler rejects.
-    ingestDemo(requestedRows)
+    ingestDemo(request.rows)
       .then((result) => {
         if (cancelled) return
         setTiming(result)
@@ -57,7 +67,7 @@ export function DuckProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [requestedRows])
+  }, [request])
 
   return (
     <DuckContext.Provider
@@ -69,7 +79,7 @@ export function DuckProvider({ children }: { children: ReactNode }) {
         reload: (rows) => {
           setStatus('loading')
           setError(null)
-          setRequestedRows(rows)
+          setRequest((r) => ({ rows, nonce: r.nonce + 1 }))
         },
       }}
     >

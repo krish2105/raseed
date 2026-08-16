@@ -13,6 +13,8 @@ export * from './domain/detectRecurrence'
 export * from './domain/detectRemittance'
 export * from './domain/regretRate'
 export * from './domain/rankNudges'
+export * from './domain/splitBill'
+export * from './domain/reconcileCash'
 
 export * from './finance'
 export * from './stats'
