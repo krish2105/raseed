@@ -1,5 +1,14 @@
 import type { ReactNode } from 'react'
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native'
+import {
+  I18nManager,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native'
 
 import { radius, space, type Palette } from '@raseed/tokens'
 
@@ -219,6 +228,146 @@ export function TextLink({ label, onPress }: { label: string; onPress: () => voi
 }
 
 /**
+ * A navigation row: title, hint, chevron.
+ *
+ * Written out seven times verbatim in the You screen and nowhere else — the highest line-count
+ * duplication in the app. Not a `Card`, despite looking like one: a card is a container you put
+ * things in, and this is a control you press.
+ *
+ * The chevron is `‹` under RTL. It points the way the stack pushes, and the stack pushes the
+ * other way in Arabic — a `›` in a mirrored layout points back at the screen you came from,
+ * which is the one thing a chevron must never do. `I18nManager.isRTL` rather than the locale,
+ * because the native layout direction is what actually got applied at launch.
+ */
+export function NavRow({
+  title,
+  hint,
+  onPress,
+  style,
+}: {
+  title: string
+  hint?: string
+  onPress?: () => void
+  style?: ViewStyle | ViewStyle[]
+}) {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={hint ? `${title}. ${hint}` : title}
+      onPress={onPress}
+      style={({ pressed }) => [s.navRow, style, pressed && s.pressed]}
+    >
+      <View style={s.navText}>
+        <Text style={s.navTitle}>{title}</Text>
+        {hint ? <Text style={s.navHint}>{hint}</Text> : null}
+      </View>
+      <Text style={s.navChevron}>{I18nManager.isRTL ? '‹' : '›'}</Text>
+    </Pressable>
+  )
+}
+
+/**
+ * One line of the ledger: a category dot, the merchant, and the amount.
+ *
+ * Written three separate times — in `ledger`, on the home screen and in `you` — with the same
+ * six style keys and three different sets of typos waiting to happen. The amount is `monoMedium`
+ * and tabular and pinned LTR, which is the combination every figure in this app needs and the
+ * one most likely to be forgotten when the row is copied a fourth time.
+ */
+export function LedgerRow({
+  name,
+  meta,
+  amount,
+  dotColor,
+  onPress,
+}: {
+  name: string
+  meta?: string
+  /** Pre-formatted by `@raseed/money`. This component never does arithmetic. */
+  amount: string
+  dotColor: string
+  onPress?: () => void
+}) {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  const body = (
+    <>
+      <View style={s.ledgerLeft}>
+        <View style={[s.ledgerDot, { backgroundColor: dotColor }]} />
+        <View style={s.ledgerText}>
+          <Text style={s.ledgerName}>{name}</Text>
+          {meta ? <Text style={s.ledgerMeta}>{meta}</Text> : null}
+        </View>
+      </View>
+      <Text style={s.ledgerAmount}>{amount}</Text>
+    </>
+  )
+  if (!onPress) return <View style={s.ledgerRow}>{body}</View>
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${name}, ${amount}`}
+      onPress={onPress}
+      style={({ pressed }) => [s.ledgerRow, pressed && s.pressed]}
+    >
+      {body}
+    </Pressable>
+  )
+}
+
+/**
+ * A labelled text input.
+ *
+ * The same four declarations — surface, hairline, `radius.md`, `space[3]` — appeared in `add`,
+ * `edit`, `goals` and `trip`, with near-variants in three more. The label is part of the
+ * component rather than a sibling `<Text>` because that is what made them drift: a screen that
+ * has to place its own label is a screen that can forget `accessibilityLabel`, and four of them
+ * had.
+ */
+export function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType,
+  accessibilityLabel,
+  style,
+}: {
+  label: string
+  value: string
+  onChangeText: (next: string) => void
+  placeholder?: string
+  keyboardType?: 'default' | 'decimal-pad' | 'number-pad'
+  /**
+   * Overrides the visible label for screen readers, and several screens need it: the label
+   * reads "Amount (₹)" because the column is narrow, while the spoken one is "Target amount in
+   * rupees". Defaulting to `label` and offering no override would have quietly replaced the
+   * better string with the shorter one on every field that had bothered.
+   */
+  accessibilityLabel?: string
+  style?: TextStyle | TextStyle[]
+}) {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  return (
+    <View>
+      <Text style={s.fieldLabel}>{label}</Text>
+      <TextInput
+        style={[s.field, style]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors['text-lo']}
+        keyboardType={keyboardType}
+        accessibilityLabel={accessibilityLabel ?? label}
+      />
+    </View>
+  )
+}
+
+/**
  * Appearance: system, light, dark.
  *
  * Three options rather than a switch, because "follow the system" is a real answer and a
@@ -403,6 +552,64 @@ const styles = (c: Palette) =>
       paddingVertical: space[3],
     },
     rowFirst: { borderTopWidth: 0 },
+
+    navRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space[3],
+      backgroundColor: c['surface-1'],
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius.xl,
+      padding: space[4],
+    },
+    navText: { flex: 1 },
+    navTitle: { color: c['text-hi'], fontFamily: font.bodyMedium, fontSize: 15 },
+    navHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginTop: 2 },
+    navChevron: { color: c['text-lo'], fontFamily: font.body, fontSize: 22 },
+
+    ledgerRow: {
+      // `flex: 1` because this is usually the only child of a `Row`, which is itself
+      // `space-between`. Without it the row sizes to its content and sits at the start, and the
+      // amount floats in the middle of the card instead of reaching the far edge. Caught on the
+      // device — every unit in the app was green.
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: space[3],
+      paddingVertical: space[3],
+    },
+    ledgerLeft: { flexDirection: 'row', alignItems: 'center', gap: space[3], flexShrink: 1 },
+    ledgerDot: { width: 6, height: 6, borderRadius: radius.full },
+    ledgerText: { flexShrink: 1 },
+    ledgerName: { color: c['text-hi'], fontFamily: font.body, fontSize: 15 },
+    ledgerMeta: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginTop: 1 },
+    ledgerAmount: {
+      color: c['text-hi'],
+      fontFamily: font.monoMedium,
+      fontSize: 15,
+      fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
+    },
+
+    fieldLabel: {
+      color: c['text-lo'],
+      fontFamily: font.body,
+      fontSize: 12,
+      marginBottom: space[2],
+    },
+    field: {
+      color: c['text-hi'],
+      fontFamily: font.body,
+      fontSize: 16,
+      backgroundColor: c['surface-1'],
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius.md,
+      paddingHorizontal: space[3],
+      paddingVertical: space[3],
+    },
 
     link: {
       color: c['text-hi'],

@@ -8,7 +8,7 @@ import { format, fromMajor, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { PrimaryButton } from '@/components/ui'
+import { PrimaryButton, Field } from '@/components/ui'
 import { Glass } from '@/components/Glass'
 import {
   addGoal,
@@ -128,26 +128,24 @@ export default function GoalsScreen() {
 
         <View style={s.row}>
           <View style={s.half}>
-            <Text style={s.label}>Amount (₹)</Text>
-            <TextInput
+            <Field
+              label="Amount (₹)"
+              accessibilityLabel="Target amount in rupees"
               value={amountText}
               onChangeText={(t) => {
                 setAmountText(t)
                 setError(null)
               }}
               keyboardType="decimal-pad"
-              accessibilityLabel="Target amount in rupees"
-              style={s.input}
             />
           </View>
           <View style={s.half}>
-            <Text style={s.label}>Months</Text>
-            <TextInput
+            <Field
+              label="Months"
+              accessibilityLabel="Months from now"
               value={monthsText}
               onChangeText={setMonthsText}
               keyboardType="number-pad"
-              accessibilityLabel="Months from now"
-              style={s.input}
             />
           </View>
         </View>

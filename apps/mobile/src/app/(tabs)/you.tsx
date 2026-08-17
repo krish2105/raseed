@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Link } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -10,7 +10,7 @@ import { countSpend, listAccounts, listCategories, useQuery } from '@/db'
 import { WalletCount } from '@/components/WalletCount'
 import { COMMITMENTS } from '@/lib/commitments'
 import { AppLockToggle } from '@/components/AppLockToggle'
-import { LanguageChoice, ThemeChoice } from '@/components/ui'
+import { LanguageChoice, LedgerRow, NavRow, Row, ThemeChoice } from '@/components/ui'
 import { useLocale } from '@/lib/locale'
 
 
@@ -47,88 +47,40 @@ export default function YouScreen() {
         {cashCategoryId !== '' && <WalletCount categoryId={cashCategoryId} />}
 
         <Link href="/reckoning" asChild>
-          <Pressable accessibilityRole="button" style={s.entry}>
-            <View style={s.entryText}>
-              <Text style={s.entryTitle}>The Reckoning</Text>
-              <Text style={s.entryHint}>
-                Was it worth it? The one question a statement cannot answer
-              </Text>
-            </View>
-            <Text style={s.entryChevron}>›</Text>
-          </Pressable>
+          <NavRow title="The Reckoning" hint="Was it worth it? The one question a statement cannot answer" style={s.navSpacing} />
         </Link>
 
         <Link href="/split" asChild>
-          <Pressable accessibilityRole="button" style={s.entry}>
-            <View style={s.entryText}>
-              <Text style={s.entryTitle}>Split &amp; settle up</Text>
-              <Text style={s.entryHint}>Who owes you, and the fewest payments that clear it</Text>
-            </View>
-            <Text style={s.entryChevron}>›</Text>
-          </Pressable>
+          <NavRow title="Split &amp; settle up" hint="Who owes you, and the fewest payments that clear it" style={s.navSpacing} />
         </Link>
 
         <Link href="/import" asChild>
-          <Pressable accessibilityRole="button" style={s.entry}>
-            <View style={s.entryText}>
-              <Text style={s.entryTitle}>Import a statement</Text>
-              <Text style={s.entryHint}>A bank CSV, read on device and shown before it lands</Text>
-            </View>
-            <Text style={s.entryChevron}>›</Text>
-          </Pressable>
+          <NavRow title="Import a statement" hint="A bank CSV, read on device and shown before it lands" style={s.navSpacing} />
         </Link>
 
         <Link href="/numbers" asChild>
-          <Pressable accessibilityRole="button" style={s.entry}>
-            <View style={s.entryText}>
-              <Text style={s.entryTitle}>Numbers</Text>
-              <Text style={s.entryHint}>
-                What repeats, what changed, and which days were unusual
-              </Text>
-            </View>
-            <Text style={s.entryChevron}>›</Text>
-          </Pressable>
+          <NavRow title="Numbers" hint="What repeats, what changed, and which days were unusual" style={s.navSpacing} />
         </Link>
 
         <Link href="/trip" asChild>
-          <Pressable accessibilityRole="button" style={s.entry}>
-            <View style={s.entryText}>
-              <Text style={s.entryTitle}>Plan a trip</Text>
-              <Text style={s.entryHint}>
-                What it would cost you, built from your own habits
-              </Text>
-            </View>
-            <Text style={s.entryChevron}>›</Text>
-          </Pressable>
+          <NavRow title="Plan a trip" hint="What it would cost you, built from your own habits" style={s.navSpacing} />
         </Link>
 
         <Link href="/goals" asChild>
-          <Pressable accessibilityRole="button" style={s.entry}>
-            <View style={s.entryText}>
-              <Text style={s.entryTitle}>Goals</Text>
-              <Text style={s.entryHint}>
-                Targets measured against what is actually left over
-              </Text>
-            </View>
-            <Text style={s.entryChevron}>›</Text>
-          </Pressable>
+          <NavRow title="Goals" hint="Targets measured against what is actually left over" style={s.navSpacing} />
         </Link>
 
         <Text style={s.section}>{t('you.accounts')}</Text>
         <View style={s.card}>
           {accounts.map((a, i) => (
-            <View key={a.id} style={[s.row, i === 0 && s.rowFirst]}>
-              <View style={s.rowLeft}>
-                <View
-                  style={[s.dot, { backgroundColor: a.currency === 'AED' ? colors.aed : colors.inr }]}
-                />
-                <View style={s.rowText}>
-                  <Text style={s.rowName}>{a.name}</Text>
-                  <Text style={s.rowMeta}>{a.kind}</Text>
-                </View>
-              </View>
-              <Text style={s.rowAmount}>{format(money(a.opening_minor, a.currency))}</Text>
-            </View>
+            <Row key={a.id} first={i === 0}>
+              <LedgerRow
+                name={a.name}
+                meta={a.kind}
+                amount={format(money(a.opening_minor, a.currency))}
+                dotColor={a.currency === 'AED' ? colors.aed : colors.inr}
+              />
+            </Row>
           ))}
         </View>
 
@@ -155,15 +107,7 @@ export default function YouScreen() {
         <AppLockToggle />
 
         <Link href="/privacy" asChild>
-          <Pressable accessibilityRole="button" style={s.entry}>
-            <View style={s.entryText}>
-              <Text style={s.entryTitle}>What this app knows</Text>
-              <Text style={s.entryHint}>
-                Every row it holds, how long it keeps it, and how to take it or delete it
-              </Text>
-            </View>
-            <Text style={s.entryChevron}>›</Text>
-          </Pressable>
+          <NavRow title="What this app knows" hint="Every row it holds, how long it keeps it, and how to take it or delete it" style={s.navSpacing} />
         </Link>
 
         <Text style={s.section}>{t('you.about')}</Text>
@@ -205,21 +149,7 @@ const styles = (c: Palette) =>
       marginTop: space[4],
     },
 
-    entry: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: space[3],
-      backgroundColor: c['surface-1'],
-      borderColor: c.line,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderRadius: radius.lg,
-      padding: space[4],
-      marginTop: space[4],
-    },
-    entryText: { flex: 1 },
-    entryTitle: { color: c['text-hi'], fontFamily: font.bodyMedium, fontSize: 15 },
-    entryHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginTop: 2 },
-    entryChevron: { color: c['text-lo'], fontFamily: font.body, fontSize: 22 },
+    navSpacing: { marginTop: space[2] },
     card: {
       backgroundColor: c['surface-1'],
       borderColor: c.line,

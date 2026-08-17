@@ -2567,3 +2567,26 @@ which is itself the proof that the activity was genuinely registered with Activi
 silently swallowed by the error handling. The bottom row is empty, which is correct: no budget was
 set and it is day one, so there is neither a remaining figure nor an average to show, and the design
 prints nothing rather than a placeholder.
+
+## Task #21, finished
+
+`NavRow`, `LedgerRow` and `Field` were the three the inventory named and the last three missing.
+All the duplication counts it measured are now zero: 7 navigation rows in `you`, 3 independent
+ledger rows across `you`/`ledger`/`index`, and the input block.
+
+**The chevron flips.** `NavRow` renders `‹` under `I18nManager.isRTL`. It points the way the stack
+pushes, and the stack pushes the other way in Arabic — a `›` in a mirrored layout points back at the
+screen you just came from, which is the one thing a chevron must never do. Reading
+`I18nManager.isRTL` rather than the locale, because the native layout direction is what actually got
+applied at launch, and those can disagree until a restart.
+
+**`Field` takes an `accessibilityLabel` override, for the same reason `Chip` takes a `role`.**
+`goals` labels a column "Amount (₹)" because the column is narrow and tells a screen reader "Target
+amount in rupees". Defaulting to the visible label and offering no override would have silently
+replaced the better string with the shorter one on every field whose author had bothered — a
+primitive that makes the app worse while looking like a cleanup.
+
+**One layout bug, and only the device could see it.** `LedgerRow` is usually the only child of a
+`Row`, which is itself `space-between`; without `flex: 1` it sized to its content and sat at the
+start, so the amount floated in the middle of the card instead of reaching the edge. Every unit test
+was green. Fixed and confirmed against the pre-conversion layout.
