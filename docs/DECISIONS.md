@@ -1567,3 +1567,46 @@ from the screen.
 Under Node 20 `node:sqlite` does not exist and the device schema suite fails to load — and since
 turbo aborts siblings on first failure, that one failure also reported `schema` and `web` as
 failed when they were fine. Use `--continue` when diagnosing.
+
+## The CSP ships — and the reason it did not is a lesson about where you listen (2026-08-17)
+
+Two sessions left the policy written but disabled, with the same note each time: enabling it
+loads the page, serves the worker and `.wasm` (both 200), reports **zero console violations**,
+and never finishes instantiating. Both halves of that had one cause.
+
+**The blocker is `new Function`, not WebAssembly.** An add-one bisect over the thirteen
+directives shows `script-src` alone reproduces it and every other directive alone is fine.
+Within `script-src`, the single token that fixes it is **`'unsafe-eval'`**; `'wasm-unsafe-eval'`
+makes no difference at all. `public/duckdb/duckdb-browser-*.worker.js` contains
+`new Function("x", …+"\nreturn true;")` — Arrow's compiled-predicate path. The narrow directive
+was chosen because compiling WebAssembly *looked* like the thing a CSP would object to, and
+that guess held for two sessions because it was never tested against the alternative.
+
+**The violation was never in the page.** It is raised inside the DuckDB worker, and worker
+console output does not reach the page's console listener — which is what both earlier sessions
+were reading. "Zero violations" meant "we were listening in the wrong place", not "the browser
+is silent". Attaching over CDP with `Target.setAutoAttach` surfaces it immediately. Same shape
+of error as the audit's own: **a grep proves what a grep can see**, and a listener proves what
+that listener can hear.
+
+**Scoping the permission to `/duckdb/:path*` does not work, and that is per spec.** A dedicated
+worker loaded from a same-origin script inherits the *owner document's* policy in addition to
+whatever its own response carries. Measured before being believed: serving the worker a looser
+`script-src` changed nothing.
+
+So `'unsafe-eval'` ships, and it is a real weakening, stated rather than buried. Three things
+make it the right trade. `'unsafe-inline'` is already required by `next-themes` and Next's
+hydration bootstrap and is the larger hole by some margin — an injected inline script runs
+directly and never needs `eval`. What the policy actually buys is `connect-src 'self'`: injected
+or not, the page cannot phone anywhere, and for a finance dashboard blocking exfiltration is the
+protection that matters more than blocking execution. And a policy that ships beats a stricter
+one that lives in a comment.
+
+The honest upgrades, in order of payoff: a nonce-based policy, which removes `'unsafe-inline'`
+and needs middleware this app does not otherwise have; and an upstream DuckDB build without the
+compiled-predicate path, which is not ours to make.
+
+`e2e/headers.spec.ts` no longer asserts the *absence* of a CSP. It asserts the header, the
+directives that carry the value, and — unchanged — that `/lab` still compiles WASM, runs a
+worker and computes from our own origin. **65/65 e2e green under the real header**, including
+axe-core WCAG 2 AA on all eleven routes in both themes.

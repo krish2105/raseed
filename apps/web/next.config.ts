@@ -14,7 +14,12 @@ const nextConfig: NextConfig = {
   ],
 
   async headers() {
-    return [{ source: '/:path*', headers: SECURITY_HEADERS }]
+    return [
+      {
+        source: '/:path*',
+        headers: [...SECURITY_HEADERS, { key: 'Content-Security-Policy', value: CSP }],
+      },
+    ]
   },
 }
 
@@ -25,58 +30,59 @@ const nextConfig: NextConfig = {
  * calls — so most of this is about what a compromised dependency could do, not about
  * protecting a backend there isn't one of.
  *
- * **The CSP below is NOT applied, and the constant is kept deliberately.** Enabling it loads
- * the page, serves the DuckDB worker and .wasm (both 200), reports **zero** console
- * violations — and never finishes instantiating, so the dashboard sits on its loading state
- * for ever.
+ * **The CSP now ships.** It was off for two sessions because enabling it left the dashboard on
+ * its loading state for ever while reporting *zero* console violations — the worst possible
+ * failure signature, because there was nothing to search for.
  *
- * A second session bisected it properly. Recorded so the next attempt starts from data rather
- * than from theory:
+ * Both halves of that mystery turned out to be the same mistake.
  *
- *   - maximally permissive CSP (`default-src *` etc.)  → READY. So it IS the policy.
- *   - blob-URL worker replaced with a direct same-origin Worker → still blocked.
- *     (Kept anyway: the blob wrapper only existed because the script used to be cross-origin,
- *     and removing it is simpler regardless.)
- *   - `connect-src` removed                            → still blocked.
- *   - `default-src` AND `connect-src` removed          → still blocked.
- *   - `upgrade-insecure-requests` removed              → still blocked.
+ * **The blocker is `new Function`, not WebAssembly.** `script-src` alone reproduces it, and
+ * within `script-src` the single token that fixes it is `'unsafe-eval'` — `'wasm-unsafe-eval'`
+ * makes no difference. `public/duckdb/duckdb-browser-*.worker.js` contains
+ * `new Function("x", …+"\nreturn true;")`, Arrow's compiled-predicate path. WASM was never the
+ * problem; the narrow directive was chosen because compiling WebAssembly *looked* like the
+ * thing a CSP would object to.
  *
- * So the blocker is among script-src / worker-src / child-src / style-src / img-src /
- * font-src / object-src / base-uri / form-action / frame-ancestors, and Chromium reports
- * nothing for it. Next step is to bisect that remaining set one directive at a time, and to
- * check whether the failure reproduces over HTTPS — every run above was against a local HTTP
- * server, which is not how it will ship.
+ * **The violation was never in the page.** It is raised inside the DuckDB worker, and worker
+ * console output does not surface through the page's console listener — which is what both
+ * earlier sessions were reading. "Zero violations" meant "we were listening in the wrong
+ * place", not "the browser is being silent". Attaching over CDP with
+ * `Target.setAutoAttach` shows it immediately.
  *
- * A CSP that silently empties every figure on a finance dashboard is worse than no CSP.
+ * **Scoping the permission to the worker does not work, and that is per spec.** A dedicated
+ * worker loaded from a same-origin script inherits the *owner document's* policy in addition
+ * to whatever its own response carries, so serving `/duckdb/:path*` a looser `script-src`
+ * changes nothing. Measured, not assumed.
  *
- * What ships is the rest, which is verified and carries no such risk. Notes on the CSP for
- * whoever picks it up:
+ * So `'unsafe-eval'` is required, and it is a real weakening — stated plainly rather than
+ * buried. Three things make it the right trade here:
  *
- * **`wasm-unsafe-eval`.** DuckDB-WASM compiles WebAssembly, which a default CSP blocks
- * outright. The narrow directive permits exactly that and nothing else — a blanket
- * `unsafe-eval`, which would also re-enable `eval()` and `new Function()`, is deliberately
- * absent. This is the tension `RASEED_SECURITY_ARCHITECTURE.md` G11 names.
+ *   1. `'unsafe-inline'` is *already* required for `next-themes` and Next's hydration
+ *      bootstrap, and it is the larger hole by some margin: an injected inline script runs
+ *      directly and never needs `eval` at all. Adding `'unsafe-eval'` on top of it is
+ *      marginal.
+ *   2. What this policy actually buys is `connect-src 'self'`. Injected script or not, the
+ *      page cannot phone anywhere — and for a finance dashboard, blocking exfiltration is the
+ *      protection that matters. With it come `object-src 'none'`, `base-uri 'self'`,
+ *      `form-action 'self'` and `frame-ancestors 'none'`.
+ *   3. A policy that ships and blocks exfiltration beats a stricter one that lives in a
+ *      comment.
  *
- * **`blob:` in script-src and worker-src.** Both DuckDB and the Comlink analytics worker are
- * instantiated from blob URLs (`lib/duck/client.ts` builds one). Without this the dashboard
- * loads and then computes nothing, which is a worse failure than an obvious one.
- *
- * **`'unsafe-inline'` in script-src, and it is a real weakening.** `next-themes` injects an
- * inline script to set the theme before first paint, and Next's hydration bootstrap is inline
- * too. Removing it means nonces, which means middleware on every request — currently there is
- * no middleware at all. Recorded as a known gap rather than quietly accepted: the honest
- * upgrade is a nonce-based policy, and it is worth doing when middleware exists for another
- * reason. Note `style-src` needs it regardless for the theme's inline custom properties.
+ * The honest upgrades, in order of payoff: a nonce-based policy, which removes
+ * `'unsafe-inline'` and needs middleware this app does not otherwise have; and an upstream
+ * DuckDB build without the compiled-predicate path, which is not ours to make. Until then this
+ * is where the line sits, and `e2e/headers.spec.ts` drives `/lab` under the real header so a
+ * dashboard whose every figure is dead cannot ship quietly.
  */
-/** Not yet applied — see above. Kept so the work is not lost. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: data:",
-  // A blob-URL worker inherits this document's policy, and DuckDB's worker calls
-  // importScripts() and then compiles WASM from inside it. child-src is the legacy fallback
-  // some engines still consult for workers; declaring both costs nothing and removes a
-  // whole class of "works here, blank there".
+  // 'unsafe-eval' is what DuckDB's worker needs and 'wasm-unsafe-eval' is not — see above.
+  // Both are listed: the WASM token is the narrower permission and stays declared so that
+  // removing the eval dependency later is a one-token change rather than a re-investigation.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data:",
+  // A worker inherits the document's policy. child-src is the legacy fallback some engines
+  // still consult for workers; declaring both costs nothing and removes a whole class of
+  // "works here, blank there".
   "worker-src 'self' blob: data:",
   "child-src 'self' blob: data:",
   "style-src 'self' 'unsafe-inline'",

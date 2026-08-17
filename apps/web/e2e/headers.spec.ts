@@ -22,14 +22,27 @@ test.describe('security headers', () => {
   })
 
   /**
-   * The CSP is written but not applied: it silently breaks WebAssembly instantiation inside
-   * the blob-URL worker. This asserts the current, honest state — if someone enables it, this
-   * test fails and points them at the analytics check below rather than letting a dead
-   * dashboard ship quietly.
+   * The CSP ships. What it is *for* is `connect-src 'self'`: injected script or not, this page
+   * cannot phone anywhere, and for a finance dashboard blocking exfiltration is the protection
+   * that matters more than blocking execution.
+   *
+   * `'unsafe-eval'` is asserted deliberately rather than tolerated. DuckDB's worker calls
+   * `new Function` (Arrow's compiled predicates) and a worker inherits the document's policy,
+   * so the permission cannot be scoped away — see `next.config.ts`. If someone removes it, the
+   * analytics test below fails; this one records that its presence is a known, argued position
+   * rather than an oversight.
    */
-  test('no CSP is claimed while it would break analytics', async ({ page }) => {
+  test('ships a CSP that blocks exfiltration', async ({ page }) => {
     const res = await page.goto('/overview')
-    expect(res!.headers()['content-security-policy']).toBeUndefined()
+    const csp = res!.headers()['content-security-policy']
+
+    expect(csp, 'no CSP header').toBeTruthy()
+    expect(csp).toContain("default-src 'self'")
+    expect(csp).toContain("connect-src 'self'")
+    expect(csp).toContain("object-src 'none'")
+    expect(csp).toContain("base-uri 'self'")
+    expect(csp).toContain("frame-ancestors 'none'")
+    expect(csp).toContain("'unsafe-eval'")
   })
 
   /**
