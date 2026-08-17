@@ -77,7 +77,50 @@ export function CalendarHeatmap({ points, className }: CalendarHeatmapProps) {
 
   return (
     <figure className={className}>
-      <div className="overflow-x-auto">
+      {/*
+        Keyboard-reachable in its own right, the same way the ledger's scroller is: it scrolls
+        horizontally and contains nothing focusable to tab to, so without this a keyboard user
+        can see the first few months of the calendar and reach none of the rest.
+
+        It only started failing axe when the month labels landed — "Sept" is wider than the
+        9px column it sits over, which is what tipped the container into actually overflowing
+        at the test viewport. The container was always going to overflow on a narrow screen;
+        the labels just made it certain.
+      */}
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Daily spending calendar"
+        className="overflow-x-auto rounded focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+      >
+        {/*
+          The month scale. A calendar heatmap without one is eighteen months of squares you
+          cannot locate yourself in — you can see that a stretch was heavy and not when it was,
+          which makes the whole panel a texture rather than a chart.
+
+          A label is drawn on the first column of each month, and columns are a fixed 12px
+          (9px cell + 3px gap), so the label sits over the week it names without any measuring.
+        */}
+        <div aria-hidden className="mb-1 flex h-3 gap-[3px]">
+          {weeks.map((col, i) => {
+            const month = new Date(`${col[0]!.day}T00:00:00Z`).getUTCMonth()
+            const prev = weeks[i - 1]
+            const isNew = !prev || new Date(`${prev[0]!.day}T00:00:00Z`).getUTCMonth() !== month
+            return (
+              <span key={i} className="relative w-[9px] shrink-0">
+                {isNew && (
+                  <span className="absolute top-0 left-0 font-mono text-[9px] whitespace-nowrap text-text-lo">
+                    {new Date(`${col[0]!.day}T00:00:00Z`).toLocaleDateString('en-IN', {
+                      month: 'short',
+                      timeZone: 'UTC',
+                    })}
+                  </span>
+                )}
+              </span>
+            )
+          })}
+        </div>
+
         <div className="flex gap-[3px]" role="img" aria-label={`Daily spending calendar over ${points.length} days`}>
           {weeks.map((col, i) => (
             <div key={i} className="flex flex-col gap-[3px]">

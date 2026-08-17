@@ -160,6 +160,11 @@ test('the ledger scrolls its own table instead of the page', async ({ page }) =>
   await page.setViewportSize({ width: 360, height: 780 })
   await page.goto('/ledger')
   await waitForReady(page)
+  // Readiness is DuckDB's, not React's — the table lands a few milliseconds later, and
+  // `evaluate` does not wait for anything. Without this the query below can return null and
+  // the assertion becomes "a table that does not exist is not in a scroll container", which
+  // is true and meaningless.
+  await page.locator('table tbody tr').first().waitFor()
 
   // The table has a 560px minimum, so it must live in its own overflow container.
   const scrollsInside = await page.evaluate(() => {

@@ -18,6 +18,9 @@ test.describe('the ledger is not truncated', () => {
     await resetStorage(page)
     await page.goto('/ledger')
     await waitForReady(page)
+    // `waitForReady` is DuckDB's readiness, not the table's — the rows land a few
+    // milliseconds later and `count()` does not auto-wait, so it can read zero.
+    await page.locator('table tbody tr').first().waitFor()
 
     const count = await page.locator('table tbody tr').count()
 
@@ -35,6 +38,7 @@ test.describe('the ledger is not truncated', () => {
     await resetStorage(page)
     await page.goto('/ledger')
     await waitForReady(page)
+    await page.locator('table tbody tr').first().waitFor()
 
     // The last row on screen is the oldest one loaded. Searching for its merchant has to find
     // it — under the cap, a merchant that appears only in the tail was unreachable.

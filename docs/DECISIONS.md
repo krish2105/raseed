@@ -1732,3 +1732,44 @@ roles — a real change to the markup and the keyboard model, worth doing when t
 justifies it. D-12 stays open with a reason attached rather than being quietly ticked.
 
 **74 e2e green.**
+
+## Axes, where an axis is the thing that makes the chart readable (2026-08-17)
+
+D-12 named "no axes anywhere" as a consequence of hand-building the charts. Three of them got
+one; two deliberately did not, and the split is the decision.
+
+**The Lorenz curve now has real axes**, and it is the plot where this mattered most. Both scales
+are percentages of a whole, so the ticks are known in advance and there is no scale to derive —
+the one case where an axis costs almost nothing. Before, a point on the curve meant nothing,
+because you could not say *which* point.
+
+**The calendar heatmap has month labels.** Eighteen months of squares with no scale is a
+texture, not a chart: you can see that a stretch was heavy and not when it was. Labels are drawn
+on the first column of each month, and the fixed 12px column pitch means they land over the week
+they name without measuring anything.
+
+**The category bars get a scale line, not an axis.** Every bar already carries its own figure,
+so a value axis would repeat what each row says. What was genuinely missing is that the bars are
+drawn *relative to the largest*, and without saying so a full-width bar reads as "all of it"
+rather than "the biggest of these". One line at the top.
+
+**The sparkline stays without one, on purpose.** A sparkline is a shape, not a plot; giving it
+ticks would make it a small bad chart instead of a good glyph.
+
+### Two things this shook loose
+
+**The heatmap's scroll container became keyboard-unreachable.** Adding the labels tipped it into
+actually overflowing at the test viewport — "Sept" is wider than the 9px column it sits over —
+and axe immediately flagged a scrollable region with no focusable content. It now carries
+`tabIndex`, a role and a label, the same as the ledger's scroller. The container was always
+going to overflow on a narrow screen; the labels only made it certain, so this was a latent bug
+the change exposed rather than one it created.
+
+**Two ledger specs turned flaky, and the cause is worth knowing.** `waitForReady` waits for
+*DuckDB*, and the table lands a few milliseconds after — measured at 5ms. `count()` and
+`page.evaluate` do not auto-wait, so both could read zero rows or a null table. With 250 rows
+the gap never opened; with 951 it did. The assertion "a table that does not exist is not inside
+a scroll container" is true and meaningless, which is exactly the kind of green a suite should
+not produce. Both now wait for a row first.
+
+**74 e2e green, 24/24 tasks.**

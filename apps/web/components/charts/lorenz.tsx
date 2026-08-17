@@ -3,11 +3,22 @@
 import { motion, useReducedMotion } from 'motion/react'
 import type { LorenzPoint } from '@raseed/engines'
 
+/** Room for the tick labels. `PAD_T` exists because the topmost label is centred on y = 0. */
+const PAD_L = 30
+const PAD_B = 20
+const PAD_T = 7
+const TICKS = [0, 0.25, 0.5, 0.75, 1] as const
+
 /**
  * The Lorenz curve, with the equality diagonal for reference.
  *
  * Gini is the area between the two, doubled. Drawing the diagonal is what makes the number
  * legible — without it, 0.45 is a statistic; with it, the gap is the point.
+ *
+ * **Now with axes**, which D-12 named as missing everywhere and which mattered most here: both
+ * scales are percentages of a whole, so the ticks are known in advance and there is no scale to
+ * derive — the one case where an axis costs almost nothing and a plot without one is simply
+ * unreadable. A point on a curve means nothing until you can say *which* point.
  */
 export function LorenzCurve({ points, gini }: { points: readonly LorenzPoint[]; gini: number }) {
   const reduceMotion = useReducedMotion()
@@ -17,24 +28,67 @@ export function LorenzCurve({ points, gini }: { points: readonly LorenzPoint[]; 
     return <p className="py-8 text-center text-sm text-text-lo">Not enough merchants yet.</p>
   }
 
+  const x = (share: number) => PAD_L + share * S
+  const y = (share: number) => PAD_T + S - share * S
+
   const d = points
-    .map(
-      (p, i) =>
-        `${i === 0 ? 'M' : 'L'}${(p.populationShare * S).toFixed(1)},${(S - p.valueShare * S).toFixed(1)}`,
-    )
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.populationShare).toFixed(1)},${y(p.valueShare).toFixed(1)}`)
     .join(' ')
 
   return (
     <div>
       <svg
-        viewBox={`0 0 ${S} ${S}`}
-        className="h-auto w-full max-w-[320px]"
+        viewBox={`0 0 ${S + PAD_L} ${S + PAD_T + PAD_B}`}
+        className="h-auto w-full max-w-[340px]"
         role="img"
         aria-label={`Lorenz curve of merchant spend, Gini ${gini.toFixed(2)}`}
       >
-        <path d={`M0,${S} L${S},0`} stroke="var(--line)" strokeWidth="1" strokeDasharray="4 4" fill="none" />
+        {/* Axes. Gridlines first so the curve draws over them. */}
+        <g aria-hidden className="font-mono">
+          {TICKS.map((t) => (
+            <g key={t}>
+              <line
+                x1={PAD_L}
+                x2={S + PAD_L}
+                y1={y(t)}
+                y2={y(t)}
+                stroke="var(--line)"
+                strokeWidth="1"
+                opacity={t === 0 ? 1 : 0.45}
+              />
+              <text
+                x={PAD_L - 6}
+                y={y(t)}
+                textAnchor="end"
+                dominantBaseline="middle"
+                fill="var(--text-lo)"
+                fontSize="9"
+              >
+                {t * 100}
+              </text>
+              <text
+                x={x(t)}
+                y={PAD_T + S + 13}
+                textAnchor={t === 0 ? 'start' : t === 1 ? 'end' : 'middle'}
+                fill="var(--text-lo)"
+                fontSize="9"
+              >
+                {t * 100}
+              </text>
+            </g>
+          ))}
+          <line x1={PAD_L} x2={PAD_L} y1={PAD_T} y2={PAD_T + S} stroke="var(--line)" strokeWidth="1" />
+        </g>
+
+        <path
+          d={`M${PAD_L},${PAD_T + S} L${S + PAD_L},${PAD_T}`}
+          stroke="var(--line)"
+          strokeWidth="1"
+          strokeDasharray="4 4"
+          fill="none"
+        />
         <motion.path
-          d={`${d} L${S},${S} Z`}
+          d={`${d} L${S + PAD_L},${PAD_T + S} Z`}
           fill="var(--inr)"
           opacity={0.14}
           initial={reduceMotion ? false : { opacity: 0 }}
@@ -52,6 +106,9 @@ export function LorenzCurve({ points, gini }: { points: readonly LorenzPoint[]; 
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
         />
       </svg>
+      <p className="mt-1 text-[11px] text-text-lo">
+        % of merchants (horizontal) against % of spend (vertical)
+      </p>
       <p className="mt-3 text-xs leading-relaxed text-text-lo">
         The dashed line is perfect equality — every merchant taking the same share. The gap
         between it and the curve is inequality; Gini <span className="tabular font-mono">{gini.toFixed(3)}</span>{' '}

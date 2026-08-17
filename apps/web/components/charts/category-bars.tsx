@@ -21,9 +21,26 @@ export interface CategoryBar {
 export function CategoryBars({ data }: { data: readonly CategoryBar[] }) {
   const reduceMotion = useReducedMotion()
   const max = Math.max(...data.map((d) => d.share), 0.0001)
+  const largest = data.find((d) => d.share === max)
 
   return (
     <ul className="flex flex-col gap-3">
+      {/*
+        The scale, which a labelled bar list still needs.
+
+        Every bar already carries its own figure, so there is no axis to read a value off —
+        but the bars are drawn *relative to the largest*, and without saying so a full-width
+        bar reads as "all of it" rather than "the biggest of these". One line, at the top,
+        rather than an axis that would repeat what each row already says.
+      */}
+      {largest && (
+        <li className="flex items-baseline justify-between text-[11px] text-text-lo">
+          <span>share of the period</span>
+          <span className="tabular font-mono">
+            full width = {format(largest.total)} ({(max * 100).toFixed(0)}%)
+          </span>
+        </li>
+      )}
       {data.map((d, i) => (
         <li key={d.categoryId} className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5">
           <span className="truncate text-sm">{d.name}</span>
