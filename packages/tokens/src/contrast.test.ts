@@ -28,7 +28,7 @@ describe('contrast', () => {
     const failures: string[] = []
     for (const [themeName, palette] of Object.entries(PALETTES)) {
       const surfaces = ['surface-0', 'surface-1', 'surface-2'] as const
-      const inks = ['text-hi', 'text-lo', 'inr', 'aed', 'good', 'warn', 'horizon'] as const
+      const inks = ['text-hi', 'text-lo', 'inr', 'aed', 'good', 'warn', 'horizon', 'accent'] as const
       for (const ink of inks) {
         for (const surface of surfaces) {
           const r = contrastRatio(palette[ink], palette[surface])
@@ -37,6 +37,17 @@ describe('contrast', () => {
       }
     }
     expect(failures).toEqual([])
+  })
+
+  /**
+   * `accent-ink` is the one token that never appears on a surface, so it is exempt from the
+   * sweep above and checked here instead — against the only thing it is ever drawn on.
+   */
+  it('accent-ink is readable on the accent it sits on, in both themes', () => {
+    for (const [themeName, p] of Object.entries(PALETTES)) {
+      const r = contrastRatio(p['accent-ink'], p.accent)
+      expect(r, `${themeName}: accent-ink on accent is ${r.toFixed(2)}`).toBeGreaterThanOrEqual(4.5)
+    }
   })
 
   it('picks ink by luminance, not by theme', () => {

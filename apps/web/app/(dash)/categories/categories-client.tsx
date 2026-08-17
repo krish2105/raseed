@@ -54,7 +54,7 @@ export function CategoriesClient() {
               onClick={() => setDays(w)}
               className={cn(
                 'rounded-md px-2.5 py-1 font-mono text-xs transition-colors',
-                'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                 days === w ? 'bg-surface-2 text-text-hi' : 'text-text-lo hover:text-text-hi',
               )}
             >

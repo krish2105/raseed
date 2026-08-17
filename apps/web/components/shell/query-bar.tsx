@@ -109,7 +109,7 @@ export function QueryBar() {
         type="button"
         onClick={() => setOpen(true)}
         disabled={status !== 'ready'}
-        className="hidden min-w-0 flex-1 items-center gap-2 rounded-lg border border-line bg-surface-0 px-3 py-1.5 text-left text-sm text-text-lo transition-colors hover:border-text-lo focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:flex"
+        className="hidden min-w-0 flex-1 items-center gap-2 rounded-lg border border-line bg-surface-0 px-3 py-1.5 text-left text-sm text-text-lo transition-colors hover:border-text-lo focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 sm:flex"
       >
         <Search aria-hidden className="h-4 w-4 shrink-0" />
         <span className="truncate">Ask your ledger…</span>
@@ -165,7 +165,7 @@ export function QueryBar() {
                   type="button"
                   onClick={() => setOpen(false)}
                   aria-label="Close"
-                  className="rounded-md p-1 text-text-lo hover:text-text-hi focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                  className="rounded-md p-1 text-text-lo hover:text-text-hi focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -184,7 +184,7 @@ export function QueryBar() {
                               setText(ex)
                               void run(ex)
                             }}
-                            className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-text-lo transition-colors hover:bg-surface-2 hover:text-text-hi focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                            className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-text-lo transition-colors hover:bg-surface-2 hover:text-text-hi focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                           >
                             {ex}
                           </button>

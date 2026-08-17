@@ -131,14 +131,14 @@ export function WalletCount() {
           }}
           inputMode="decimal"
           placeholder="800"
-          className="tabular w-28 rounded-lg border border-line bg-surface-0 px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+          className="tabular w-28 rounded-lg border border-line bg-surface-0 px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
         />
         <button
           type="submit"
           disabled={!counted}
           className={cn(
             'rounded-lg bg-text-hi px-3 py-2 text-sm font-medium text-surface-0 transition-opacity',
-            'hover:opacity-90 focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+            'hover:opacity-90 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
             'disabled:opacity-40',
           )}
         >

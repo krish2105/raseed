@@ -22,6 +22,8 @@
   --good: #317829;
   --warn: #B23A34;
   --horizon: #5566A8;
+  --accent: #14713C;
+  --accent-ink: #FFFFFF;
 
   /* ── depth ────────────────────────────────────────────────────────────────
      Elevation is a stack of two shadows, not one: a tight contact shadow that
@@ -67,6 +69,8 @@
     --good: #6FCB68;
     --warn: #F0736B;
     --horizon: #8B9BDB;
+    --accent: #4ADE80;
+    --accent-ink: #052E16;
 
     /* ── depth ────────────────────────────────────────────────────────────────
        Dark elevation is not light elevation with the numbers turned down.
@@ -110,6 +114,8 @@
   --good: #6FCB68;
   --warn: #F0736B;
   --horizon: #8B9BDB;
+  --accent: #4ADE80;
+  --accent-ink: #052E16;
 
   /* ── depth ────────────────────────────────────────────────────────────────
      Dark elevation is not light elevation with the numbers turned down.
@@ -152,6 +158,8 @@
   --good: #317829;
   --warn: #B23A34;
   --horizon: #5566A8;
+  --accent: #14713C;
+  --accent-ink: #FFFFFF;
 
   /* ── depth ────────────────────────────────────────────────────────────────
      Elevation is a stack of two shadows, not one: a tight contact shadow that

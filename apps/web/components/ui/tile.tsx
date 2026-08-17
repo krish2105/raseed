@@ -95,7 +95,7 @@ export function Tile({
             className={cn(
               'mt-2 -mb-1 flex items-center gap-1 self-start rounded px-1 py-0.5',
               'text-[11px] text-text-lo transition-colors hover:text-text-hi',
-              'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+              'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
             )}
           >
             <ChevronDown

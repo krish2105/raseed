@@ -172,7 +172,7 @@ export function Reckoning() {
                     type="button"
                     onClick={() => markNudgeSent(n.id, NOW)}
                     aria-label={`Dismiss: ${n.title}`}
-                    className="shrink-0 rounded p-0.5 text-text-lo hover:text-text-hi focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                    className="shrink-0 rounded p-0.5 text-text-lo hover:text-text-hi focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -212,7 +212,7 @@ function RateButton({
       onClick={onClick}
       className={cn(
         'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors',
-        'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+        'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
         tone === 'good' && 'border-good/40 text-good hover:bg-good/10',
         tone === 'warn' && 'border-warn/40 text-warn hover:bg-warn/10',
         tone === 'muted' && 'border-line text-text-lo hover:text-text-hi',

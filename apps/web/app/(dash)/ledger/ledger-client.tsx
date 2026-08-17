@@ -84,7 +84,7 @@ export function LedgerClient() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search merchant or category…"
             aria-label="Search the ledger"
-            className="min-w-0 flex-1 rounded-lg border border-line bg-surface-0 px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-line bg-surface-0 px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
           />
           <div
             role="radiogroup"
@@ -100,7 +100,7 @@ export function LedgerClient() {
                 onClick={() => setKind(k)}
                 className={cn(
                   'rounded-md px-2.5 py-1.5 text-xs capitalize transition-colors',
-                  'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                  'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                   kind === k ? 'bg-surface-2 text-text-hi' : 'text-text-lo hover:text-text-hi',
                 )}
               >
@@ -123,7 +123,7 @@ export function LedgerClient() {
           tabIndex={0}
           role="region"
           aria-label="Transactions"
-          className="mt-4 max-h-[62vh] overflow-auto rounded focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+          className="mt-4 max-h-[62vh] overflow-auto rounded focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
         >
           {rows.error ? (
             <PanelError message={rows.error} />
@@ -187,7 +187,7 @@ export function LedgerClient() {
                               onChange={(e) => setDraftMerchant(e.target.value)}
                               aria-label={`Merchant for ${r.merchant}`}
                               autoFocus
-                              className="w-full rounded border border-line bg-surface-0 px-1.5 py-0.5 text-sm text-text-hi focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                              className="w-full rounded border border-line bg-surface-0 px-1.5 py-0.5 text-sm text-text-hi focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                             />
                           ) : (
                             <span className="block truncate">{r.merchant}</span>
@@ -206,7 +206,7 @@ export function LedgerClient() {
                           onChange={(e) => setDraftAmount(e.target.value)}
                           inputMode="decimal"
                           aria-label={`Amount for ${r.merchant}`}
-                          className="w-24 rounded border border-line bg-surface-0 px-1.5 py-0.5 text-right font-mono text-xs text-text-hi focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                          className="w-24 rounded border border-line bg-surface-0 px-1.5 py-0.5 text-right font-mono text-xs text-text-hi focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                         />
                       ) : (
                         format(r.native)
@@ -244,7 +244,7 @@ export function LedgerClient() {
                                 setDraftAmount((r.native.minor / 100).toFixed(2))
                               }
                             }}
-                            className="rounded p-1 text-text-lo transition-colors hover:text-inr focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                            className="rounded p-1 text-text-lo transition-colors hover:text-inr focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                           >
                             {editing === r.id ? (
                               <Check className="h-3.5 w-3.5" />
@@ -259,7 +259,7 @@ export function LedgerClient() {
                               removeLocal(r.id)
                               reload()
                             }}
-                            className="rounded p-1 text-text-lo transition-colors hover:text-warn focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                            className="rounded p-1 text-text-lo transition-colors hover:text-warn focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

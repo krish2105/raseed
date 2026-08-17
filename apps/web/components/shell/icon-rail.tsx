@@ -58,9 +58,11 @@ export function IconRail() {
             title={label}
             className={cn(
               'group relative inline-flex h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-sm transition-colors',
-              'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+              'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
               'md:w-10 md:justify-center md:px-0',
-              active ? 'bg-surface-2 text-text-hi' : 'text-text-lo hover:bg-surface-2 hover:text-text-hi',
+              active
+                ? 'bg-accent/12 text-accent'
+                : 'text-text-lo hover:bg-surface-2 hover:text-text-hi',
             )}
           >
             <Icon aria-hidden className="h-[18px] w-[18px]" />

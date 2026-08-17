@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Bricolage_Grotesque, Geist, Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono, Plus_Jakarta_Sans } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { ThemeProvider } from '@/components/shell/theme-provider'
 import '@raseed/tokens/tokens.css'
@@ -7,7 +7,7 @@ import './globals.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
-const bricolage = Bricolage_Grotesque({ variable: '--font-bricolage', subsets: ['latin'] })
+const jakarta = Plus_Jakarta_Sans({ variable: '--font-jakarta', subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'RASEED',
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`no-js ${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+      className={`no-js ${geistSans.variable} ${geistMono.variable} ${jakarta.variable} h-full antialiased`}
     >
       <head>
         {/* Removed synchronously before paint, so there is no flash. If this never runs,

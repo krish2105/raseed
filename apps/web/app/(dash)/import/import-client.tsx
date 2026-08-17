@@ -133,7 +133,7 @@ export function ImportClient() {
           className={cn(
             'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg',
             'border-2 border-dashed border-line px-6 py-10 text-center transition-colors',
-            'hover:border-inr focus-within:border-inr',
+            'hover:border-accent focus-within:border-accent',
           )}
         >
           <input
@@ -234,9 +234,9 @@ export function ImportClient() {
                           onClick={() => setOrder(choice.o)}
                           className={cn(
                             'rounded-lg border px-3 py-2 text-left transition-colors',
-                            'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                            'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                             order === choice.o
-                              ? 'border-inr bg-surface-2'
+                              ? 'border-accent bg-accent/10'
                               : 'border-line hover:border-text-lo',
                           )}
                         >
@@ -263,7 +263,7 @@ export function ImportClient() {
               tabIndex={0}
               role="region"
               aria-label="Rows to import"
-              className="max-h-[46vh] overflow-auto rounded focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+              className="max-h-[46vh] overflow-auto rounded focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
             >
               <table className="w-full min-w-[520px] border-collapse text-sm">
                 <thead className="sticky top-0 bg-surface-1">
@@ -350,7 +350,7 @@ export function ImportClient() {
                 className={cn(
                   'rounded-lg bg-text-hi px-4 py-2 text-sm font-medium text-surface-0',
                   'transition-opacity hover:opacity-90 disabled:opacity-40',
-                  'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                  'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                 )}
               >
                 <Upload aria-hidden className="mr-1.5 -mt-0.5 inline h-4 w-4" />

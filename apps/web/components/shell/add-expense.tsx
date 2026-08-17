@@ -116,7 +116,7 @@ export function AddExpense() {
         disabled={status !== 'ready'}
         aria-label="Add"
         title="Add an expense"
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-text-hi px-2.5 py-1.5 text-sm font-medium text-surface-0 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none disabled:opacity-50"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1.5 text-sm font-semibold text-accent-ink transition-transform hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 focus-visible:outline-none disabled:translate-y-0 disabled:opacity-50"
       >
         <Plus aria-hidden className="h-4 w-4" />
         <span className="hidden sm:inline">Add</span>
@@ -153,7 +153,7 @@ export function AddExpense() {
                   type="button"
                   onClick={() => setOpen(false)}
                   aria-label="Close"
-                  className="rounded-md p-1 text-text-lo hover:text-text-hi focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                  className="rounded-md p-1 text-text-lo hover:text-text-hi focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -176,7 +176,7 @@ export function AddExpense() {
                       onClick={() => setCurrency(c)}
                       className={cn(
                         'rounded-md border px-2.5 py-1 font-mono text-xs transition-colors',
-                        'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                        'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                         currency === c
                           ? c === 'INR'
                             ? 'border-inr bg-surface-2 text-inr'
@@ -195,7 +195,7 @@ export function AddExpense() {
                     onClick={() => setCash((v) => !v)}
                     className={cn(
                       'ml-auto rounded-md border px-2.5 py-1 text-xs transition-colors',
-                      'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                      'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                       cash
                         ? 'border-warn bg-surface-2 text-warn'
                         : 'border-line text-text-lo hover:text-text-hi',
@@ -237,7 +237,7 @@ export function AddExpense() {
                         onClick={() => setWays(n)}
                         className={cn(
                           'tabular rounded-md px-2 py-1 font-mono text-xs transition-colors',
-                          'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                          'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                           ways === n ? 'bg-surface-2 text-text-hi' : 'text-text-lo hover:text-text-hi',
                         )}
                       >
@@ -274,7 +274,7 @@ export function AddExpense() {
                     setError(null)
                   }}
                   placeholder="BigBasket, Careem, the chai guy…"
-                  className="mt-1 w-full rounded-lg border border-line bg-surface-0 px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                  className="mt-1 w-full rounded-lg border border-line bg-surface-0 px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                 />
 
                 <p className="mt-4 text-xs text-text-lo">Category</p>
@@ -288,9 +288,9 @@ export function AddExpense() {
                       onClick={() => setCategoryId(c.id)}
                       className={cn(
                         'rounded-full border px-2.5 py-1 text-xs transition-colors',
-                        'focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                        'focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                         categoryId === c.id
-                          ? 'border-inr bg-surface-2 text-text-hi'
+                          ? 'border-accent bg-accent/10 text-text-hi'
                           : 'border-line text-text-lo hover:text-text-hi',
                       )}
                     >
@@ -313,7 +313,7 @@ export function AddExpense() {
                     }}
                     placeholder="New category, then Enter"
                     aria-label="New category name"
-                    className="min-w-0 flex-1 rounded-full border border-dashed border-line bg-transparent px-2.5 py-1 text-xs focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+                    className="min-w-0 flex-1 rounded-full border border-dashed border-line bg-transparent px-2.5 py-1 text-xs focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
                   />
                 </div>
 
@@ -333,7 +333,7 @@ export function AddExpense() {
                   <button
                     type="submit"
                     disabled={!canSave}
-                    className="rounded-lg bg-text-hi px-3 py-1.5 text-sm font-medium text-surface-0 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none disabled:opacity-40"
+                    className="rounded-lg bg-text-hi px-3 py-1.5 text-sm font-medium text-surface-0 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none disabled:opacity-40"
                   >
                     {saved ? 'Saved' : 'Save'}
                   </button>

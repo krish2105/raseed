@@ -29,8 +29,8 @@ export function useTheme(): { colors: Palette; scheme: ThemeName } {
 
 /** Font families, matching the names registered in _layout.tsx. */
 export const font = {
-  display: 'Bricolage',
-  displayBold: 'BricolageBold',
+  display: 'Jakarta',
+  displayBold: 'JakartaBold',
   body: 'Geist',
   bodyMedium: 'GeistMedium',
   mono: 'GeistMono',

@@ -1802,3 +1802,78 @@ of the arithmetic. Also removed a second copy of `AED_TO_INR` that had survived 
 `lib/fx.ts` owns the rate, and two copies of one rate is the bug that DECISIONS already names.
 
 77 mobile tests.
+
+## The redesign — FinCopilot's system, RASEED's colour law (2026-08-17)
+
+Krishna asked for the dashboard and the app to look like `fin-copilot-six.vercel.app` in both
+modes. What was adopted is its *system*: a masked grid ground, pill badges, one accent for
+chrome, hairline-bordered cards on soft radii, an answer card that cites its sources, a fading
+marquee, numbered step cards, and outlined-secondary beside filled-primary.
+
+**What was not adopted is one accent for everything, and that is the whole ruling.** The
+reference is monochrome plus green. RASEED's thesis is that currency is a temperature — INR
+warm brass, AED cool verdigris — so a figure tells you which country it came from before it
+tells you anything else. Painting the product green would have made the two currencies
+indistinguishable, which is the single thing this app exists to prevent.
+
+So: **`accent` is chrome, temperature is money.** Green owns the primary button, the badge, the
+focus ring, the meter fill, the icon tile, the rail's current page and every selection state.
+Brass and verdigris own amounts, charts and the currency lens. The 34 focus rings that were
+`ring-inr` are now `ring-accent` — a focus ring was never a currency. The currency selector in
+the add sheet keeps `border-inr`/`border-aed`, because there the colour *is* the currency.
+
+**The light accent is `#14713C`, measured rather than chosen.** It has to clear 4.5:1 against
+`surface-2` (`#E7EBEF`), the hardest surface in the light theme, and every candidate between
+`#15803D` and `#1A7F4B` lands at 4.19–4.49 there. `accent-ink` is the one token exempt from the
+surface sweep, because it only ever appears on a filled accent — it has its own assertion
+instead. 78 token tests.
+
+### The display face changed, and it cost something
+
+Plus Jakarta Sans replaces Bricolage Grotesque on **both** surfaces, so the two products do not
+diverge on type. The trade is stated rather than buried: Bricolage had a **width axis** and
+`KineticHeading` animated it on scroll — the one showy moment on the landing page. Jakarta is
+variable on weight only. That component was **deleted**, not re-staged as a scale transform,
+which would have been the same gesture pretending to be typographic.
+
+### Above the fold, nothing large and textual animates in
+
+This is the rule the redesign earned, and it came out of being wrong twice.
+
+The `<h1>` was written to fade in. A throttled `requestAnimationFrame` in a background tab
+caught it at `opacity: 0` — and that is not a test artefact, it is the whole failure: an element
+that does not exist until an animation frame cannot be painted by a crawler, a slow device or a
+backgrounded tab, and it is the LCP element. It was made static.
+
+That fixed the headline and moved the problem one element down. The **lede paragraph** then
+became the LCP candidate, still wrapped in a reveal, and mobile performance fell from 94 to
+**88** with 3.4s of a 3.9s LCP spent in render delay. Making the lede static took it to **95**.
+
+Which resolves this morning's open question. Mobile performance sat at 94 with 85% of its LCP
+"known, bounded, unexplained", and two attributions had been tested and disproved. The cause was
+the reveal wrapper all along — found by making it worse and reading the trace, not by guessing
+better. **`scripts/lighthouse.mjs` no longer exempts anything.** Desktop 100/100/100/100, mobile
+95/100/100/100, gate green with no carve-outs.
+
+### Two things the axe gate caught in the new page
+
+**`text-text-lo/70`.** An opacity modifier on a colour token silently opts out of the contrast
+gate that token exists to pass — 3.04 on white, 4.23 on the dark card. Both themes, caught
+immediately, and worth remembering as a category: `/70` on a token is a new colour nobody
+measured.
+
+**The marquee was a keyboard trap in reverse.** Under reduced motion it becomes a real
+horizontal scroller with nothing inside it to tab to, so you could see the first few merchants
+and reach none of the rest. Same finding axe raised on the calendar heatmap an hour earlier, and
+the same fix. A static fallback that cannot be operated is not a fallback.
+
+### Scope
+
+Phase 1 is web: tokens, the landing route, and the shell primitives — which re-skins all eleven
+dashboard routes at once, because the routes read the shell rather than styling themselves. The
+phone has the new face and the new tokens; its screens are Phase 2, along with dark mode
+following the system, which Krishna asked for and which reverses the light-only decision
+recorded earlier.
+
+**Verified:** 24/24 tasks, 1,022 unit tests, **74 e2e** including axe WCAG 2 AA on all eleven
+routes plus the landing in both themes, and the Lighthouse gate with nothing exempt.

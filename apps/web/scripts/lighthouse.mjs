@@ -24,15 +24,20 @@ const URL_UNDER_TEST = process.env.LH_URL ?? 'http://127.0.0.1:3801/'
 const FLOOR = Number(process.env.LH_FLOOR ?? 95)
 
 /**
- * Mobile performance sits at 94 and is exempt, stated rather than hidden by a lower floor.
+ * Nothing is exempt, and that is new.
  *
- * 85% of its LCP is render delay on the hero `<h1>` with a total blocking time of 0ms and no
- * resource dependency in the trace. Two attributions were tested and both measured as no-ops:
- * dropping the mono face out of the preload race, and removing `will-change` from the heading.
- * Neither moved it by a millisecond, so neither was kept — a change justified by a disproved
- * hypothesis is worse than no change. The honest state is: known, bounded, unexplained.
+ * Mobile performance sat at 94 with 85% of its LCP unexplained render delay, and was exempted
+ * here rather than hidden behind a lower floor. The redesign found the cause by making it
+ * worse: the hero rebuild dropped it to 88, and the trace named the LCP element outright — the
+ * lede paragraph, wrapped in a reveal that starts at `opacity: 0`. An element that does not
+ * exist until an animation frame cannot be painted, and the largest text block above the fold
+ * is exactly what LCP measures.
+ *
+ * Removing the entrance animation from the headline and the lede took it to **95**. The rule
+ * that came out of it, and the one worth keeping: above the fold, nothing large and textual
+ * animates in.
  */
-const EXEMPT = new Set(['mobile:performance'])
+const EXEMPT = new Set()
 
 const RUNS = [
   { label: 'desktop', args: ['--preset=desktop'] },

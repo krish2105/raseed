@@ -5,9 +5,9 @@ import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import { useFonts } from 'expo-font'
 import {
-  BricolageGrotesque_600SemiBold,
-  BricolageGrotesque_700Bold,
-} from '@expo-google-fonts/bricolage-grotesque'
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans'
 import { Geist_400Regular, Geist_500Medium } from '@expo-google-fonts/geist'
 import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono'
 
@@ -25,8 +25,8 @@ export default function RootLayout() {
   const { colors, scheme } = useTheme()
 
   const [fontsLoaded, fontError] = useFonts({
-    Bricolage: BricolageGrotesque_600SemiBold,
-    BricolageBold: BricolageGrotesque_700Bold,
+    Jakarta: PlusJakartaSans_600SemiBold,
+    JakartaBold: PlusJakartaSans_700Bold,
     Geist: Geist_400Regular,
     GeistMedium: Geist_500Medium,
     GeistMono: GeistMono_400Regular,

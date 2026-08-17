@@ -15,10 +15,12 @@
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-horizon: var(--horizon);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-bricolage);
+  --font-display: var(--font-jakarta);
 }
 
 body {
@@ -134,4 +136,21 @@ body {
   .rise { animation: none; opacity: 1; transform: none; }
   .magnetic { transition: none; }
   .magnetic:hover { transform: none; }
+}
+
+/* The merchant strip. Translates one half of a duplicated run, so the loop is seamless.
+   `transform` only — a marquee that animates `left` repaints the whole strip every frame. */
+@keyframes raseed-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='raseed-marquee'] {
+    animation: none !important;
+  }
 }

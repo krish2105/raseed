@@ -24,8 +24,28 @@ export type ColorToken =
   | 'good'
   | 'warn'
   | 'horizon'
+  | 'accent'
+  | 'accent-ink'
 
 export type Palette = Readonly<Record<ColorToken, string>>
+
+/**
+ * `accent` is the chrome, and it is deliberately NOT a currency.
+ *
+ * The thesis above owns the *data*: every amount, arc and chart segment is brass or verdigris
+ * so you never have to check which country's money you are reading. `accent` owns everything
+ * that is not data — the primary button, the badge, the focus ring, the meter fill, the icon
+ * tile. Green reads as "act on this"; temperature reads as "this is money, and it is from
+ * here". Letting one colour do both jobs is how a dual-currency app ends up with two
+ * indistinguishable currencies.
+ *
+ * Light is a deep green because it has to clear 4.5:1 against `surface-2` (#E7EBEF), which is
+ * the hardest surface in the theme and the one a lighter, more obvious green fails on — every
+ * candidate between #15803D and #1A7F4B lands at 4.19–4.49 there. Measured, not chosen.
+ *
+ * `accent-ink` is what sits *on* a filled accent and is the one token that is not required to
+ * clear AA against the surfaces, because it never appears on one.
+ */
 
 /**
  * Light is a designed cool-paper theme, not an inversion. Deliberately not cream — a warm
@@ -44,6 +64,8 @@ const light: Palette = {
   good: '#317829',
   warn: '#B23A34',
   horizon: '#5566A8',
+  accent: '#14713C',
+  'accent-ink': '#FFFFFF',
 }
 
 const dark: Palette = {
@@ -58,6 +80,8 @@ const dark: Palette = {
   good: '#6FCB68',
   warn: '#F0736B',
   horizon: '#8B9BDB',
+  accent: '#4ADE80',
+  'accent-ink': '#052E16',
 }
 
 export const palette: Readonly<Record<ThemeName, Palette>> = { light, dark }
@@ -72,8 +96,16 @@ export function currencyColor(currency: 'INR' | 'AED', theme: ThemeName): string
 // ── type ────────────────────────────────────────────────────────────────────
 
 export const fontFamily = {
-  /** Bricolage Grotesque — variable, width axis animates on the dial and the hero. */
-  display: 'Bricolage Grotesque',
+  /**
+   * Plus Jakarta Sans — the display face.
+   *
+   * Replaced Bricolage Grotesque in the FinCopilot-direction redesign. The trade is stated
+   * rather than buried: Bricolage had a **width axis**, and the kinetic hero animated it. Jakarta
+   * is variable on weight only, so that effect had nowhere to go and was removed rather than
+   * faked with a transform. What is gained is a cleaner, wider-apertured face at display sizes,
+   * which is what the new hero is built around.
+   */
+  display: 'Plus Jakarta Sans',
   /** Geist Sans — everything else. */
   body: 'Geist',
   /** Geist Mono — every numeral, everywhere, tabular. */

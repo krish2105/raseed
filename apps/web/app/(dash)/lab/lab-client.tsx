@@ -139,7 +139,7 @@ export function LabClient() {
               disabled={status !== 'ready' || running !== null}
               className={cn(
                 'rounded-lg border border-line bg-surface-1 px-3 py-2 text-sm transition-colors',
-                'hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none',
+                'hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                 'disabled:cursor-not-allowed disabled:opacity-50',
               )}
             >

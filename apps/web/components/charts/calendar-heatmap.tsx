@@ -91,7 +91,7 @@ export function CalendarHeatmap({ points, className }: CalendarHeatmapProps) {
         tabIndex={0}
         role="region"
         aria-label="Daily spending calendar"
-        className="overflow-x-auto rounded focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+        className="overflow-x-auto rounded focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
       >
         {/*
           The month scale. A calendar heatmap without one is eighteen months of squares you

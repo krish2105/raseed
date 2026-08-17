@@ -1,54 +1,17 @@
 'use client'
 
-import { useRef, type ReactNode } from 'react'
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react'
+import { type ReactNode } from 'react'
+import { motion, useReducedMotion } from 'motion/react'
 
 /**
- * The hero headline.
+ * Reveal and SplitLine.
  *
- * Bricolage Grotesque is a variable font with a width axis, so the type itself narrows as
- * you scroll rather than merely moving. That is the one showy moment on this page; the rest
- * stays quiet.
- *
- * Only `transform` and `opacity` animate. Reduced motion gets the finished state.
+ * `KineticHeading` used to live here and animated Bricolage Grotesque's **width axis** as you
+ * scrolled — the one showy moment on the page. Plus Jakarta Sans is variable on weight only, so
+ * when the display face changed that effect had no axis to animate. It was deleted rather than
+ * re-staged as a scale transform, which would have been the same gesture pretending to be
+ * typographic. The new hero earns its first impression from the layout instead.
  */
-export function KineticHeading({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLHeadingElement>(null)
-  const reduceMotion = useReducedMotion()
-
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start start', 'end start'],
-  })
-
-  const smooth = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.4 })
-
-  const y = useTransform(smooth, [0, 1], [0, -60])
-  const opacity = useTransform(smooth, [0, 0.75], [1, 0])
-  const width = useTransform(smooth, [0, 1], [100, 75])
-  const fontVariationSettings = useTransform(width, (w) => `'wdth' ${w}`)
-
-  if (reduceMotion) {
-    return (
-      <h1
-        ref={ref}
-        className="font-display text-[clamp(2.5rem,7.5vw,5rem)] leading-[0.92] font-semibold tracking-[-0.035em]"
-      >
-        {children}
-      </h1>
-    )
-  }
-
-  return (
-    <motion.h1
-      ref={ref}
-      style={{ y, opacity, fontVariationSettings }}
-      className="font-display text-[clamp(2.5rem,7.5vw,5rem)] leading-[0.92] font-semibold tracking-[-0.035em] will-change-transform"
-    >
-      {children}
-    </motion.h1>
-  )
-}
 
 /**
  * Reveal-on-enter.

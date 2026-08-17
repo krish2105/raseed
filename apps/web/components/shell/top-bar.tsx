@@ -8,7 +8,7 @@ export function TopBar() {
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-surface-1 px-3 sm:gap-3 sm:px-4">
       <Link
         href="/"
-        className="font-display shrink-0 text-[15px] font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-inr focus-visible:outline-none"
+        className="font-display shrink-0 text-[15px] font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
       >
         RASEED
       </Link>
