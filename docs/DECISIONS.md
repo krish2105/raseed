@@ -2218,3 +2218,59 @@ does — the same half-measure with extra steps. The `-wal` and `-shm` sidecars 
 
 **1,083 tests.** Verified on device: the badge reads "Database encrypted on this device", and
 the counts on screen are the rows in the encrypted database.
+
+## Voice capture, and the Arabic tone gate (2026-08-17)
+
+### Voice — P8 closed
+
+`expo-speech-recognition` is at **56.0.1**, built for SDK 56, and this app is pinned to 57
+because `CLAUDE.md` records a Hermes regression in 56. It declared `expo: "*"` so it was worth
+attempting, and `ios/` is gitignored so a bad prebuild is recoverable by re-running prebuild.
+**It works**: prebuild clean, pod in the lock, permission strings in `Info.plist`, native build
+succeeded, and SQLCipher survived the regenerated project (checked, not assumed).
+
+**`requiresOnDeviceRecognition: true` is the whole reason this is acceptable.** iOS will happily
+send audio to Apple for a better transcript, and for a ledger that is the wrong trade at any
+accuracy. If a device cannot manage on-device, the hook **refuses** rather than falling back to
+the network — a silent fallback is how a privacy claim becomes a lie.
+
+Dictation writes into the same field the keyboard does, and from there it is the identical flow:
+one parser, one confirmation sheet. Two capture routes that diverge after the transcript is two
+places for the ledger to be written differently.
+
+**The permission dialog caught a real honesty problem, and only running it would.** iOS prepends
+its own fixed sentence — *"Speech data from this app will be sent to Apple to process your
+requests"* — and my string said *"the audio never leaves the phone"*. Two sentences contradicting
+each other in one dialog, and the user will believe Apple, correctly, because Apple's text is the
+one they have seen before. The string now says what **this app requests** without denying
+Apple's generic notice: on-device recognition only, and the notice above applies to apps that
+use its servers.
+
+### The Arabic tone gate
+
+`tone.ts` is a safety system that fails closed. Translating the interface into Arabic without
+translating *it* would have shipped Arabic financial copy past a gate that cannot read it — the
+guarantee silently switching off for one language. So `toneAr.ts` exists, with the same four
+categories: shame, diagnosis, body, and regulated advice under the SCA and SEBI.
+
+**`AR_REVIEW_STATUS` is exported as `'unreviewed-by-native-speaker'`, and there is a test
+asserting it.** I can write the patterns; I cannot judge whether an Arabic sentence lands as
+shaming, or whether a Gulf colloquialism carries a diagnostic connotation that MSA regexes miss
+entirely. An unreviewed safety rule claiming to be reviewed is worse than no rule, because it
+stops anyone looking. Where I was unsure the gate blocks — a test asserts the Arabic gate is
+never *more permissive* than the English one on an equivalent sentence.
+
+**And the first version was completely broken, in the most dangerous possible way.** JavaScript's
+`\b` is defined against `[A-Za-z0-9_]`, so `/\bبذرت\b/` matches nothing in Arabic. Every pattern
+failed silently and the gate reported **allowed** for every sentence it exists to block. A safety
+system that fails open is worse than none, because it is believed. The tests caught it on the
+first run — which is the argument for writing them before trusting the thing.
+
+The patterns now carry **no word boundaries at all**, and that is right rather than lazy: Arabic
+glues clitics straight onto the word, so بذرت, وبذرت and فبذرت are the same accusation with
+different glue, and a boundary-anchored match would catch one and miss two. There is a test for
+exactly that. Substring matching over-matches slightly, and over-matching is the direction this
+gate is supposed to fail in.
+
+**408 engine tests.** Still to do: the i18n string layer, RTL layout, and Arabic numerals — the
+gate is the part that had to exist before any Arabic copy could be written, not after.

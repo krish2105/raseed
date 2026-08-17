@@ -27,9 +27,10 @@ import {
 } from '@/db'
 import { AED_TO_INR } from '@/lib/fx'
 import { Badge, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { useDictation } from '@/hooks/useDictation'
 
 /**
- * Capture — one line in, structured rows out.
+ * Capture — one line in, structured rows out. Typed or spoken.
  *
  * P3's shape, with the deterministic tiers only. `parseCapture` is the rules tier: no key, no
  * request, works in airplane mode, and measured against a golden set that ships in
@@ -73,6 +74,15 @@ export default function CaptureScreen() {
   const [accountId, setAccountId] = useState<string | null>(null)
   const account = accounts.find((a) => a.id === accountId) ?? accounts.find((a) => a.currency === 'INR') ?? accounts[0]
   const defaultCurrency = account?.currency ?? 'INR'
+
+  /**
+   * Dictation writes into the same field the keyboard does.
+   *
+   * Voice does not get its own parser or its own confirmation path — it produces a string, and
+   * from there it is the identical flow. Two capture routes that diverge after the transcript
+   * is two things to keep correct and two places for the ledger to be written differently.
+   */
+  const dictation = useDictation((said) => setText((current) => (current ? `${current}, ${said}` : said)))
 
   function read() {
     const started = Date.now()
@@ -159,6 +169,51 @@ export default function CaptureScreen() {
             autoFocus
             style={s.input}
           />
+
+          <View style={s.micRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={dictation.state === 'listening' ? 'Stop listening' : 'Say it instead'}
+              accessibilityState={{ busy: dictation.state === 'listening' }}
+              onPress={() => (dictation.state === 'listening' ? dictation.stop() : void dictation.start())}
+              style={[
+                s.mic,
+                dictation.state === 'listening' && {
+                  backgroundColor: colors.accent,
+                  borderColor: colors.accent,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  s.micText,
+                  dictation.state === 'listening' && { color: colors['accent-ink'] },
+                ]}
+              >
+                {dictation.state === 'listening' ? 'Listening — tap to stop' : 'Say it instead'}
+              </Text>
+            </Pressable>
+          </View>
+
+          {dictation.state === 'listening' && dictation.transcript.length > 0 && (
+            <Text style={s.heard}>“{dictation.transcript}”</Text>
+          )}
+
+          {dictation.state === 'denied' && (
+            <Text style={s.warn}>
+              Microphone or speech access is off. Settings → RASEED to turn it on — or just type
+              it, which works identically.
+            </Text>
+          )}
+
+          {dictation.state === 'unsupported' && (
+            <Text style={s.warn}>
+              This device cannot recognise speech without sending audio away, so it was not
+              started. Type it instead.
+            </Text>
+          )}
+
+          {dictation.error && <Text style={s.warn}>{dictation.error}</Text>}
 
           <View
             style={s.accounts}
@@ -323,6 +378,18 @@ const styles = (c: Palette) =>
       lineHeight: 24,
       textAlignVertical: 'top',
     },
+
+    micRow: { flexDirection: 'row' },
+    mic: {
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius.full,
+      paddingHorizontal: space[4],
+      paddingVertical: space[2],
+    },
+    micText: { color: c['text-hi'], fontFamily: font.bodyMedium, fontSize: 13 },
+    heard: { color: c['text-lo'], fontFamily: font.body, fontSize: 14, fontStyle: 'italic' },
+    warn: { color: c.warn, fontFamily: font.body, fontSize: 12, lineHeight: 18 },
 
     accounts: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
     accountChip: {

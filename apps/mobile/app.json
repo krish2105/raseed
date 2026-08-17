@@ -28,7 +28,14 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "RASEED listens only while you are on the capture screen and have tapped the mic, to turn what you say into a transaction you then confirm. No audio is stored.",
+          "speechRecognitionPermission": "RASEED requests on-device recognition only, so what you say is turned into text on this phone and the text is never uploaded. The notice above is Apple's, and applies to apps that use its servers."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
