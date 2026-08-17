@@ -13,7 +13,20 @@ import { ExportPanel } from '@/components/ledger/export-panel'
 import { isLocal, removeLocal, updateLocal } from '@/lib/store/local-ledger'
 import { cn } from '@/lib/utils'
 
-const PAGE = 250
+/**
+ * The whole ledger, not a page of it.
+ *
+ * This was `250`, and the cap was quietly wrong in a way that looked fine: the search and the
+ * category filter run over `rows.data`, so they were searching *the first 250 rows* rather
+ * than the ledger. A merchant from four months ago returned "Nothing matches" — a correct
+ * message about a subset, presented as a fact about your money.
+ *
+ * Fetching everything is cheap here: DuckDB is in this tab, the query is a scan of a view over
+ * an in-memory Arrow table, and the alternative — pushing the filters into SQL and paginating
+ * — is more code for a dataset a phone could hold. What is *not* cheap is rendering it, which
+ * is what `content-visibility` below handles.
+ */
+const ALL_ROWS = 100_000
 
 /**
  * The full ledger.
@@ -34,7 +47,7 @@ export function LedgerClient() {
   const [draftMerchant, setDraftMerchant] = useState('')
   const [draftAmount, setDraftAmount] = useState('')
 
-  const rows = useDuckQuery(() => ledgerPage(PAGE, 0, lens), [lens])
+  const rows = useDuckQuery(() => ledgerPage(ALL_ROWS, 0, lens), [lens])
 
   const filtered = useMemo(() => {
     if (!rows.data) return null
@@ -133,6 +146,24 @@ export function LedgerClient() {
               </thead>
               <tbody>
                 {filtered.map((r) => (
+                  /*
+                   * Not virtualised, and that is a measurement rather than an omission.
+                   *
+                   * `content-visibility: auto` was the obvious answer — browser-native
+                   * windowing, no library, no fixed row height (a row with a note is taller
+                   * than one without, which every JS virtualiser wants not to be true). It is
+                   * **inert on a table row**: size containment does not apply to internal
+                   * table elements, so the property computes to `auto` while `contain` stays
+                   * `none` and every row is laid out anyway. Checking the computed value
+                   * would have shown "auto" and proved nothing; counting rows that actually
+                   * laid out is what showed it — 951 of 951.
+                   *
+                   * At 951 rows the full ledger scrolls in ~8ms a frame, so nothing here
+                   * needs windowing today. Making it work means leaving `<table>` for a
+                   * grid of divs with ARIA table roles, which is a real change to the
+                   * markup and the keyboard model — worth doing when the row count justifies
+                   * it, not before. D-12 stays open, with a reason.
+                   */
                   <tr key={r.id} className="border-b border-line last:border-0">
                     <td className="tabular py-2.5 pr-3 font-mono text-xs text-text-lo">
                       {new Date(r.occurredAt).toLocaleDateString('en-IN', {

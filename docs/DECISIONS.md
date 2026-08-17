@@ -1697,3 +1697,38 @@ delete control that would edit it for everyone, and nothing leaves the origin.
 
 **Verified:** 24/24 turbo tasks, 1,007 unit tests, 891 of them under the coverage gate, and
 **72 e2e** — up from 65, under the CSP shipped earlier today.
+
+## The ledger was showing a quarter of itself (2026-08-17)
+
+`PAGE = 250`, and the search and the category filter ran over *that* — so with 951 spend rows
+in the demo, **three quarters of the ledger was invisible** and searching for a merchant from
+four months ago returned "Nothing matches". A correct statement about a subset, presented as a
+fact about your money.
+
+Nothing looked broken, which is the point. The table rendered, the total added up, the empty
+state was well written. Only the number was wrong, and only if you already knew what it should
+have been. This was on the D-12 list as "the ledger is not virtualised" — filed as a
+performance note. The performance was never the problem.
+
+Fetching everything is cheap: DuckDB is in the tab and the query scans a view over an in-memory
+Arrow table. `e2e/ledger-completeness.spec.ts` now fails if the cap returns, and separately
+asserts that a search finds a merchant from the tail — the two halves of the same bug.
+
+**Virtualisation is deliberately not done, and this is a measurement rather than an omission.**
+`content-visibility: auto` was the obvious answer: browser-native windowing, no library, and no
+fixed-row-height requirement — which matters because a row with a note is taller than one
+without, and every JS virtualiser wants that not to be true. It is **inert on a table row**.
+Size containment does not apply to internal table elements, so the property computes to `auto`
+while `contain` stays `none`, and every row lays out anyway.
+
+The first probe checked the computed value, saw `auto`, and proved nothing. Counting the rows
+that had actually laid out is what showed it: 951 of 951. **Same error as the CSP's, twice in
+one day** — reading the thing that is easy to read instead of the thing that is true. It very
+nearly shipped as a comment claiming the list was virtualised.
+
+At 951 rows the full ledger scrolls in ~8ms a frame, well inside a 60fps budget, so nothing
+needs windowing today. Making it work means leaving `<table>` for a grid of divs with ARIA table
+roles — a real change to the markup and the keyboard model, worth doing when the row count
+justifies it. D-12 stays open with a reason attached rather than being quietly ticked.
+
+**74 e2e green.**
