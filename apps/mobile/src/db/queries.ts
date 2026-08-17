@@ -943,3 +943,47 @@ export function recurrenceCandidates(days = 400): RecurrenceRow[] {
     }
   })
 }
+
+export interface RemittanceLegRow {
+  id: string
+  direction: 'out' | 'in'
+  amountMinor: number
+  currency: Currency
+  occurredAt: number
+}
+
+/**
+ * Both legs of anything that might be a cross-border transfer.
+ *
+ * Deliberately reads `transactions` rather than `v_spend`: a remittance is an outflow in one
+ * currency paired with an inflow in another, and the inflow is not spend by any definition.
+ * Filtering through the spend view would hide exactly the half that makes the pair detectable.
+ *
+ * The engine does the pairing and refuses anything it cannot match confidently, so this is
+ * deliberately generous — every confirmed movement in the window, both directions.
+ */
+export function remittanceLegs(days = 400): RemittanceLegRow[] {
+  const since = Date.now() - days * 86_400_000
+  return getConnection().executeSync(
+    `SELECT id, direction, amount_minor, currency, occurred_at
+       FROM transactions
+      WHERE deleted = 0 AND status = 'confirmed' AND occurred_at >= ?
+      ORDER BY occurred_at;`,
+    [since],
+  ).rows.map((r) => {
+    const row = r as unknown as {
+      id: string
+      direction: 'out' | 'in'
+      amount_minor: number
+      currency: Currency
+      occurred_at: number
+    }
+    return {
+      id: row.id,
+      direction: row.direction,
+      amountMinor: row.amount_minor,
+      currency: row.currency,
+      occurredAt: row.occurred_at,
+    }
+  })
+}

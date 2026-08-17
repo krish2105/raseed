@@ -2,7 +2,13 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 
-import { changePoints, detectRecurrence, flagAnomalies, median } from '@raseed/engines'
+import {
+  changePoints,
+  detectRecurrence,
+  detectRemittance,
+  flagAnomalies,
+  median,
+} from '@raseed/engines'
 import { format, money } from '@raseed/money'
 import { space, type Palette } from '@raseed/tokens'
 
@@ -10,7 +16,8 @@ import { font, useTheme } from '@/theme'
 import { useNow } from '@/hooks/useNow'
 import { Glass } from '@/components/Glass'
 import { Sparkline } from '@/components/Sparkline'
-import { dailySpend, recurrenceCandidates, useQuery } from '@/db'
+import { dailySpend, recurrenceCandidates, remittanceLegs, useQuery } from '@/db'
+import { midMarket, remittanceCaveat } from '@/lib/fx'
 
 /** Below this many days of history, the statistics say more about the sample than about you. */
 const MIN_DAYS = 21
@@ -47,6 +54,7 @@ export default function NumbersScreen() {
   const now = useNow()
   const days = useQuery(() => dailySpend(90))
   const candidates = useQuery(() => recurrenceCandidates(400))
+  const legs = useQuery(() => remittanceLegs(400))
 
   const series = days.map((d) => d.minor)
   const enough = days.length >= MIN_DAYS && series.some((v) => v > 0)
@@ -66,6 +74,12 @@ export default function NumbersScreen() {
   const shifts = enough ? changePoints(series) : []
   const outlierIdx = enough ? flagAnomalies(series) : []
   const typical = enough ? median(series.filter((v) => v > 0)) : 0
+
+  // The corridor: an outflow in one currency paired with an inflow in the other. The engine
+  // refuses anything it cannot match confidently, so an empty list means "no clear pair",
+  // not "no transfers".
+  const remittances = detectRemittance(legs, midMarket)
+  const corridorCost = remittances.reduce((a, r) => a + r.costMinor, 0)
 
   const monthlyRecurring = recurring.reduce(
     (a, r) => a + Math.round((r.amountMinor * 30) / Math.max(1, r.periodDays)),
@@ -195,6 +209,54 @@ export default function NumbersScreen() {
               CUSUM, with the textbook k=0.5σ and h=5σ. Loosening h finds a change every few
               weeks in ordinary noise, which is indistinguishable from finding none.
             </Text>
+          </View>
+        </Glass>
+
+        {/* ── the corridor ─────────────────────────────────────────────── */}
+        <Text style={s.section}>The corridor</Text>
+        <Glass style={s.card}>
+          <View style={s.cardInner}>
+            {remittances.length === 0 ? (
+              <Text style={s.empty}>
+                No transfer pairs found. A remittance is an outflow in one currency and an
+                inflow in the other within a few days — nothing here matched that closely
+                enough to claim.
+              </Text>
+            ) : (
+              <>
+                <Text style={s.big}>
+                  {format(money(Math.round(corridorCost), 'INR'))}
+                  <Text style={s.bigUnit}> lost to spread</Text>
+                </Text>
+                <Text style={s.note}>
+                  across {remittances.length}{' '}
+                  {remittances.length === 1 ? 'transfer' : 'transfers'}
+                </Text>
+                <View style={s.rows}>
+                  {remittances.slice(0, 6).map((r) => (
+                    <View key={r.outflowId} style={s.row}>
+                      <View style={s.rowText}>
+                        <Text style={s.rowName}>
+                          {r.impliedRate.toFixed(2)} vs {r.midMarketRate.toFixed(2)} mid
+                        </Text>
+                        <Text style={s.rowMeta}>
+                          {(r.efficiency * 100).toFixed(1)}% of mid-market
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          s.rowAmount,
+                          { color: r.efficiency < 0.97 ? colors.warn : colors.good },
+                        ]}
+                      >
+                        {format(money(Math.round(r.costMinor), 'INR'))}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+            <Text style={s.note}>{remittanceCaveat}</Text>
           </View>
         </Glass>
 

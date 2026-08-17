@@ -17,6 +17,7 @@ import { splitBill } from '@raseed/engines'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
+import { AED_TO_INR } from '@/lib/fx'
 import {
   commitAfterDismiss,
   insertTransaction,
@@ -27,8 +28,6 @@ import {
   useQuery,
 } from '@/db'
 
-/** INR per AED, frozen onto the row at write time. Session 15 replaces this with a rate cache. */
-const AED_TO_INR = 23.45
 
 /**
  * Manual entry. Never writes without an explicit confirm — the parser will propose here in

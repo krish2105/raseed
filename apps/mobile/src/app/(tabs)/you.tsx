@@ -51,6 +51,16 @@ export default function YouScreen() {
           </Pressable>
         </Link>
 
+        <Link href="/import" asChild>
+          <Pressable accessibilityRole="button" style={s.entry}>
+            <View style={s.entryText}>
+              <Text style={s.entryTitle}>Import a statement</Text>
+              <Text style={s.entryHint}>A bank CSV, read on device and shown before it lands</Text>
+            </View>
+            <Text style={s.entryChevron}>›</Text>
+          </Pressable>
+        </Link>
+
         <Link href="/numbers" asChild>
           <Pressable accessibilityRole="button" style={s.entry}>
             <View style={s.entryText}>
