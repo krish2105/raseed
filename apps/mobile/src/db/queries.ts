@@ -1443,3 +1443,133 @@ export function deleteEverything(): void {
     }
   }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Trip Mode
+//
+// `MOBILE_ARCHITECTURE.md` F15: "Trip Mode. Toggle (or auto-detect via timezone/locale change)."
+//
+// **A toggle, and deliberately not the detector.** `detectTrips` needs `days >= 2` before a run
+// counts, so nothing exists to show on day one — and day one is the whole point of a lock-screen
+// activity. A person starting a trip also supplies the `name` and `country` the table requires
+// and the ledger cannot invent, and gives "no thanks" somewhere to live: there is no status
+// column, so a *declined* proposal could not have been remembered anyway.
+//
+// The `trips` table has been in the contract, in every device's SQLite, and empty, since it was
+// added. Nothing here changes the schema; `parity.test.ts` is untouched.
+// ---------------------------------------------------------------------------------------------
+
+export interface TripRow {
+  id: string
+  name: string
+  country: string
+  currency: Currency
+  started_at: number
+  ended_at: number | null
+  budget_minor: number | null
+}
+
+/**
+ * The trip you are on, if any.
+ *
+ * `ended_at IS NULL` is the only possible encoding of "active" — there is no status column, and
+ * adding one would be a contract change for a state the absence of an end date already expresses.
+ *
+ * `LIMIT 1` with a newest-first order rather than an assertion that only one is open. `startTrip`
+ * closes any open trip before opening the next, so two should be impossible; if a bug ever makes
+ * it possible, this returns the one you most recently started instead of throwing on the home
+ * screen. A ledger that will not render is worse than one that renders the likelier answer.
+ */
+export function activeTrip(): TripRow | null {
+  return (
+    rows<TripRow>(
+      `SELECT id, name, country, currency, started_at, ended_at, budget_minor
+         FROM trips
+        WHERE ended_at IS NULL AND deleted = 0
+        ORDER BY started_at DESC
+        LIMIT 1`,
+    )[0] ?? null
+  )
+}
+
+export function listTrips(): TripRow[] {
+  return rows<TripRow>(
+    `SELECT id, name, country, currency, started_at, ended_at, budget_minor
+       FROM trips
+      WHERE deleted = 0
+      ORDER BY started_at DESC`,
+  )
+}
+
+/**
+ * Start a trip. Closes any trip still open first.
+ *
+ * Two open trips would make "the active trip" ambiguous, and the active trip is what tags new
+ * spend — so the ambiguity would not stay cosmetic, it would misfile money. Closing first is one
+ * statement and removes the state entirely rather than defending against it everywhere later.
+ */
+export function startTrip(input: {
+  name: string
+  country: string
+  currency: Currency
+  budgetMinor: number | null
+}): string {
+  const id = `trip-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  const now = Date.now()
+  endActiveTrip()
+  getConnection().executeSync(
+    `INSERT INTO trips
+       (id, name, country, currency, started_at, ended_at, budget_minor, user_id, updated_at, deleted)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, 0)`,
+    [id, input.name, input.country, input.currency, now, input.budgetMinor, USER, now],
+  )
+  return id
+}
+
+/**
+ * End the trip you are on.
+ *
+ * Sets `ended_at`; never deletes. Soft delete only is the invariant, and a finished trip is not
+ * a deleted one in any case — it is the thing you look back on, and the rows tagged to it keep
+ * pointing at a row that still exists.
+ */
+export function endActiveTrip(): void {
+  const now = Date.now()
+  getConnection().executeSync(
+    'UPDATE trips SET ended_at = ?, updated_at = ? WHERE ended_at IS NULL AND deleted = 0',
+    [now, now],
+  )
+}
+
+/**
+ * What the current trip has cost so far.
+ *
+ * Through `v_spend`, like everything else that counts as spend — the predicate is defined once
+ * and this is not the place to start a second opinion. `home_amount_minor` rather than
+ * `amount_minor`, so a trip that mixes currencies still totals to one number, using the rate
+ * frozen on each row rather than today's.
+ */
+export function tripSpend(tripId: string): Money {
+  const result = rows<{ total: number | null }>(
+    'SELECT SUM(home_amount_minor) AS total FROM v_spend WHERE trip_id = ?',
+    [tripId],
+  )
+  return money(Math.round(result[0]?.total ?? 0), 'INR')
+}
+
+/**
+ * Tag a transaction to the trip that was open when it was written.
+ *
+ * Called after the insert rather than folded into it, because `insertTransaction` is shared with
+ * every capture path and none of them should have to know whether a trip is running. A row
+ * written with no trip open simply never gets tagged.
+ */
+export function tagToActiveTrip(transactionId: string): void {
+  const trip = activeTrip()
+  if (!trip) return
+  getConnection().executeSync('UPDATE transactions SET trip_id = ?, updated_at = ? WHERE id = ?', [
+    trip.id,
+    Date.now(),
+    transactionId,
+  ])
+}

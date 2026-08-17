@@ -122,6 +122,34 @@ export function mul(a: Money, factor: number): Money {
   return money(roundHalfAwayFromZero(a.minor * factor), a.currency)
 }
 
+/**
+ * Divide by a scalar — a per-day rate, a per-head average.
+ *
+ * **This is not how you split a bill.** `allocate()` is, and the difference is the whole reason
+ * this function is documented rather than obvious: dividing ₹100 by 3 gives 33.33 three times,
+ * which sums to ₹99.99 and loses a paisa. `allocate` gives 34/33/33, which sums to exactly ₹100
+ * because it hands the remainder out rather than rounding it away.
+ *
+ * So `divide` is for a *rate you display*, never for money you hand to someone. A burn rate of
+ * ₹2,480 a day is a description of a trip; it is not four people's shares, and if you find
+ * yourself summing the results of `divide` back up and expecting the original, you wanted
+ * `allocate`.
+ *
+ * Division by zero throws rather than returning zero or Infinity. Zero days elapsed is a real
+ * state on the morning a trip starts, and a silent 0 would render "₹0 a day" on a trip that has
+ * already cost something — a wrong number that looks like a fine one. The caller has to decide
+ * what to show before there is anything to average.
+ */
+export function divide(a: Money, divisor: number): Money {
+  if (!Number.isFinite(divisor)) {
+    throw new MoneyError(`divisor must be finite, got ${divisor}`)
+  }
+  if (divisor === 0) {
+    throw new MoneyError('cannot divide money by zero')
+  }
+  return money(roundHalfAwayFromZero(a.minor / divisor), a.currency)
+}
+
 export function negate(a: Money): Money {
   return money(-a.minor, a.currency)
 }
