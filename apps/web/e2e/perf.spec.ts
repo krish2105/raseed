@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { waitForReady } from './helpers'
+import { resetStorage, waitForReady } from './helpers'
 
 /**
  * C5 — the 400ms view-rebuild budget, gated rather than merely instrumented.
@@ -39,5 +39,14 @@ test.describe('performance budget', () => {
     // visible before it is a failure.
     const rebuild = await row.locator('td').nth(4).innerText()
     console.log(`view rebuild at 100k rows: ${rebuild}`)
+
+    // Put the demo back.
+    //
+    // `ingestDemo(100_000)` does not add rows, it *replaces* the tables — so without this the
+    // next spec in the run inherits a hundred thousand synthetic rows instead of the seeded
+    // ledger. That is how this spec made `routes.spec.ts` fail intermittently on a currency
+    // assertion that has nothing to do with performance: one server, one origin, one DuckDB,
+    // and a benchmark that quietly mutated all three.
+    await resetStorage(page)
   })
 })
