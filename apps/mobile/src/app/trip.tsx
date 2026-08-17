@@ -14,6 +14,7 @@ import {
 import { format, fromMajor, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
+import { Chip } from '@/components/ui'
 import { font, useTheme } from '@/theme'
 import { Glass } from '@/components/Glass'
 import { travelHabitsRaw, useQuery } from '@/db'
@@ -146,15 +147,13 @@ export default function TripScreen() {
         <Text style={s.label}>Where</Text>
         <View style={s.chips}>
           {PRICE_LEVELS.filter((p) => p.name !== 'India').map((p) => (
-            <Pressable
+            <Chip
               key={p.name}
+              label={p.name}
+              role="radio"
+              selected={destName === p.name}
               onPress={() => setDestName(p.name)}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: destName === p.name }}
-              style={[s.chip, destName === p.name && s.chipActive]}
-            >
-              <Text style={[s.chipText, destName === p.name && s.chipTextActive]}>{p.name}</Text>
-            </Pressable>
+            />
           ))}
         </View>
 
@@ -208,24 +207,19 @@ export default function TripScreen() {
 
         <Text style={s.label}>What kind of trip</Text>
         <View style={s.chips}>
-          {INTENTS.map((i) => {
-            const on = intents.includes(i.key)
-            return (
-              <Pressable
-                key={i.key}
-                onPress={() =>
-                  setIntents((prev) =>
-                    on ? prev.filter((x) => x !== i.key) : [...prev, i.key],
-                  )
-                }
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: on }}
-                style={[s.chip, on && s.chipActive]}
-              >
-                <Text style={[s.chipText, on && s.chipTextActive]}>{i.label}</Text>
-              </Pressable>
-            )
-          })}
+          {INTENTS.map((i) => (
+            <Chip
+              key={i.key}
+              label={i.label}
+              role="checkbox"
+              selected={intents.includes(i.key)}
+              onPress={() =>
+                setIntents((prev) =>
+                  prev.includes(i.key) ? prev.filter((x) => x !== i.key) : [...prev, i.key],
+                )
+              }
+            />
+          ))}
         </View>
 
         <Glass style={s.card}>
@@ -335,17 +329,6 @@ const styles = (c: Palette) =>
     },
 
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-    chip: {
-      borderColor: c.line,
-      borderWidth: 1,
-      borderRadius: radius.full,
-      paddingHorizontal: space[3],
-      paddingVertical: space[2],
-      backgroundColor: c['surface-1'],
-    },
-    chipActive: { backgroundColor: c['surface-2'], borderColor: c.inr },
-    chipText: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
-    chipTextActive: { color: c['text-hi'] },
 
     card: { marginTop: space[5] },
     cardInner: { padding: space[5] },

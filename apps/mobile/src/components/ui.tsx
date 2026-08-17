@@ -42,17 +42,31 @@ export function Badge({ children, tone = 'accent' }: { children: ReactNode; tone
   )
 }
 
-/** The one action a screen is for. There is at most one of these visible at a time. */
+/**
+ * The one action a screen is for. There is at most one of these visible at a time.
+ *
+ * `style` exists because its absence is what kept screens off these primitives. A button that
+ * cannot be given a width, a flex or a margin is unusable in a row of two, so every screen
+ * that needed one hand-rolled the whole thing — and then owned its colours, its radius and its
+ * pressed state for ever. The escape hatch is cheaper than the duplication it prevents.
+ *
+ * `children` is for a leading glyph. The label stays a `string` rather than becoming a node,
+ * because `accessibilityLabel` has to default to something readable and a node has no text.
+ */
 export function PrimaryButton({
   label,
   onPress,
   disabled = false,
   accessibilityLabel,
+  style,
+  children,
 }: {
   label: string
   onPress: () => void
   disabled?: boolean
   accessibilityLabel?: string
+  style?: ViewStyle | ViewStyle[]
+  children?: ReactNode
 }) {
   const { colors } = useTheme()
   const s = styles(colors)
@@ -63,8 +77,9 @@ export function PrimaryButton({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [s.primary, pressed && s.pressed, disabled && s.disabled]}
+      style={({ pressed }) => [s.primary, style, pressed && s.pressed, disabled && s.disabled]}
     >
+      {children}
       <Text style={s.primaryText}>{label}</Text>
     </Pressable>
   )
@@ -75,22 +90,130 @@ export function SecondaryButton({
   label,
   onPress,
   disabled = false,
+  tone = 'neutral',
+  style,
+  children,
 }: {
   label: string
   onPress: () => void
   disabled?: boolean
+  /** `danger` outlines and inks in `warn` — for delete, purge, and "erase everything". */
+  tone?: 'neutral' | 'danger'
+  style?: ViewStyle | ViewStyle[]
+  children?: ReactNode
 }) {
   const { colors } = useTheme()
   const s = styles(colors)
+  const danger = tone === 'danger'
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [s.secondary, pressed && s.pressed, disabled && s.disabled]}
+      style={({ pressed }) => [
+        s.secondary,
+        danger && { borderColor: colors.warn },
+        style,
+        pressed && s.pressed,
+        disabled && s.disabled,
+      ]}
     >
-      <Text style={s.secondaryText}>{label}</Text>
+      {children}
+      <Text style={[s.secondaryText, danger && { color: colors.warn }]}>{label}</Text>
+    </Pressable>
+  )
+}
+
+/**
+ * A selectable chip. **The single most duplicated control in the app.**
+ *
+ * The identical `chip` / `chipActive` / `chipText` / `chipTextActive` block was written out
+ * verbatim in `add`, `edit`, `trip` and `import`, with near-variants in eight more screens —
+ * twelve files, one control. `Badge` never covered it: a badge is static and carries a dot,
+ * a chip is pressed and carries a selected state.
+ *
+ * `selected` drives `accessibilityState`, not just the fill. A chip whose only cue is colour
+ * tells VoiceOver nothing, and this is a control people use to pick a category for money.
+ *
+ * **`role` is a prop because the screens were already right and a primitive must not flatten
+ * them.** `add` marks its people chips `checkbox`/`checked` because you pick several, and its
+ * category chips `radio`/`selected` because you pick one. Those are different promises to a
+ * screen reader, and a shared component that collapsed both into `button` would have made the
+ * app less accessible while looking like a cleanup. Note the state key changes with the role —
+ * `checked` for a checkbox, `selected` for a radio — which is the part that is easy to get
+ * wrong by hand and is now impossible to get wrong at the call site.
+ */
+export function Chip({
+  label,
+  selected = false,
+  onPress,
+  role = 'button',
+  tone = 'accent',
+}: {
+  label: string
+  selected?: boolean
+  onPress: () => void
+  role?: 'button' | 'radio' | 'checkbox'
+  tone?: 'accent' | 'warn'
+}) {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  const colour = tone === 'warn' ? colors.warn : colors.accent
+  return (
+    <Pressable
+      accessibilityRole={role}
+      accessibilityState={role === 'checkbox' ? { checked: selected } : { selected }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        s.chip,
+        selected && { borderColor: `${colour}55`, backgroundColor: `${colour}1F` },
+        pressed && s.pressed,
+      ]}
+    >
+      <Text style={[s.chipText, selected && { color: colour }]}>{label}</Text>
+    </Pressable>
+  )
+}
+
+/**
+ * A card that holds hairline-separated rows.
+ *
+ * This is the structural reason task #21 stalled. Five screens needed a card whose padding is
+ * horizontal-only, so a row separator can span the full width instead of floating inside a
+ * uniform inset — and `Card`'s `padding: space[4]` cannot express that. So five screens kept
+ * their own container rather than adopt the primitive, and the duplication looked like
+ * laziness when it was actually a missing variant.
+ *
+ * `Row` owns the separator, and suppresses it on the first child. Putting that rule in the row
+ * rather than the list is what lets a caller map over data without tracking an index.
+ */
+export function RowList({ children, style }: { children: ReactNode; style?: ViewStyle | ViewStyle[] }) {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  return <View style={[s.rowList, style]}>{children}</View>
+}
+
+export function Row({ children, first = false }: { children: ReactNode; first?: boolean }) {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  return <View style={[s.row, first && s.rowFirst]}>{children}</View>
+}
+
+/**
+ * A low-emphasis text action.
+ *
+ * Underlined and inline rather than a button, for the "show me the numbers" class of link that
+ * should not compete with the one action a screen is for. Written three separate times as
+ * `disclosure`, `inline` and `tertiary` before it was one thing.
+ */
+export function TextLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => pressed && s.pressed}>
+      <Text style={s.link}>{label}</Text>
     </Pressable>
   )
 }
@@ -210,8 +333,10 @@ const styles = (c: Palette) =>
     badgeText: { fontFamily: font.bodyMedium, fontSize: 12 },
 
     primary: {
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: space[2],
       backgroundColor: c.accent,
       borderRadius: radius.lg,
       paddingVertical: space[4],
@@ -220,8 +345,10 @@ const styles = (c: Palette) =>
     primaryText: { color: c['accent-ink'], fontFamily: font.bodyMedium, fontSize: 15 },
 
     secondary: {
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: space[2],
       borderColor: c.line,
       borderWidth: StyleSheet.hairlineWidth,
       borderRadius: radius.lg,
@@ -250,6 +377,40 @@ const styles = (c: Palette) =>
       borderRadius: radius.md,
       paddingVertical: space[2],
     },
+    chip: {
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius.full,
+      paddingHorizontal: space[3],
+      paddingVertical: space[2],
+    },
+    chipText: { color: c['text-lo'], fontFamily: font.bodyMedium, fontSize: 13 },
+
+    // Horizontal padding only — the separator on `row` has to reach both edges.
+    rowList: {
+      backgroundColor: c['surface-1'],
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius.xl,
+      paddingHorizontal: space[4],
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderTopColor: c.line,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      paddingVertical: space[3],
+    },
+    rowFirst: { borderTopWidth: 0 },
+
+    link: {
+      color: c['text-hi'],
+      fontFamily: font.body,
+      fontSize: 13,
+      textDecorationLine: 'underline',
+    },
+
     segmentText: { color: c['text-lo'], fontFamily: font.bodyMedium, fontSize: 13 },
     restart: {
       color: c['text-lo'],

@@ -2328,3 +2328,48 @@ the phone half was invisible for as long as nobody added a package.
 **Still open, deliberately:** 26 of 79 keys are untranslated and stay English rather than guessing;
 `toneAr.ts` and `ar.ts` both need Gulf Arabic native-speaker review before an Arabic build reaches
 anyone; the web side has no `dir` attribute yet.
+
+## The mobile restyle, and why it had actually stalled
+
+Task #21 read like unfinished tidying. It was not: **two structural gaps in `ui.tsx` made the
+duplication rational**, and every screen that "failed to adopt the primitives" was working around
+one of them.
+
+**The app had two card primitives that disagreed.** `Glass.fallback` was `radius.lg` (14);
+`ui.Card` was `radius.xl` (20). Six screens draw both, so the seam was on every one of them and
+never wrong enough to look like a bug. All eighteen `<Glass>` call sites are `s.card` or `s.hero`
+— not one is a pill or a chip — so there was nothing that wanted the tighter corner. Unified at
+`xl`. A mechanical "swap hand-rolled cards for `Card`" without this first would have produced
+20px cards beside 14px glass ones.
+
+**`PrimaryButton` and `SecondaryButton` took no `style`.** A button that cannot be given a flex or
+a width is unusable in a row of two, so `WalletCount`, the Today capture bar and `receipt` each
+hand-rolled the whole control — and then owned its colours, radius and pressed state for ever.
+`capture` and `privacy` worked around it with a `grow: { flex: 1 }` wrapper `View`, which is the
+tell. The escape hatch is cheaper than the duplication it prevents.
+
+**`Chip` carries `role`, because the screens were already right.** `add` marks its people chips
+`checkbox`/`checked` (you pick several) and its category chips `radio`/`selected` (you pick one).
+Those are different promises to a screen reader, and the state key changes with the role. A shared
+component that collapsed both into `button` would have made the app *less* accessible while looking
+like a cleanup — so the role is a prop and the state key is derived from it, which is the part that
+is easy to get wrong by hand and now impossible to get wrong at the call site.
+
+**The conversion fixed a colour-law violation nobody had noticed.** `add.tsx`'s `chipActive`
+bordered in `c.inr` — the INR brass. A category chip is chrome, not money, and the law is that
+accent owns chrome while temperature owns figures. Going through `Chip` makes selection green and
+leaves the AED/INR toggle brass, which is the distinction the law was written for.
+
+**`RowList` / `Row` is the variant whose absence was the real blocker.** Five screens need a card
+with horizontal-only padding so a hairline separator reaches both edges; `Card`'s uniform
+`padding: space[4]` cannot express it. `Row` owns the separator and suppresses it on the first
+child, so a caller can map over data without tracking an index.
+
+Measured, not guessed: `Chip` replaces the same block in 12 files, `NavRow` 7 repeats in one
+screen, `LedgerRow` 3 independent implementations, `TextLink` 3, a `danger` tone on
+`SecondaryButton` 3, and a `Field` input style 4. Converted so far: `add` (3 blocks), `edit` (2),
+`trip` (2), `import` (1). The rest are listed and unconverted rather than claimed.
+
+**Still open:** `app.json:25` carries `"backgroundColor": "#0F1419"` for the splash — the last hex
+literal outside `@raseed/tokens` in the mobile app. Static JSON cannot import a token, so closing
+it means moving to `app.config.ts`.

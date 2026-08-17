@@ -14,6 +14,7 @@ import {
 import { format, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
+import { Chip } from '@/components/ui'
 import { font, useTheme } from '@/theme'
 import { Glass } from '@/components/Glass'
 import {
@@ -197,17 +198,13 @@ export default function ImportScreen() {
                         ['mdy', 'Month first · 03/04 is 4 March'],
                       ] as const
                     ).map(([value, label]) => (
-                      <Pressable
+                      <Chip
                         key={value}
+                        label={label}
+                        role="radio"
+                        selected={order === value}
                         onPress={() => setOrder(value)}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: order === value }}
-                        style={[s.chip, order === value && s.chipActive]}
-                      >
-                        <Text style={[s.chipText, order === value && s.chipTextActive]}>
-                          {label}
-                        </Text>
-                      </Pressable>
+                      />
                     ))}
                   </View>
                 </View>
@@ -362,17 +359,6 @@ const styles = (c: Palette) =>
     struck: { opacity: 0.45, textDecorationLine: 'line-through' },
 
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[3] },
-    chip: {
-      borderColor: c.line,
-      borderWidth: 1,
-      borderRadius: radius.full,
-      paddingHorizontal: space[3],
-      paddingVertical: space[2],
-      backgroundColor: c['surface-1'],
-    },
-    chipActive: { backgroundColor: c['surface-2'], borderColor: c.inr },
-    chipText: { color: c['text-lo'], fontFamily: font.body, fontSize: 12 },
-    chipTextActive: { color: c['text-hi'] },
 
     note: {
       color: c['text-lo'],
