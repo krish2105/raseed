@@ -1412,3 +1412,30 @@ the phone.
 DuckDB raw table is `raw_transactions`. The query failed, and the tile rendered a skeleton for
 ever — through a typecheck, a build and a screenshot. Both new tiles now render their error.
 A panel that fails silently is indistinguishable from one that is slow.
+
+### Third wave — mobile catches up with web
+
+`parseStatement` and `detectRemittance` had both been tested for sessions and imported only by
+the web app. The phone — the device that owns the ledger — could not load a statement into it,
+and could not tell you what a transfer had cost. Both now on device.
+
+The import screen parses **twice** on purpose: the unforced parse decides whether the *file* is
+ambiguous, so the date-order control keeps rendering after you answer. Bound to the forced
+parse instead, the question vanishes the moment you touch it and a wrong pick is only undoable
+by re-importing. Only outflows are written — a statement contains your salary, and a credit
+imported as spend inflates every figure by a month's income — but credits are still shown,
+because seeing the salary land is how you check the file was read correctly.
+
+`AED_TO_INR` moved from a literal inside `add.tsx` to `lib/fx.ts`. The write path freezes it
+onto a row; the remittance detector uses it to judge what a transfer *should* have cost. Two
+copies of one rate is how a corridor app calls the same transfer efficient on one screen and
+expensive on another.
+
+Native modules added (`expo-document-picker`, `expo-file-system`) with a prebuild and a full
+native rebuild. The picker opens on device. Getting a fixture into the simulator's Files app
+defeated me — a harness limitation, recorded rather than papered over — so the screen's own
+decisions were extracted to `lib/import.ts` and tested directly instead.
+
+**Still open, and honestly so:** voice capture and device security (native deps approved, not
+started), Arabic/RTL, the CSP, Lighthouse, chart axes beyond the net-worth line, ledger
+virtualisation, `splitByItems` UI, and bidirectional splits.

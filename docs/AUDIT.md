@@ -52,7 +52,7 @@ R-3).
 | P2 | Safe-to-Spend + Day Dial | **[fixed] built** | Engine `safeToSpend.test.ts` (14 cases), `components/DayDial.tsx`. Was **partial**: five of six inputs were literals and two screens disagreed about committed bills. Fixed in `57ef305` — balance derived via `liquidBalanceMinor()`, commitments unified in `src/lib/commitments.ts` |
 | P3 | Capture router rules→alias→LLM, confirm sheet, `capture_log`, golden set ≥0.90 | **not started** | No router, no LLM. `capture_log` is declared (`contract.ts:271`) and created on device but **never read or written**. No eval harness or golden set exists anywhere — a find for `*/eval/*` and `*golden*` returns only CocoaPods headers |
 | P4 | Merchant resolver + alias learning + reversal pairing | **[fixed] built** | Refunds recorded from the row they reverse (`a1183f5`), which is exact rather than inferred. | `resolveMerchant`/`learnAlias` (`queries.ts:314`, `:346`) are on the real write path at `insertTransaction` (`:159`). **Reversal pairing absent** — `pairReversals` never imported; `reversal_of_id` written NULL unconditionally (`:166-168`) |
-| P5 | Multi-currency, FX freeze, remittance detection, Trip Mode | **partial** | FX frozen at write (`add.tsx`, `queries.ts:156`); Trip Mode `src/app/trip.tsx`. **`detectRemittance` not imported by mobile** |
+| P5 | Multi-currency, FX freeze, remittance detection, Trip Mode | **[fixed] built** | Remittance detection on `/numbers` (`74e494c`), rate unified in `lib/fx.ts` |
 | P6 | Worth-it loop + Weekly Reckoning + nudge budget | **not started** | `regretRate`/`rankNudges` not imported by mobile |
 | P7 | Splits, Ledger Link, cash reconciliation | **partial** | `src/app/split.tsx` + `engines/domain/settle.ts`; `WalletCount.tsx` + `reconcileCash`. **Ledger Link does not exist** — only a nullable `share_link_id` column whose single writer hardcodes NULL (`queries.ts:411-413`) |
 | P8 | Voice capture + receipt OCR | **partial** | `src/app/receipt.tsx` (Apple Vision), `engines/domain/parseReceipt.ts`. **Voice capture not built** — no microphone permission, no STT dependency |
@@ -168,7 +168,7 @@ is a hand-rolled `useSyncExternalStore`; the DB is plain op-sqlite.
 (schema 412, engines 342, money 39, tokens 34, fixtures 20) plus 27 in `apps/web`. Every
 mobile-specific claim rests on manual simulator runs narrated in `DECISIONS.md`.
 
-**D-12 · The §2 web stack was substituted wholesale.** No visx, no `d3-*`, no cmdk, no TanStack,
+**D-12 · The §2 web stack was substituted wholesale.** *(Partly addressed: the net-worth line has a real axis. Ledger virtualisation still open.)* No visx, no `d3-*`, no cmdk, no TanStack,
 no Zod. Charts are hand-built SVG. Two consequences: **no axes anywhere**, and the ledger is
 **not virtualised** (`ledger-client.tsx:15`, `PAGE = 250`).
 

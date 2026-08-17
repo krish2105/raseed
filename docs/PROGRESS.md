@@ -45,7 +45,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [~] **#21** Web **P9** — landing route and Lenis are live (`app/page.tsx`,
   `components/landing/`); **Lighthouse ≥95 never measured**, which is the actual done-when
 - [x] **#22** Web **P10** — deploy, nuqs share links, a11y sweep and **data export** all done
-- [~] **#23** Mobile P8 — receipt OCR is live (`/receipt`, Apple Vision, column-major blocks handled); voice capture remains
+- [~] **#23** Mobile P8 — receipt OCR live (`/receipt`, Apple Vision); **voice capture remains** (native deps approved, not started)
 - [ ] **#24** Both — buffer, eval regression, hardening
 
 ---
