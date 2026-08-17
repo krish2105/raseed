@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { InteractionManager } from 'react-native'
 import { useFocusEffect } from 'expo-router'
+import { migratePlaintextIfPresent } from './client'
+import type { MigrationResult } from './migrateToEncrypted'
 import { migrate } from './migrations'
 import { isSeeded, seed } from './seed'
 
 export * from './client'
+export * from './encryption'
 export * from './queries'
 export { migrate, dropAll } from './migrations'
 export { seed, isSeeded } from './seed'
@@ -98,9 +101,23 @@ export function useQuery<T>(read: () => T): T {
 
 let ready = false
 
-/** Idempotent. Runs migrations, seeds reference data on first launch only. */
+/** What the last plaintext-to-encrypted migration did. Read by the privacy screen. */
+let lastMigration: MigrationResult = { status: 'nothing-to-do', verified: {} }
+
+export function encryptionMigration(): MigrationResult {
+  return lastMigration
+}
+
+/**
+ * Idempotent. Moves a plaintext ledger across if one exists, then migrates and seeds.
+ *
+ * The order is load-bearing: the encrypted file must receive the old rows **before** `migrate()`
+ * creates empty tables in it, or the copy lands on top of a schema that already exists and the
+ * ledger is gone in the least recoverable way there is.
+ */
 export function initDatabase(): void {
   if (ready) return
+  lastMigration = migratePlaintextIfPresent()
   migrate()
   if (!isSeeded()) seed()
   ready = true

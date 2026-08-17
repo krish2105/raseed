@@ -1361,3 +1361,85 @@ export function answerAsk(intent: AskIntent): AskAnswer {
     }
   }
 }
+
+// ── retention and deletion (S8, S9) ─────────────────────────────────────────
+
+/**
+ * Throw away what has outlived its purpose.
+ *
+ * A **hard** delete, and that is deliberate — it is the one place in this schema where
+ * `deleted = 1` would be wrong. Soft-deleting a retention purge leaves the raw text you typed
+ * sitting on disk with a flag next to it saying we agreed not to look at it, which satisfies a
+ * policy document and nobody's actual privacy. The rows this touches are diagnostic and local;
+ * there is no peer to converge with about a row that is meant to stop existing.
+ */
+export function purgeExpired(plan: { captureLogBefore: number; nudgesBefore: number }): {
+  captureLog: number
+  nudges: number
+} {
+  const db = getConnection()
+  const before = {
+    captureLog: rows<{ n: number }>('SELECT COUNT(*) AS n FROM capture_log WHERE created_at < ?', [
+      plan.captureLogBefore,
+    ])[0]?.n ?? 0,
+    nudges: rows<{ n: number }>('SELECT COUNT(*) AS n FROM nudges WHERE created_at < ?', [
+      plan.nudgesBefore,
+    ])[0]?.n ?? 0,
+  }
+
+  db.executeSync('DELETE FROM capture_log WHERE created_at < ?', [plan.captureLogBefore])
+  db.executeSync('DELETE FROM nudges WHERE created_at < ?', [plan.nudgesBefore])
+
+  return before
+}
+
+/** What is actually on disk, per table, for the privacy screen to report rather than claim. */
+export function storedCounts(): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const table of ['transactions', 'people', 'splits', 'worth_scores', 'capture_log', 'nudges']) {
+    counts[table] = rows<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table}`)[0]?.n ?? 0
+  }
+  return counts
+}
+
+/**
+ * Everything, gone.
+ *
+ * S9's deletion right, and it has to mean it. Every table is emptied with `DELETE`, not
+ * `deleted = 1` — a soft delete here would be the app telling you it had forgotten while
+ * keeping the rows, which is the precise opposite of what was asked for.
+ *
+ * The reference data is re-seeded afterwards by the caller, so the app is usable rather than
+ * broken. What is not restored is anything you entered.
+ */
+export function deleteEverything(): void {
+  const db = getConnection()
+  // Order matters only for foreign keys; emptying children first avoids a constraint error on
+  // a device where `PRAGMA foreign_keys` is on, which it is.
+  for (const table of [
+    'split_participants',
+    'splits',
+    'worth_scores',
+    'capture_log',
+    'nudges',
+    'transactions',
+    'recurrences',
+    'cash_counts',
+    'merchant_aliases',
+    'people',
+    'goals',
+    'trips',
+    'budgets',
+    'fx_rates',
+    'merchants',
+    'categories',
+    'accounts',
+  ]) {
+    try {
+      db.executeSync(`DELETE FROM ${table}`)
+    } catch {
+      // A table the contract has but this device somehow lacks must not stop the rest of the
+      // deletion. Failing halfway through "delete everything" is worse than a missing table.
+    }
+  }
+}

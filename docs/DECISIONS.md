@@ -2092,3 +2092,79 @@ server snapshot is deliberately empty: the server has no fragment and never will
 reason `/` was not — no DuckDB, no Add button, so `waitForReady` cannot gate it. That excuse
 cost the landing page a real violation for weeks; this one got its own check immediately.
 **76 e2e.**
+
+## SQLCipher, with a migration that refuses to lose a ledger (2026-08-17)
+
+The app lock protected the screen, not the file. It now protects the file: `raseed-enc.db` opens
+with a 256-bit key from the keychain, and the header on disk is random bytes rather than
+`SQLite format 3` — verified by reading the file, not by trusting a flag.
+
+**op-sqlite 18 has SQLCipher built in.** The obvious move was `@op-engineering/op-sqlcipher`,
+which is at 2.0.21 against op-sqlite's 18.0.0 — a stale split. Checking the podspec instead of
+installing it found `op_sqlite_config["sqlcipher"]`, an `encryptionKey` on `open()`, and an
+`isSQLCipher()` that asks the compiled binary what it actually is. That last one earns its place
+below.
+
+**The key is `WHEN_UNLOCKED_THIS_DEVICE_ONLY`**, and both halves matter. `THIS_DEVICE_ONLY`
+keeps it out of iCloud Keychain, so restoring a backup onto another phone restores an encrypted
+file and no way to open it — without it, the encryption protects you from everyone except
+whoever has your iCloud password. `WHEN_UNLOCKED` means a device seized locked cannot be made to
+give up the ledger over a cable. The cost is stated in the file: **a lost phone is a lost
+ledger**, and there is no recovery path because a recovery path is an alternative way in.
+
+`SecureStore.getItem` is synchronous, which is what let the whole database layer stay
+synchronous instead of threading a promise through every screen to fetch one string.
+
+### Three bugs, each found by a different kind of checking
+
+**The config was being read from the wrong package.json.** The podspec walks *up* from
+`node_modules/@op-engineering/op-sqlite`, which under pnpm's hoisted linker is the **workspace
+root** — so `"op-sqlite": { "sqlcipher": true }` in `apps/mobile/package.json` was silently
+ignored and the pod compiled plain SQLite. Found by grepping the generated xcconfig for
+`OP_SQLITE_USE_SQLCIPHER` rather than assuming the flag took. This is the exact failure
+`isSQLCipher()` exists for: a binary that ignores `encryptionKey` writes a plaintext file while
+the JavaScript believes it is encrypting, and nothing else would ever say so.
+
+**`ATTACH DATABASE` resolves against the process working directory, `open({ name })` does not.**
+The first migration ran, reported success, and produced a perfectly valid, perfectly encrypted,
+perfectly **empty** database somewhere nobody would look — while the real ledger sat untouched
+next door. Found by comparing file sizes: 4KB against 176KB. It now attaches an absolute path
+built from `IOS_LIBRARY_PATH`.
+
+**The migration was written, tested, and never called.** Four passing tests, wired into nothing.
+The device said `file is not a database` on launch, which is what an encrypted build does when
+handed a plaintext file. `initDatabase` now runs it first — and the order is load-bearing: the
+copy must land **before** `migrate()` creates empty tables in the destination, or the ledger is
+overwritten in the least recoverable way there is.
+
+### The migration itself
+
+Copy → count every table on both sides → only then remove the original. A lossy copy and a
+throwing copy both leave the plaintext file exactly where it was, and there are tests for both,
+because a partial copy plus a deleted original is the one outcome worse than not migrating.
+
+`sqlcipher_export()` rather than reading rows into JS and writing them back: it runs inside
+SQLite, moves schema and rows as one unit, and cannot mangle a value on the way through a
+JavaScript number.
+
+**Verified on device:** the encrypted file is 176,128 bytes matching the original, the old
+plaintext file reports **zero tables**, and the app renders the identical ledger from the
+encrypted database.
+
+One honest limitation: the emptied plaintext file was not truncated, so while it has no schema
+and no readable rows, its freelist pages were not overwritten. Deleting the file outright is the
+better ending and is the next change to this code.
+
+## Retention and the privacy track (S8, S9) — partial (2026-08-17)
+
+`purgePlan` and `dataCategories` are built and tested, and the DB has `purgeExpired`,
+`storedCounts` and `deleteEverything`. Retention is **per kind**, because collapsing them would
+be wrong in both directions: your ledger is the product and is kept until you delete it, raw
+capture text is diagnostic and expires at 90 days, nudges are a delivery record and go at 180.
+
+The purge is a **hard** delete — the one place in this schema where `deleted = 1` would be
+wrong. Soft-deleting a retention purge leaves the text you typed on disk with a flag beside it
+saying we agreed not to look, which satisfies a policy document and nobody's privacy.
+
+**Not yet built: the privacy dashboard screen itself, the consent ledger, and mobile export.**
+The engine and the queries are done and tested; the surface is not.
