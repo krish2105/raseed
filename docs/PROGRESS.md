@@ -2,7 +2,7 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: #29** — redesign, Phase 1 (web). Phase 2 is the phone. Previous: #28 — Mobile P6: the worth-it loop, the Weekly Reckoning and the nudge budget are on the phone. `regretRate` and `rankNudges` had zero mobile callers until now
+**Current session: #30** — SQLCipher + migration, privacy dashboard, Ledger Link, capture router, Payday Runway. Previous: #29 — redesign, Phase 1 (web). Phase 2 is the phone. Previous: #28 — Mobile P6: the worth-it loop, the Weekly Reckoning and the nudge budget are on the phone. `regretRate` and `rankNudges` had zero mobile callers until now
 
 ---
 
@@ -69,6 +69,21 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - ✅ **Splits run both ways** — an expense someone else paid is recordable. The sign on
   `owed_minor` is the direction; your share is spend immediately; settling writes no
   transaction because the spend row is already the outflow.
+
+- 🚧 **Three items remain from the 17 Aug batch, and none is started:**
+  **Arabic + RTL** (with the tone gate extended to Arabic — Krishna reaffirmed full translation;
+  the Arabic rule set must be reviewed by a native speaker before it can be trusted),
+  **voice capture** (`expo-speech-recognition@56.0.1` targets SDK **56** and we are pinned to
+  57 — untested combination, try it on a throwaway prebuild since `ios/` is gitignored and
+  therefore recoverable), and the **Trip Live Activity** (Swift Widget Extension via
+  `@bacons/apple-targets@5.0.0`). Also outstanding: several phone screens still carry their own
+  card and pill styles instead of `components/ui.tsx`.
+
+- ✅ **SQLCipher ships** — `raseed-enc.db`, key in the keychain at
+  `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, with a verified copy-then-delete migration off the old
+  plaintext file. A lost phone is a lost ledger, by design.
+
+- ✅ **Privacy dashboard, consent ledger, export and deletion** on the phone (`/privacy`).
 
 - ✅ **Lighthouse ≥95 is met and gated** — desktop 100/100/100/100, mobile 95/100/100/100,
   `pnpm --filter web lighthouse`, nothing exempt. The old unexplained 94 was a reveal wrapper
