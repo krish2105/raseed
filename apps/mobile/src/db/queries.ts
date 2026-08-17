@@ -1159,3 +1159,55 @@ export function markNudgeActed(kind: string): void {
     [Date.now(), kind, kind],
   )
 }
+
+// ── capture ─────────────────────────────────────────────────────────────────
+
+/**
+ * Log a capture, accepted or not.
+ *
+ * `capture_log` has been declared in the contract and created on every device since P1, and had
+ * **never been written to** — which meant the one table that could tell you whether the parser
+ * is any good in real use was empty, and V1's model page had no input.
+ *
+ * Both outcomes are recorded. A rejected parse is the more useful row of the two: it is a real
+ * sentence a real person typed that the rules tier got wrong, and it is exactly what belongs in
+ * the golden set. `edited_json` holds what you changed it to, so the diff is the label.
+ */
+export function logCapture(input: {
+  rawInput: string
+  parsedJson: string
+  route: 'rules' | 'local' | 'llm'
+  latencyMs: number
+  accepted: boolean
+  editedJson?: string
+}): void {
+  const at = Date.now()
+  const id = `cap-${at.toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  getConnection().executeSync(
+    `INSERT INTO capture_log
+       (id, raw_input, parsed_json, route, model, latency_ms, accepted, edited_json,
+        created_at, user_id, updated_at, deleted)
+     VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, 0)`,
+    [
+      id,
+      input.rawInput,
+      input.parsedJson,
+      input.route,
+      input.latencyMs,
+      input.accepted ? 1 : 0,
+      input.editedJson ?? null,
+      at,
+      USER,
+      at,
+    ],
+  )
+}
+
+/** How the parser is doing in real use, as opposed to on the golden set. */
+export function captureStats(): { total: number; accepted: number } {
+  const row = rows<{ total: number; accepted: number }>(
+    `SELECT COUNT(*) AS total, COALESCE(SUM(accepted), 0) AS accepted
+       FROM capture_log WHERE deleted = 0`,
+  )[0]
+  return { total: row?.total ?? 0, accepted: row?.accepted ?? 0 }
+}

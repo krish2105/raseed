@@ -55,6 +55,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         {/* Capture is a sheet over the ledger, not a destination you navigate away to. */}
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="capture" options={{ presentation: 'modal' }} />
       </Stack>
     </AppLock>
   )

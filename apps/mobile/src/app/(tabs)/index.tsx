@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link } from 'expo-router'
-import { Camera, Plus } from 'lucide-react-native'
+import { Camera, Plus, Sparkles } from 'lucide-react-native'
 
 import { safeToSpend, type Fact } from '@raseed/engines'
 import { format, money } from '@raseed/money'
@@ -220,6 +220,15 @@ export default function TodayScreen() {
           <Pressable style={s.capture} accessibilityRole="button" accessibilityLabel="Add a transaction">
             <Plus color={colors['surface-0']} size={18} />
             <Text style={s.captureText}>Add what you spent</Text>
+          </Pressable>
+        </Link>
+        <Link href="/capture" asChild>
+          <Pressable
+            style={s.captureCamera}
+            accessibilityRole="button"
+            accessibilityLabel="Type a line"
+          >
+            <Sparkles color={colors['text-hi']} size={20} />
           </Pressable>
         </Link>
         <Link href="/receipt" asChild>

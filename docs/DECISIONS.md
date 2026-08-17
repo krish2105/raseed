@@ -1917,3 +1917,71 @@ edit has to land thirteen times and will not.
 
 **Verified on device in both themes**, including that the override applies instantly and the
 resolved theme is reported back on the About row.
+
+## Mobile P3 — the capture router, and the eval harness that was specified on day one (2026-08-17)
+
+The biggest unbuilt phase. Deterministic tiers only, on Krishna's ruling: rules and a local
+classifier, no network, no key. The LLM tier stays a named seam, and that is not a compromise —
+with no outbound call there is nothing for S4's redaction gate to protect, and "airplane mode is
+a supported state" stays true rather than becoming true-except-for-the-good-parts.
+
+**`parseCapture` is a real parser, not a regex with ambitions.** Clause splitting including the
+Hinglish `aur`, amount suffixes (`2k`, `1.5 lakh`), currency words on either side of the number
+(`25 dh`, `aed 25`), Indian digit grouping, a noise list so `"400 ka petrol dala"` yields
+`petrol` rather than `ka petrol dala`, and — the two that separate a ledger from a list —
+`paid rahul 500` as a **transfer** and `refund 200 from swiggy` as **income**. A parser that
+calls either of those spend has overstated your spending in a way no total will reveal.
+
+Confidence is computed, not felt: it starts at 1 and each thing that had to be assumed takes
+something off, so the sheet can lead with the rows worth checking.
+
+### The eval harness found two bugs in its first two runs
+
+`MOBILE_ARCHITECTURE.md` §7 has asked for `eval/` since the first session — *"the difference
+between 'I made an app' and 'I made an app and measured it'"* — and until today a find for an
+eval directory returned CocoaPods headers.
+
+Its **first** run failed on `"₹1,250 zomato"`: the comma in Indian digit grouping was being read
+as a clause separator, so it produced two transactions, the first of them **₹1**. Not a rounding
+error — a fabricated row, invisible to every existing test.
+
+Its **second** run failed on `"chai 20, auto 80"`: guarding the comma on both sides fixed
+grouping and broke the ordinary case, because a clause comma has a digit before it too. What
+actually separates them is what *follows*: a grouping comma is followed by a digit, a clause
+comma is not.
+
+Neither bug was findable by reading the code. Both were named in one line of output by something
+that scored the parser against a label.
+
+**The gate and the report are different questions.** The gate runs the cases the deterministic
+tier is responsible for — 22 cases, 30 transactions, and it clears every target the spec names.
+The report runs everything, including four cases written to be beyond a regex: word amounts
+("two fifty for lunch"), elided merchants ("filled the tank, 3200"), arithmetic in prose ("split
+the 1800 dinner three ways"). Those stay in the set because a benchmark trimmed to what already
+passes measures nothing and can only ever go down, and they stay out of the gate because a red
+build should mean a regression rather than an unbuilt tier. There is a test asserting the hard
+cases **still fail** — if that ever passes, either the parser got much better or somebody
+softened the labels, and both are worth noticing.
+
+### `capture_log` is written for the first time
+
+Declared in the contract and created on every device since P1, never once written to — which
+meant the one table that could say whether the parser works in real use was empty, and V1's
+model page had no input. Both outcomes are recorded now, and **the rejected ones are the
+valuable half**: a real sentence a real person typed that the rules tier got wrong is exactly
+what belongs in the golden set. `edited_json` holds what you changed it to, so the diff is the
+label.
+
+### One bug the simulator found that the golden set could not
+
+Every parsed row came back in **AED**. The default currency was `accounts[0]` — alphabetical,
+which on this ledger is an AED account — so `"chai 20"` became AED 20: a 23× error on a cup of
+tea, produced silently, from a default nobody chose. The golden set passes its own
+`defaultCurrency` and so could never see it.
+
+The account is now on screen as a row of chips, coloured by its currency, and changing it clears
+the parsed rows rather than leaving drafts that depend on an assumption that just moved. The
+initial guess is the home currency. It is a guess either way; the difference is whether you can
+see it.
+
+**1,029 tests**, 349 of them in engines.
