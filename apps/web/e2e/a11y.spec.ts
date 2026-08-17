@@ -52,6 +52,37 @@ async function setTheme(page: Page, theme: (typeof THEMES)[number]): Promise<voi
   await page.waitForTimeout(400) // let transition-colors land
 }
 
+/**
+ * The landing route, which this suite did not cover until Lighthouse found what it was
+ * missing.
+ *
+ * `/` is not in `ROUTES` because it has no DuckDB and no Add button, so `waitForReady` cannot
+ * gate it — and that structural difference is exactly why it fell out of the sweep. It sat
+ * with a content-model violation (`<div>` between `<ul>` and its `<li>`s, from the reveal
+ * wrapper) through every green run of this file. A route excluded for a mechanical reason is
+ * still an uncovered route.
+ */
+for (const theme of THEMES) {
+  test(`the landing route has no WCAG 2 AA violations in ${theme}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: theme })
+    await loadWithTheme(page, theme, '/')
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+
+    const { violations } = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('button:disabled')
+      .exclude('[aria-disabled="true"]')
+      .analyze()
+
+    const detail = violations.flatMap((v) =>
+      v.nodes.map(
+        (n) => `[${v.id}] ${n.target.join(' ')} — ${n.failureSummary?.split('\n')[1] ?? v.help}`,
+      ),
+    )
+    expect(detail, `landing in ${theme}`).toEqual([])
+  })
+}
+
 for (const theme of THEMES) {
   test.describe(`${theme} theme`, () => {
     for (const route of ROUTES) {

@@ -1610,3 +1610,33 @@ compiled-predicate path, which is not ours to make.
 directives that carry the value, and — unchanged — that `/lab` still compiles WASM, runs a
 worker and computes from our own origin. **65/65 e2e green under the real header**, including
 axe-core WCAG 2 AA on all eleven routes in both themes.
+
+## Lighthouse, measured at last — and what it found that the axe suite could not (2026-08-17)
+
+Web P9's done-when has always been "Lighthouse ≥95", and for four sessions it was the one
+criterion nobody had run. The route was built; the score was assumed.
+
+**Desktop is 100 / 100 / 100 / 100.** Performance, accessibility, best practices, SEO.
+
+**Accessibility started at 92, and the cause is worth keeping.** `<Reveal>` renders a `div`, and
+the landing page wrapped each `<li>` in one — putting a `div` between a `<ul>` and its items,
+which is a content-model violation on two lists. `Reveal` now takes `as="li"` and the wrapper
+*is* the list item.
+
+The interesting part is why 65 green e2e runs never saw it. `ROUTES` drives the axe sweep and
+`/` is not in it — because the landing route has no DuckDB and no Add button, so `waitForReady`
+cannot gate it. **A route excluded for a mechanical reason is still an uncovered route**, and it
+sat with a real violation through every green run. `/` now has its own axe check in both themes.
+
+**Mobile performance is 94 and stays 94, stated rather than papered over.** Everything else on
+mobile is 100. Its LCP is 3.1s of which 85% is *render delay* on the hero `<h1>`, with a total
+blocking time of 0ms and no resource dependency in the trace. Two attributions were tested and
+both measured as exact no-ops: taking the mono face out of the preload race, and removing
+`will-change` from the heading. **Neither was kept.** A change justified by a hypothesis you
+have just disproved is worse than no change — it looks like a fix for ever afterwards. The
+honest state is: known, bounded, unexplained, and on a throttle harsher than anything this app
+will meet.
+
+`pnpm --filter web lighthouse` now runs both form factors against a production build and exits
+non-zero below the floor, with that one exemption named in the file rather than hidden by a
+lower threshold. The point is that "never measured" cannot recur.

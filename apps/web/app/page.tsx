@@ -112,12 +112,10 @@ export default function Landing() {
           </h2>
           <ul className="mt-9 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2">
             {PROBLEMS.map((p, i) => (
-              <Reveal key={p.failure} delay={i * 0.06} className="bg-surface-1">
-                <li className="h-full p-6">
-                  <h3 className="text-sm font-medium">{p.failure}</h3>
-                  <p className="mt-2.5 font-mono text-xs break-words text-text-lo">{p.reality}</p>
-                  <p className="mt-3.5 text-sm text-text-lo">{p.answer}</p>
-                </li>
+              <Reveal key={p.failure} as="li" delay={i * 0.06} className="h-full bg-surface-1 p-6">
+                <h3 className="text-sm font-medium">{p.failure}</h3>
+                <p className="mt-2.5 font-mono text-xs break-words text-text-lo">{p.reality}</p>
+                <p className="mt-3.5 text-sm text-text-lo">{p.answer}</p>
               </Reveal>
             ))}
           </ul>
@@ -177,11 +175,9 @@ export default function Landing() {
           </h2>
           <ul className="mt-7 flex max-w-2xl flex-col gap-3">
             {LIMITS.map((l, i) => (
-              <Reveal key={l} delay={i * 0.05}>
-                <li className="flex gap-3 text-sm text-text-lo">
-                  <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-text-lo" />
-                  {l}
-                </li>
+              <Reveal key={l} as="li" delay={i * 0.05} className="flex gap-3 text-sm text-text-lo">
+                <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-text-lo" />
+                {l}
               </Reveal>
             ))}
           </ul>

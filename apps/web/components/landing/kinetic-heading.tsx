@@ -66,20 +66,33 @@ export function Reveal({
   delay = 0,
   className,
   onMount = false,
+  as = 'div',
 }: {
   children: ReactNode
   delay?: number
   className?: string
   onMount?: boolean
+  /**
+   * The element to render. `div` unless the wrapper sits somewhere a `div` is invalid.
+   *
+   * This exists because it broke something real. Wrapping each `<li>` in a `Reveal` put a
+   * `div` between the `<ul>` and its items — a content-model violation that cost eight points
+   * of Lighthouse accessibility and had survived every green run of the axe suite, because
+   * the landing route was not in it. The animation wrapper has to *be* the list item.
+   */
+  as?: 'div' | 'li'
 }) {
   const reduceMotion = useReducedMotion()
   const transition = { duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] as const }
 
-  if (reduceMotion) return <div className={className}>{children}</div>
+  const Static = as
+  const Motion = as === 'li' ? motion.li : motion.div
+
+  if (reduceMotion) return <Static className={className}>{children}</Static>
 
   if (onMount) {
     return (
-      <motion.div
+      <Motion
         data-reveal
         className={className}
         initial={{ opacity: 0, y: 24 }}
@@ -87,12 +100,12 @@ export function Reveal({
         transition={transition}
       >
         {children}
-      </motion.div>
+      </Motion>
     )
   }
 
   return (
-    <motion.div
+    <Motion
       data-reveal
       className={className}
       initial={{ opacity: 0, y: 24 }}
@@ -101,7 +114,7 @@ export function Reveal({
       transition={transition}
     >
       {children}
-    </motion.div>
+    </Motion>
   )
 }
 
