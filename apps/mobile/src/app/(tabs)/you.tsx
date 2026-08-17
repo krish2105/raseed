@@ -247,6 +247,7 @@ const styles = (c: Palette) =>
       fontFamily: font.monoMedium,
       fontSize: 14,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     footnote: {

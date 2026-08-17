@@ -355,12 +355,14 @@ const styles = (c: Palette) =>
       fontFamily: font.displayBold,
       fontSize: 24,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     savedDone: {
       color: c.good,
       fontFamily: font.displayBold,
       fontSize: 24,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     of: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
 
@@ -395,6 +397,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 12,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     label: {

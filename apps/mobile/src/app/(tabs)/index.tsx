@@ -280,6 +280,7 @@ const styles = (c: Palette) =>
       fontSize: 52,
       letterSpacing: -1.5,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     heroHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
 
@@ -297,6 +298,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 11,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     section: {
@@ -333,6 +335,7 @@ const styles = (c: Palette) =>
       fontFamily: font.monoMedium,
       fontSize: 15,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     empty: {

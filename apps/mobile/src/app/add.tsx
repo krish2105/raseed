@@ -304,6 +304,7 @@ const styles = (c: Palette) =>
       fontSize: 48,
       letterSpacing: -1,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
       paddingVertical: space[1],
     },
 

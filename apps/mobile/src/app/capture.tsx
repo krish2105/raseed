@@ -418,6 +418,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 11,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     draft: {
@@ -440,6 +441,7 @@ const styles = (c: Palette) =>
       fontFamily: font.monoMedium,
       fontSize: 15,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     source: { color: c['text-lo'], fontFamily: font.body, fontSize: 12 },
     tags: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[2] },

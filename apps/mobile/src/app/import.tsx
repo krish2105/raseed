@@ -298,6 +298,7 @@ function Stat({ label, value, c }: { label: string; value: string; c: Palette })
           fontFamily: font.displayBold,
           fontSize: 20,
           fontVariant: ['tabular-nums'],
+          writingDirection: 'ltr',
         }}
       >
         {value}

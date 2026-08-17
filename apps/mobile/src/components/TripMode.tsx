@@ -244,6 +244,7 @@ const styles = (c: Palette) =>
       fontFamily: font.display,
       fontSize: 32,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     lede: { color: c['text-lo'], fontFamily: font.body, fontSize: 13, lineHeight: 19 },
     input: {

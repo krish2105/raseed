@@ -141,6 +141,7 @@ const styles = (c: Palette) =>
       fontFamily: font.monoMedium,
       fontSize: 15,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     empty: {
       color: c['text-lo'],

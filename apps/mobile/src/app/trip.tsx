@@ -323,6 +323,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 16,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
       backgroundColor: c['surface-1'],
       borderColor: c.line,
       borderWidth: 1,
@@ -342,6 +343,7 @@ const styles = (c: Palette) =>
       fontSize: 40,
       letterSpacing: -1,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
       marginTop: space[1],
     },
     headroom: {
@@ -349,6 +351,7 @@ const styles = (c: Palette) =>
       fontFamily: font.bodyMedium,
       fontSize: 13,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
       marginTop: space[1],
     },
 
@@ -360,6 +363,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 13,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     meals: {
