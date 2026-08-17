@@ -30,7 +30,11 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [x] **#8** Web P1 — DuckDB-WASM, Arrow ingest, demo path, view rebuild 41ms at 100k rows (live/Supabase path deferred until credentials exist)
 - [x] **#9** Mobile P2 — Safe-to-Spend engine + Skia Day Dial
 - [x] **#10** Web P2 — hand-built charts, theme-reactive colours, zero hex outside tokens
-- [ ] **#11** Mobile P3 — capture router, confirmation sheet, eval harness ≥0.90
+- [x] **#11** Mobile P3 — capture router (`/capture`), confirmation sheet, `capture_log` written
+  for the first time, and the eval harness with a 26-case golden set. **Deterministic tiers
+  only** — rules and local, no network, no key. The LLM tier is a named seam, so S4 redaction
+  still has no surface and airplane mode stays fully supported. Gate clears every metric the
+  spec names; four cases are labelled beyond-a-regex and stay failing on purpose
 - [x] **#12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`
 - [~] **#13** Mobile P4 — merchant resolver and alias learning are live and on the write path;
   **reversal pairing is not built** — `pairReversals` is never imported by mobile and
@@ -56,11 +60,15 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 
 *Anything left unfinished or unresolved. Clear it or carry it forward — never let it sit for more than two sessions.*
 
-- 🚧 **Redesign Phase 2 — the phone.** Web is done: new `accent` tokens, Plus Jakarta Sans,
-  the landing route and the shell rebuilt in the FinCopilot direction. The phone already has
-  the new face and the new tokens; its **thirteen screens are not restyled yet**, and dark mode
-  following the system is agreed but unbuilt (`theme.ts` still hard-codes light and reads
-  `useColorScheme` only to discard it). That reverses the light-only decision recorded earlier.
+- ✅ **Redesign, both surfaces.** New `accent` tokens (chrome green, money keeps its
+  temperature), Plus Jakarta Sans, the landing route and web shell rebuilt, and the phone on
+  dark mode following the system with a System/Light/Dark override on You. Remaining polish:
+  the phone's screens use the new colours and primitives but several still carry their own
+  card and pill styles rather than `components/ui.tsx`.
+
+- ✅ **Splits run both ways** — an expense someone else paid is recordable. The sign on
+  `owed_minor` is the direction; your share is spend immediately; settling writes no
+  transaction because the spend row is already the outflow.
 
 - ✅ **Lighthouse ≥95 is met and gated** — desktop 100/100/100/100, mobile 95/100/100/100,
   `pnpm --filter web lighthouse`, nothing exempt. The old unexplained 94 was a reveal wrapper
@@ -98,8 +106,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - ✅ **Editing an expense** — built on the phone (`app/edit.tsx`, tap any ledger row): amount,
   merchant, category, account, plus soft delete and "this was refunded". Web still has delete
   only; an edit form there is the remaining half.
-- **Receipt OCR is header + items**; assigning items to people for a per-item split is built in the engine (`splitByItems`) but not yet on a screen.
-- **Splits are one-directional** — you pay, others owe you. An expense someone else paid is not yet recordable.
+- ✅ **Receipt OCR is header + items**, and per-item assignment is on the screen — tap **Split by item**, chips per line, tax and service follow the items they were charged on.
 - ✅ **Refunds** — recordable from the row they reverse, so both halves leave `v_spend` at once.
 - ✅ **Data export** — CSV and JSON on `/ledger`, unfiltered by `v_spend` because an export is
   your data rather than a view.
