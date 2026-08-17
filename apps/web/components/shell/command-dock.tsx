@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { AddExpense } from './add-expense'
 import { CurrencyLens } from './currency-lens'
+import { LanguageLens } from './language-lens'
 import { ThemeToggle } from './theme-toggle'
 import { cn } from '@/lib/utils'
 
@@ -77,6 +78,7 @@ export function CommandDock() {
         <AddExpense />
         <span aria-hidden className="h-6 w-px shrink-0 bg-line" />
         <CurrencyLens />
+        <LanguageLens />
         <span aria-hidden className="h-6 w-px shrink-0 bg-line" />
         <ThemeToggle />
       </div>

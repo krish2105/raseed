@@ -22,7 +22,6 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0F1419",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
@@ -35,7 +34,8 @@
           "microphonePermission": "RASEED listens only while you are on the capture screen and have tapped the mic, to turn what you say into a transaction you then confirm. No audio is stored.",
           "speechRecognitionPermission": "RASEED requests on-device recognition only, so what you say is turned into text on this phone and the text is never uploaded. The notice above is Apple's, and applies to apps that use its servers."
         }
-      ]
+      ],
+      "expo-widgets"
     ],
     "experiments": {
       "typedRoutes": true,

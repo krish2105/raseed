@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { tripProgress, type TripPace } from '@raseed/engines'
@@ -8,6 +8,7 @@ import { radius, space, type Palette } from '@raseed/tokens'
 import { font, useTheme } from '@/theme'
 import { useNow } from '@/hooks/useNow'
 import { activeTripWithSpend, endActiveTrip, startTrip, useQuery } from '@/db'
+import { endTripActivity, startTripActivity, updateTripActivity } from '@/lib/tripActivity'
 import { Badge, Card, PrimaryButton, SecondaryButton } from '@/components/ui'
 
 /**
@@ -82,14 +83,28 @@ export function TripMode() {
           label="Start the trip"
           disabled={!ready}
           onPress={() => {
+            const budgetMinor = parseBudget(budgetText)
             startTrip({
               name: name.trim(),
               country: country.trim(),
               // AED because a trip's own currency is what you spend there. The ledger still
               // freezes fx_rate per row, so the home total is unaffected by this choice.
               currency: 'AED' as Currency,
-              budgetMinor: parseBudget(budgetText),
+              budgetMinor,
             })
+            // Day one, nothing spent yet — the numbers the activity opens on.
+            startTripActivity(
+              { name: name.trim() },
+              tripProgress({
+                startedDay: epochDay(now),
+                endsDay: null,
+                today: epochDay(now),
+                spent: money(0, 'INR'),
+                budget: budgetMinor === null ? null : money(budgetMinor, 'INR'),
+                currency: 'INR',
+              }),
+              colors,
+            )
             setName('')
             setCountry('')
             setBudgetText('')
@@ -111,6 +126,7 @@ export function TripMode() {
 
   return (
     <Card style={s.card}>
+      <TripActivitySync trip={trip} progress={p} />
       <View style={s.head}>
         <Text style={s.title}>{trip.name}</Text>
         <Badge tone={p.pace === 'over' ? 'warn' : 'accent'}>{paceLabel(p.pace, p.dayNumber)}</Badge>
@@ -129,9 +145,47 @@ export function TripMode() {
           : ' No budget set, so this is a record rather than a limit.'}
       </Text>
 
-      <SecondaryButton label="End the trip" onPress={endActiveTrip} />
+      <SecondaryButton
+        label="End the trip"
+        onPress={() => {
+          // The activity ends first, with the final numbers. Ending the row first would leave a
+          // frame where the trip is over and the Lock Screen is still counting it.
+          endTripActivity(trip, p, colors)
+          endActiveTrip()
+        }}
+      />
     </Card>
   )
+}
+
+/**
+ * Keeps the Lock Screen in step with the app.
+ *
+ * A child component rather than an effect in `TripMode`, because `TripMode` returns early when
+ * there is no trip — and a hook after a conditional return is a hook order violation. Pushing
+ * the sync down a level is the fix that does not involve restructuring the screen around a
+ * side effect.
+ *
+ * Keyed on the formatted figures, not the objects: `tripProgress` returns a fresh object every
+ * render, so depending on it would push an update to the system on every keystroke and burn
+ * through the update budget iOS gives a Live Activity.
+ */
+function TripActivitySync({
+  trip,
+  progress,
+}: {
+  trip: { name: string }
+  progress: ReturnType<typeof tripProgress>
+}) {
+  const { colors } = useTheme()
+  const key = `${progress.spent.minor}|${progress.dayNumber}|${progress.pace}`
+  useEffect(() => {
+    updateTripActivity(trip, progress, colors)
+    // `key` collapses the parts that can actually change what is displayed. The objects are
+    // new on every render and would otherwise fire this constantly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+  return null
 }
 
 /**

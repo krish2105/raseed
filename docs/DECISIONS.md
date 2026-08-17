@@ -2464,3 +2464,42 @@ rent into this week's Dubai trip the moment you corrected it mid-trip.
 **Also found, unfixed:** `import.tsx`'s "Choose a file" button is painted in the INR brass. A button
 is chrome, not money — the same colour-law violation the chip conversion fixed in `add.tsx`, still
 present here and probably elsewhere. Listed rather than claimed.
+
+## Web RTL, the Arabic face, and a bug that would have printed a wrong number
+
+**`dir` and `lang` are written by a pre-paint script, not by React.** Both live on `<html>`, which
+no provider inside `<body>` can reach during SSR, and the alternative is rendering the whole
+dashboard left-to-right and flipping it once hydration lands — a full-page reflow the reader
+watches happen. The slot and the reasoning are the ones the `.no-js` script already established in
+that file. Unlike the phone, the DOM re-lays-out on a `dir` change, so the web has no excuse to ask
+for a reload and does not.
+
+**Locale is deliberately not a nuqs URL param, and that is an exception with a reason.** The rule
+is that every view is a URL. The currency lens belongs there because it changes *what the numbers
+mean* — the same page in INR and AED shows different figures, so a link without it points at a
+different answer. Language changes what the labels say, not what anything is worth. Theme is
+already handled this way. A locale in the query string would also make every shared link impose
+the sharer's language on whoever opens it.
+
+**Loading `Noto_Sans_Arabic` is half of RTL support and the easy half to forget.** Geist, Geist
+Mono and Plus Jakarta Sans are all `subsets: ['latin']` and have no Arabic glyphs at all. Setting
+`dir="rtl"` without the face would have mirrored the layout perfectly and rendered every Arabic
+string in whatever the OS falls back to — which looks fine on the Mac it was built on and lands as
+a different face at a different size on a stock Windows machine. Applied via `:lang(ar)`, so it
+switches at the same instant `dir` does and no component opts in.
+
+**The minus sign was a real correctness bug, not a cosmetic one.** `format()` builds an amount by
+concatenation — sign, then symbol, then digits. ASCII hyphen-minus is Bidi_Class **ES**; a *leading*
+one is not between two numbers, so UAX#9 W6 makes it a neutral and N2 resolves it to the paragraph
+direction. In an RTL paragraph `-₹1,993.25` therefore renders as `₹1,993.25-`, and a debt starts
+looking like a positive figure with a stray dash after it. Fixed with `unicode-bidi: isolate` on
+`.tabular`, which pins the run without changing a single stored string, touching `format()`, or
+breaking a test that compares one. **The mobile app already ships Arabic RTL, so this is latent
+there too** — it does not reproduce today only because the Arabic translation is 66% and the
+screens carrying big figures are still English sentences. Recorded rather than claimed fixed:
+React Native needs `writingDirection: 'ltr'` on the figure styles, and that sweep is not done.
+
+**Still open on the web:** 24 physical-direction Tailwind utilities (`ml-`, `text-left`, `border-l`
+and friends) that will not mirror, listed by the audit with logical equivalents available; 22
+hardcoded `en-IN` call sites; and inline SVG, where geometry does not mirror under `dir` but the
+inherited `direction` property does — so charts split unless each `<svg>` is pinned.
