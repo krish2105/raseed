@@ -74,7 +74,7 @@ The doc defines **eleven** phases, P0–P10.
 | P6 | Workers + finance/stats engines, unit tested | **built** | Comlink worker; `finance.test.ts`, `stats.test.ts` |
 | P7 | Tier 1: Monte Carlo, Holt-Winters, anomalies, FX attribution | **built** | `analytics.ts` `forecast`/`anomalies`/`fxSeries`; engines `blockBootstrap`, `holtWinters`, `madZScore`, `fxAttribution` |
 | P8 | Chosen Tier 2 | **built** | `app/(dash)/lab/` — Benford, Lorenz/Gini, Pareto; plus `realValue.ts`, `amortise` |
-| P9 | Landing route: Lenis, kinetic hero, **Lighthouse ≥95** | **partial** | `app/page.tsx` + `components/landing/*`, `lenis@1.3.26`. **Lighthouse never measured** |
+| P9 | Landing route: Lenis, kinetic hero, **Lighthouse ≥95** | **[fixed] built** | Measured and gated: desktop 100/100/100/100, mobile 95/100/100/100 via `pnpm --filter web lighthouse`, nothing exempt. Route rebuilt in the redesign; the kinetic hero was deleted with Bricolage's width axis. Original: **Lighthouse never measured** |
 | P10 | **Export**, nuqs share links, a11y sweep, deploy | **[fixed] built** | Export shipped in `6dfe05e`. | nuqs ✓, a11y ✓, deployed ✓. **No data export exists** — only CSV *import* |
 
 ### Deployment D0–D7 — `docs/RASEED_SPRINT_PLAN.md` §4
@@ -170,7 +170,7 @@ Original text: All 874 workspace tests live in `packages/*`
 (schema 412, engines 342, money 39, tokens 34, fixtures 20) plus 27 in `apps/web`. Every
 mobile-specific claim rests on manual simulator runs narrated in `DECISIONS.md`.
 
-**D-12 · The §2 web stack was substituted wholesale.** *(Partly addressed: the net-worth line has a real axis. Ledger virtualisation still open.)* No visx, no `d3-*`, no cmdk, no TanStack,
+**D-12 · The §2 web stack was substituted wholesale.** *(Mostly addressed: the Lorenz curve, the calendar heatmap and the category bars now carry axes or a scale; the sparkline stays without one by design. Ledger virtualisation is open with a measured reason — `content-visibility` is inert on `<tr>`.)* No visx, no `d3-*`, no cmdk, no TanStack,
 no Zod. Charts are hand-built SVG. Two consequences: **no axes anywhere**, and the ledger is
 **not virtualised** (`ledger-client.tsx:15`, `PAGE = 250`).
 

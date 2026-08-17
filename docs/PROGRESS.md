@@ -2,7 +2,7 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: #28** — Mobile P6: the worth-it loop, the Weekly Reckoning and the nudge budget are on the phone. `regretRate` and `rankNudges` had zero mobile callers until now
+**Current session: #29** — redesign, Phase 1 (web). Phase 2 is the phone. Previous: #28 — Mobile P6: the worth-it loop, the Weekly Reckoning and the nudge budget are on the phone. `regretRate` and `rankNudges` had zero mobile callers until now
 
 ---
 
@@ -55,6 +55,16 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 ## Open threads
 
 *Anything left unfinished or unresolved. Clear it or carry it forward — never let it sit for more than two sessions.*
+
+- 🚧 **Redesign Phase 2 — the phone.** Web is done: new `accent` tokens, Plus Jakarta Sans,
+  the landing route and the shell rebuilt in the FinCopilot direction. The phone already has
+  the new face and the new tokens; its **thirteen screens are not restyled yet**, and dark mode
+  following the system is agreed but unbuilt (`theme.ts` still hard-codes light and reads
+  `useColorScheme` only to discard it). That reverses the light-only decision recorded earlier.
+
+- ✅ **Lighthouse ≥95 is met and gated** — desktop 100/100/100/100, mobile 95/100/100/100,
+  `pnpm --filter web lighthouse`, nothing exempt. The old unexplained 94 was a reveal wrapper
+  on the LCP element.
 
 - **Node 24 is required, not preferred** — `.nvmrc` says 24 and `package.json` says `>=24`.
   Under Node 20 `node:sqlite` does not exist and the device schema suite fails to *load*, and
