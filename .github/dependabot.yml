@@ -56,6 +56,21 @@ updates:
       # installed tree stayed on 19.2.3, because react-native 0.86.2 pins React exactly. A
       # manifest that disagrees with `node_modules` is worse than an old manifest.
       #
+      # Skia 2.11.0 turned out to carry more than SDK drift, found by reading the upstream
+      # releases rather than the diff. Shopify/react-native-skia#4003 — opened 2026-08-13, still
+      # open — is a regression introduced by 2.10.0's "migrate from host objects to native
+      # states": on a JS runtime reload the static prototype cache can outlive the runtime,
+      # giving either a SIGSEGV in `RNSkManager::installBindings` or, on the non-crashing arm,
+      # `Skia` and `vec` coming back **undefined**. The reporter bisected it: 2.6.4 and 2.9.1
+      # clean, 2.11.0 confirmed affected.
+      #
+      # Those are the exact two symbols this app imports — `Skia` and `vec` in `DayDial.tsx:3`,
+      # `Skia` in `Sparkline.tsx:3`. The report is Android and this app builds iOS, so it may
+      # not reach us; but `expo-dev-client` ships here and a runtime reload is a routine daily
+      # action, so "may not" is not a reason to take it. 2.11.0 also moves the native binary
+      # from Chrome m147 to m152 — five milestones of rasteriser change landing on a sweep
+      # gradient and a stroked path, visible only on a device screen.
+      #
       # These come back in step when the SDK moves, via `expo install --check`, not via here.
       - dependency-name: expo*
       - dependency-name: react-native*

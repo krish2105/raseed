@@ -2710,3 +2710,30 @@ Verified on the device rather than by the version numbers, because three of thes
 config-plugin surfaces that a green typecheck says nothing about: Metro restarted with a cleared
 cache, the app relaunched, `expo-router` navigation still routes, and the Skia sparkline on
 `/numbers` still draws — the chart most exposed to the `react-native-svg` walk-back.
+
+### Postscript on Skia: the SDK pin was the weaker half of the argument
+
+PR #2 was refused because `expo install --check` measured it out of step with SDK 57. Reading the
+upstream releases afterwards found something the diff could not show, and it is the stronger reason.
+
+**Shopify/react-native-skia#4003 is open and unfixed** (raised 2026-08-13). It is a regression from
+2.10.0's *"migrate from host objects to native states"* — a rewrite of how every Skia object reaches
+JSI. On a JS runtime reload the static prototype cache can outlive the runtime it belonged to,
+producing either a SIGSEGV in `RNSkManager::installBindings` or, on the quieter arm, **`Skia` and
+`vec` resolving to `undefined`**. The reporter bisected it: 2.6.4 and 2.9.1 clean, **2.11.0
+confirmed affected** — exactly the version proposed.
+
+Those two symbols are precisely what this app imports: `Skia` and `vec` at `DayDial.tsx:3`, `Skia`
+at `Sparkline.tsx:3`. The report is Android and this app builds iOS, so it may well not reach us —
+but `expo-dev-client` is installed and a runtime reload is a routine daily action, and "may not
+reach us" is not a reason to take an open crash.
+
+Worth keeping for scale: 2.11.0 also moves the native binary from Chrome **m147 to m152**. Five
+milestones of rasteriser change, landing on a sweep gradient and a stroked path — differences that
+exist only on a device screen and that no test in this repo would see. Separately, 2.10.1 genuinely
+removed `WebGPUCanvas`, `hasDevice()` and `getDevice()` from the public API without a release note
+calling it breaking; this repo touches none of them, but it is a fair measure of how settled that
+release line is.
+
+Nothing here changes the decision. It changes its footing: from *"policy says don't"* to *"there is
+an open upstream crash naming the two symbols we import."*
