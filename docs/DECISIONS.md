@@ -2690,3 +2690,23 @@ SDK moves, through `expo install --check`, not through dependabot.
 packages behind their SDK pins (`expo-constants`, `expo-dev-client`, `expo-image-picker`,
 `expo-router`, `expo-splash-screen`, and `react-native-svg` which is *ahead*). Worth a deliberate
 `expo install --fix` in its own commit rather than folded into this one.
+
+## Six packages brought back in step with the SDK
+
+`expo install --check` on `main` reported six dependencies drifted from Expo SDK 57's pins. Five
+were behind (`expo` itself, `expo-constants`, `expo-dev-client`, `expo-image-picker`, `expo-router`,
+`expo-splash-screen`) and one — `react-native-svg` at `^15.15.5` against a pin of `15.15.4` — was
+**ahead**, which is the more interesting case: a package ahead of its pin is not "more up to date",
+it is untested against the SDK's own native surface, and `--fix` deliberately walks it back.
+
+Fixed with `expo install --fix`, which is the tool that owns this decision rather than a hand-edited
+range. `expo install --check` now reports **"Dependencies are up to date"**.
+
+**Skia and React were correctly left alone** — 2.6.2 and 19.2.3, exactly their pins. That is the
+same check that refused the dependabot bump an hour earlier, agreeing with itself in both
+directions, which is the reason to trust it.
+
+Verified on the device rather than by the version numbers, because three of these have native or
+config-plugin surfaces that a green typecheck says nothing about: Metro restarted with a cleared
+cache, the app relaunched, `expo-router` navigation still routes, and the Skia sparkline on
+`/numbers` still draws — the chart most exposed to the `react-native-svg` walk-back.
