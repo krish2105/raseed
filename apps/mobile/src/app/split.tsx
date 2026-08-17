@@ -86,7 +86,11 @@ export default function SplitScreen() {
         <Glass style={s.hero}>
           <View style={s.heroInner}>
             <Text style={s.heroLabel}>
-              {totalOwed > 0 ? 'People owe you' : 'Nobody owes you anything'}
+              {totalOwed > 0
+                ? 'People owe you'
+                : totalOwed < 0
+                  ? 'You owe, on balance'
+                  : 'Nobody owes anybody'}
             </Text>
             {totalOwed > 0 && (
               <Text style={s.heroAmount}>{format(money(totalOwed, currency))}</Text>
@@ -108,9 +112,16 @@ export default function SplitScreen() {
                 <View key={o.personId} style={[s.row, i === 0 && s.rowFirst]}>
                   <View style={s.rowText}>
                     <Text style={s.rowName}>{o.name}</Text>
-                    <Text style={s.rowMeta}>owes you</Text>
+                    {/* The sign is the direction. Negative means you owe them — the case
+                        that could not be recorded at all until splits ran both ways. */}
+                    <Text style={s.rowMeta}>{o.minor >= 0 ? 'owes you' : 'you owe'}</Text>
                   </View>
-                  <Text style={s.rowAmount}>{format(money(o.minor, o.currency))}</Text>
+                  {/* Magnitude, with the direction in the label above rather than in a minus
+                      sign. "−₹600" next to the word "you owe" says the same thing twice and
+                      reads as a negative debt the first time you meet it. */}
+                  <Text style={[s.rowAmount, o.minor < 0 && { color: colors.warn }]}>
+                    {format(money(Math.abs(o.minor), o.currency))}
+                  </Text>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`Mark ${o.name} as settled`}

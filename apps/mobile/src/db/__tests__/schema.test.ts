@@ -418,3 +418,101 @@ describe('the nudge budget on the device', () => {
     expect(acted).toEqual([{ sent_at: NOW - 3 * DAY }])
   })
 })
+
+/**
+ * Splits that run both ways.
+ *
+ * The sign on `owed_minor` carries the direction: positive means they owe you, negative means
+ * you owe them. Everything else — the grouping, the `<> 0` filter, settlement — was already
+ * written to handle a signed number, which is why this direction cost a sign rather than a
+ * schema change.
+ */
+describe('splits in both directions', () => {
+  const NOW = 1_755_300_000_000
+
+  function person(id: string, name: string) {
+    db.prepare(
+      `INSERT INTO people (id, name, currency, user_id, updated_at, deleted)
+       VALUES (?, ?, 'INR', 'local-user', 0, 0)`,
+    ).run(id, name)
+  }
+
+  function split(id: string, txnId: string, personId: string, owedMinor: number) {
+    db.prepare(
+      `INSERT INTO splits (id, transaction_id, method, share_link_id, user_id, updated_at, deleted)
+       VALUES (?, ?, 'share', NULL, 'local-user', ?, 0)`,
+    ).run(id, txnId, NOW)
+    db.prepare(
+      `INSERT INTO split_participants
+         (id, split_id, person_id, owed_minor, currency, settled_txn_id, user_id, updated_at, deleted)
+       VALUES (?, ?, ?, ?, 'INR', NULL, 'local-user', ?, 0)`,
+    ).run(`${id}-p`, id, personId, owedMinor, NOW)
+  }
+
+  /** The SQL from `outstandingByPerson`, verbatim. */
+  function outstanding(): { person_id: string; owed: number }[] {
+    return db
+      .prepare(
+        `SELECT sp.person_id, SUM(sp.owed_minor) AS owed
+           FROM split_participants sp
+           JOIN people p ON p.id = sp.person_id
+          WHERE sp.deleted = 0 AND sp.settled_txn_id IS NULL AND p.deleted = 0
+          GROUP BY sp.person_id, sp.currency
+         HAVING SUM(sp.owed_minor) <> 0
+          ORDER BY owed DESC`,
+      )
+      .all() as unknown as { person_id: string; owed: number }[]
+  }
+
+  it('shows a debt you owe as a negative balance', () => {
+    person('p-rahul', 'Rahul')
+    const txn = insertTxn({ amount_minor: 100_000, home_amount_minor: 100_000 })
+    split('s1', txn.id as string, 'p-rahul', -100_000)
+
+    expect(outstanding()).toEqual([{ person_id: 'p-rahul', owed: -100_000 }])
+  })
+
+  /** Your share is spend the moment it happens, whoever handed over the card. */
+  it('counts your share as spend even though someone else paid', () => {
+    person('p-rahul', 'Rahul')
+    const txn = insertTxn({ amount_minor: 100_000, home_amount_minor: 100_000 })
+    split('s1', txn.id as string, 'p-rahul', -100_000)
+
+    expect(db.prepare('SELECT COUNT(*) c FROM v_spend').get()).toMatchObject({ c: 1 })
+  })
+
+  /** Two debts in opposite directions with one person net off, rather than listing twice. */
+  it('nets opposite directions with the same person', () => {
+    person('p-asha', 'Asha')
+    const a = insertTxn()
+    const b = insertTxn()
+    split('s1', a.id as string, 'p-asha', 60_000) // she owes you
+    split('s2', b.id as string, 'p-asha', -25_000) // you owe her
+
+    expect(outstanding()).toEqual([{ person_id: 'p-asha', owed: 35_000 }])
+  })
+
+  /** And when they cancel exactly, nobody owes anybody and the row disappears. */
+  it('drops a person whose debts cancel out', () => {
+    person('p-asha', 'Asha')
+    const a = insertTxn()
+    const b = insertTxn()
+    split('s1', a.id as string, 'p-asha', 40_000)
+    split('s2', b.id as string, 'p-asha', -40_000)
+
+    expect(outstanding()).toEqual([])
+  })
+
+  it('settles a debt you owe the same way as one owed to you', () => {
+    person('p-rahul', 'Rahul')
+    const txn = insertTxn()
+    split('s1', txn.id as string, 'p-rahul', -100_000)
+
+    db.prepare(
+      `UPDATE split_participants SET settled_txn_id = 'settled-by-hand', updated_at = ?
+        WHERE person_id = ? AND settled_txn_id IS NULL AND deleted = 0`,
+    ).run(NOW, 'p-rahul')
+
+    expect(outstanding()).toEqual([])
+  })
+})

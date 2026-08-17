@@ -1,5 +1,5 @@
 import { normaliseMerchant } from '@raseed/engines'
-import { money, type Currency, type Money } from '@raseed/money'
+import { format, money, type Currency, type Money } from '@raseed/money'
 import type { Scalar } from '@op-engineering/op-sqlite'
 import type { RatableRow, Score } from '@/lib/reckoning'
 import { getConnection } from './client'
@@ -456,7 +456,7 @@ export function outstandingByPerson(): OwedRow[] {
   }))
 }
 
-/** Mark everything one person owes as settled. */
+/** Mark everything between you and one person as settled, in whichever direction it ran. */
 export function settleUp(personId: string): void {
   getConnection().executeSync(
     `UPDATE split_participants
@@ -1210,4 +1210,59 @@ export function captureStats(): { total: number; accepted: number } {
        FROM capture_log WHERE deleted = 0`,
   )[0]
   return { total: row?.total ?? 0, accepted: row?.accepted ?? 0 }
+}
+
+/**
+ * An expense someone else paid, where you owe them your share.
+ *
+ * Splits were one-directional until now — you pay, others owe you — which meant the ordinary
+ * case of a friend covering dinner could not be recorded at all.
+ *
+ * **Your share is a confirmed spend the moment it happens.** You consumed it; waiting for
+ * settlement would leave a dinner you ate missing from your own ledger, and `v_spend` excludes
+ * pending rows so it would be missing from every figure too.
+ *
+ * The liability is a `split_participants` row with a **negative** `owed_minor`. The sign is the
+ * direction: positive means they owe you, negative means you owe them. `outstandingByPerson`
+ * already sums and filters on `<> 0`, so both directions fall out of the query that existed.
+ *
+ * **Settling writes no transaction, and that is the important part.** The spend row above is
+ * already the outflow — it reduced your balance when it was written. Writing another movement
+ * at settlement would subtract the same money twice. The consequence, stated rather than
+ * hidden: your balance treats an unpaid debt as already spent. That is the conservative reading
+ * and the correct one — money you owe is not money you have.
+ */
+export function recordOwedExpense(input: {
+  yourShare: Money
+  paidByPersonId: string
+  accountId: string
+  categoryId: string
+  merchantText: string
+  fxRate: number
+  /** The whole bill, for the note. Not written as a transaction — it was not your outflow. */
+  billTotal: Money
+}): string {
+  const transactionId = insertTransaction({
+    amount: input.yourShare,
+    accountId: input.accountId,
+    categoryId: input.categoryId,
+    merchantText: input.merchantText,
+    fxRate: input.fxRate,
+    note: `Your share of ${format(input.billTotal)}, paid by someone else.`,
+  })
+
+  recordSplit({
+    transactionId,
+    method: 'share',
+    owed: [
+      {
+        personId: input.paidByPersonId,
+        // Negative: you owe them. The sign carries the direction.
+        owedMinor: -input.yourShare.minor,
+        currency: input.yourShare.currency,
+      },
+    ],
+  })
+
+  return transactionId
 }

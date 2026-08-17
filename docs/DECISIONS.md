@@ -1985,3 +1985,33 @@ initial guess is the home currency. It is a guess either way; the difference is 
 see it.
 
 **1,029 tests**, 349 of them in engines.
+
+## Splits run both ways (2026-08-17)
+
+"You pay, others owe you" was the only shape, so the ordinary case of a friend covering dinner
+could not be recorded at all.
+
+**The sign on `owed_minor` carries the direction.** Positive means they owe you, negative means
+you owe them. Everything downstream was already written against a signed number — the grouping,
+the `HAVING SUM(...) <> 0` filter, settlement — so this direction cost a sign rather than a
+schema change. Two debts with the same person in opposite directions net off, and when they
+cancel exactly the row disappears, which is what "settled" means.
+
+**Your share is confirmed spend the moment it happens**, on Krishna's ruling and for a good
+reason: you consumed it. Waiting for settlement would leave a dinner you ate out of your own
+ledger, and since `v_spend` excludes pending rows it would be missing from every figure that
+reads it too.
+
+**Settling writes no transaction, and that is the load-bearing half.** The spend row is already
+the outflow — it reduced the balance when it was written. A settlement movement on top would
+subtract the same money twice. The consequence is stated in the code rather than hidden: your
+balance treats an unpaid debt as already spent. That is the conservative reading and the correct
+one — money you owe is not money you have.
+
+Five tests against `node:sqlite`, including that a debt you owe still counts as spend, that
+opposite directions net, and that settlement clears both directions identically. On the split
+screen the direction is a word — "you owe" — and the amount is a magnitude, because "−₹600"
+beside the words "you owe" says the same thing twice and reads as a negative debt the first time
+you meet it.
+
+**1,034 tests.**
