@@ -27,7 +27,7 @@ jobs:
       # A leaked key is not a bug you can fix in a follow-up commit — git history is public
       # the moment the repo is, and rotation is the only remedy. Scanned on every push.
       - name: Secret scan (history)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
