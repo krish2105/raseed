@@ -2274,3 +2274,57 @@ gate is supposed to fail in.
 
 **408 engine tests.** Still to do: the i18n string layer, RTL layout, and Arabic numerals — the
 gate is the part that had to exist before any Arabic copy could be written, not after.
+
+## Arabic and RTL
+
+**`packages/i18n` is a package, not a folder of strings, because the tone gate has to follow the
+language.** `tone.ts` is a safety system — it sits between generation and display and blocks copy
+that shames, diagnoses, comments on a body, or crosses into regulated advice. Its rules are English
+regexes. Shipping Arabic copy without shipping Arabic rules would have switched that guarantee off
+for one language while leaving it looking on. So `gateFor(locale)` is the only supported way to
+reach either rule set, and a screen cannot pick the wrong one by forgetting, because a screen never
+picks at all.
+
+**The Arabic rules carry no `\b`, and the first version of them was broken because they did.**
+JavaScript's word boundary is defined against `[A-Za-z0-9_]`, so every Arabic pattern matched
+nothing and the gate returned *allowed* for every sentence it exists to block. A safety system that
+fails open is worse than none, because it is believed. Tests caught it on the first run. Arabic
+glues its clitics — بذرت, وبذرت and فبذرت are one accusation with different prefixes — so substring
+matching is also the correct answer here, not merely the one that compiles.
+
+**`AR_REVIEW_STATUS` is `'unreviewed-by-native-speaker'` and the app shows it.** I can write the
+patterns; I cannot judge whether an Arabic sentence lands as shaming, or whether a phrase reads as
+advice in the SCA's sense, and specifically not in Gulf Arabic. Where I was unsure the gate blocks
+— the agency and specificity rules are stricter in Arabic than in English, not looser.
+
+**`t()` falls back to English, never to the key.** Arabic coverage is measured, not claimed:
+`coverage()` and `missingKeys()` are exported so a test asserts the number. A missing string showing
+English is a gap somebody can read. A missing string showing `privacy.deleteEverything` is a bug
+that reached a user.
+
+**Direction is applied at startup and the settings row says so.** `I18nManager.forceRTL` is read
+once when the native view hierarchy is created; flipping it at runtime leaves a half-mirrored
+interface, which is worse than either direction. Every RTL app on this platform asks for a restart.
+The alternative — hand-mirroring every layout with `flexDirection` conditionals — is how you get an
+app that is 90% mirrored and wrong in the 10% nobody tested.
+
+**Arabic-Indic digits are offered, not imposed** (`numberLocale(locale, false)` by default). UAE
+banking and receipts print Western digits, so a ledger in ٠١٢٣ is harder to reconcile against the
+statement it came from.
+
+**Verified on the device, and the device found the gap.** With Arabic selected and the app
+relaunched, the tab bar mirrors, the `+` moves to the right of its label, amounts and merchants swap
+sides, and the segmented controls reverse. But the first pass had the settings row claiming *"the
+words have changed already"* while every word on screen was still English — nothing called `t()`.
+The claim was false and a screenshot disproved it. The You screen now routes its headings through
+the dictionary, so the screen that owns the language control is the screen that proves it works.
+
+**Metro needed `watchFolders` all along.** There was no `metro.config.js` at all; six shared packages
+resolved by luck, through the symlinks `node-linker=hoisted` leaves in `apps/mobile/node_modules`.
+The seventh did not, and a cache clear did not help because the cache was never the problem.
+`CLAUDE.md` has said *"Metro needs `watchFolders`"* from the beginning — the web half was done and
+the phone half was invisible for as long as nobody added a package.
+
+**Still open, deliberately:** 26 of 79 keys are untranslated and stay English rather than guessing;
+`toneAr.ts` and `ar.ts` both need Gulf Arabic native-speaker review before an Arabic build reaches
+anyone; the web side has no `dir` attribute yet.

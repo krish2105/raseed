@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme, useThemePreference } from '@/theme'
+import { useLocale } from '@/lib/locale'
 
 /**
  * The shared surface vocabulary, in the redesigned idiom.
@@ -104,11 +105,12 @@ export function ThemeChoice() {
   const { colors } = useTheme()
   const s = styles(colors)
   const { preference, setPreference } = useThemePreference()
+  const { t } = useLocale()
 
   const options = [
-    { value: 'system', label: 'System' },
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: t('you.system') },
+    { value: 'light', label: t('you.light') },
+    { value: 'dark', label: t('you.dark') },
   ] as const
 
   return (
@@ -127,6 +129,59 @@ export function ThemeChoice() {
           </Pressable>
         )
       })}
+    </View>
+  )
+}
+
+/**
+ * Language.
+ *
+ * The strings swap at once; the *layout direction* does not, because React Native reads it when
+ * the native views are created. Rather than pretend otherwise, the row says a restart is needed
+ * — a control that appears to do nothing is worse than one that explains itself.
+ */
+export function LanguageChoice() {
+  const { colors } = useTheme()
+  const s = styles(colors)
+  const { locale, setLocale, restartNeeded } = useLocale()
+
+  const options = [
+    { value: 'en', label: 'English' },
+    { value: 'ar', label: 'العربية' },
+  ] as const
+
+  return (
+    <View>
+      <View style={s.segmented} accessibilityRole="radiogroup" accessibilityLabel="Language">
+        {options.map((option) => {
+          const active = locale === option.value
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              onPress={() => setLocale(option.value)}
+              style={[s.segment, active && { backgroundColor: `${colors.accent}1F` }]}
+            >
+              <Text style={[s.segmentText, active && { color: colors.accent }]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          )
+        })}
+      </View>
+      {restartNeeded && (
+        <Text style={s.restart}>
+          Reopen the app to mirror the layout. The words have changed already; the direction is
+          set when the app starts.
+        </Text>
+      )}
+      {locale === 'ar' && (
+        <Text style={s.restart}>
+          Arabic is machine-translated and has not been reviewed by a native speaker. Two thirds
+          of the interface is translated; the rest stays in English rather than guessing.
+        </Text>
+      )}
     </View>
   )
 }
@@ -196,4 +251,11 @@ const styles = (c: Palette) =>
       paddingVertical: space[2],
     },
     segmentText: { color: c['text-lo'], fontFamily: font.bodyMedium, fontSize: 13 },
+    restart: {
+      color: c['text-lo'],
+      fontFamily: font.body,
+      fontSize: 11,
+      lineHeight: 17,
+      marginTop: space[2],
+    },
   })

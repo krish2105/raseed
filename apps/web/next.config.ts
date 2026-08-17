@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     '@raseed/ai',
     '@raseed/engines',
     '@raseed/fixtures',
+    '@raseed/i18n',
     '@raseed/money',
     '@raseed/schema',
     '@raseed/tokens',

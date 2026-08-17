@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import { AppLock } from '@/components/AppLock'
+import { applyDirectionAtStartup } from '@/lib/locale'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import { useFonts } from 'expo-font'
@@ -19,6 +20,12 @@ void SplashScreen.preventAutoHideAsync()
 // Migrations and the first-run seed happen before the first render. op-sqlite is
 // synchronous over JSI, so this costs single-digit milliseconds and removes a whole class
 // of "screen rendered before the table existed" bugs.
+/*
+ * Layout direction is read once when the native view hierarchy is created, so this has to run
+ * before anything renders — not inside a component, and not in an effect.
+ */
+applyDirectionAtStartup()
+
 initDatabase()
 
 export default function RootLayout() {

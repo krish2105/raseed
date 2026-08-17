@@ -66,6 +66,9 @@ importers:
       '@raseed/fixtures':
         specifier: workspace:*
         version: link:../../packages/fixtures
+      '@raseed/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@raseed/money':
         specifier: workspace:*
         version: link:../../packages/money
@@ -205,6 +208,9 @@ importers:
       '@raseed/fixtures':
         specifier: workspace:*
         version: link:../../packages/fixtures
+      '@raseed/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@raseed/money':
         specifier: workspace:*
         version: link:../../packages/money
@@ -285,6 +291,12 @@ importers:
         version: link:../money
 
   packages/fixtures:
+    dependencies:
+      '@raseed/engines':
+        specifier: workspace:*
+        version: link:../engines
+
+  packages/i18n:
     dependencies:
       '@raseed/engines':
         specifier: workspace:*

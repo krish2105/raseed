@@ -10,7 +10,8 @@ import { countSpend, listAccounts, listCategories, useQuery } from '@/db'
 import { WalletCount } from '@/components/WalletCount'
 import { COMMITMENTS } from '@/lib/commitments'
 import { AppLockToggle } from '@/components/AppLockToggle'
-import { ThemeChoice } from '@/components/ui'
+import { LanguageChoice, ThemeChoice } from '@/components/ui'
+import { useLocale } from '@/lib/locale'
 
 
 export default function YouScreen() {
@@ -26,6 +27,8 @@ export default function YouScreen() {
   'use no memo'
   const { colors, scheme } = useTheme()
   const s = styles(colors)
+  // The one screen that owns the language control is the one screen that must prove it works.
+  const { t } = useLocale()
 
   const accounts = useQuery(listAccounts)
   const rowCount = useQuery(countSpend)
@@ -111,7 +114,7 @@ export default function YouScreen() {
           </Pressable>
         </Link>
 
-        <Text style={s.section}>Accounts</Text>
+        <Text style={s.section}>{t('you.accounts')}</Text>
         <View style={s.card}>
           {accounts.map((a, i) => (
             <View key={a.id} style={[s.row, i === 0 && s.rowFirst]}>
@@ -129,7 +132,7 @@ export default function YouScreen() {
           ))}
         </View>
 
-        <Text style={s.section}>Committed, before payday</Text>
+        <Text style={s.section}>{t('you.committed')}</Text>
         <View style={s.card}>
           {COMMITMENTS.map((u, i) => (
             <View key={u.label} style={[s.row, i === 0 && s.rowFirst]}>
@@ -142,10 +145,13 @@ export default function YouScreen() {
           ))}
         </View>
 
-        <Text style={s.section}>Appearance</Text>
+        <Text style={s.section}>{t('you.appearance')}</Text>
         <ThemeChoice />
 
-        <Text style={s.section}>Privacy</Text>
+        <Text style={s.section}>{t('you.language')}</Text>
+        <LanguageChoice />
+
+        <Text style={s.section}>{t('privacy.title')}</Text>
         <AppLockToggle />
 
         <Link href="/privacy" asChild>
@@ -160,7 +166,7 @@ export default function YouScreen() {
           </Pressable>
         </Link>
 
-        <Text style={s.section}>About</Text>
+        <Text style={s.section}>{t('you.about')}</Text>
         <View style={s.card}>
           <View style={[s.row, s.rowFirst]}>
             <Text style={s.rowName}>Transactions on device</Text>
@@ -171,7 +177,7 @@ export default function YouScreen() {
             <Text style={s.rowAmount}>{scheme}</Text>
           </View>
           <View style={s.row}>
-            <Text style={s.rowName}>Home currency</Text>
+            <Text style={s.rowName}>{t('you.homeCurrency')}</Text>
             <Text style={s.rowAmount}>INR</Text>
           </View>
         </View>

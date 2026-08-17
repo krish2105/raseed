@@ -19,6 +19,7 @@
     "@raseed/ai": "workspace:*",
     "@raseed/engines": "workspace:*",
     "@raseed/fixtures": "workspace:*",
+    "@raseed/i18n": "workspace:*",
     "@raseed/money": "workspace:*",
     "@raseed/schema": "workspace:*",
     "@raseed/tokens": "workspace:*",
