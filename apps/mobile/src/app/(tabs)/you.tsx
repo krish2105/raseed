@@ -148,6 +148,18 @@ export default function YouScreen() {
         <Text style={s.section}>Privacy</Text>
         <AppLockToggle />
 
+        <Link href="/privacy" asChild>
+          <Pressable accessibilityRole="button" style={s.entry}>
+            <View style={s.entryText}>
+              <Text style={s.entryTitle}>What this app knows</Text>
+              <Text style={s.entryHint}>
+                Every row it holds, how long it keeps it, and how to take it or delete it
+              </Text>
+            </View>
+            <Text style={s.entryChevron}>›</Text>
+          </Pressable>
+        </Link>
+
         <Text style={s.section}>About</Text>
         <View style={s.card}>
           <View style={[s.row, s.rowFirst]}>

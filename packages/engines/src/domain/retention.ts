@@ -63,6 +63,15 @@ export function purgePlan(now: number, policy: RetentionPolicy = DEFAULT_RETENTI
  */
 export interface DataCategory {
   readonly key: string
+  /**
+   * The table this counts, when there is one.
+   *
+   * The key is what a person calls it; the table is what SQLite calls it. Conflating them left
+   * "Your transactions" with no number beside it on the privacy screen, because the category
+   * said `ledger` and the count said `transactions`. A dashboard whose whole claim is "these
+   * figures are counted, not written" cannot afford a blank where a count should be.
+   */
+  readonly table: string | null
   readonly label: string
   readonly what: string
   readonly retention: string
@@ -73,6 +82,7 @@ export function dataCategories(policy: RetentionPolicy = DEFAULT_RETENTION): Dat
   return [
     {
       key: 'ledger',
+      table: 'transactions',
       label: 'Your transactions',
       what: 'Amounts, merchants, categories, dates and the FX rate frozen on each row.',
       retention: 'Kept until you delete them. This is the product; it is not diagnostic data.',
@@ -80,6 +90,7 @@ export function dataCategories(policy: RetentionPolicy = DEFAULT_RETENTION): Dat
     },
     {
       key: 'people',
+      table: 'people',
       label: 'People you split with',
       what: 'Names you typed, and what each person owes or is owed.',
       retention: 'Kept until you remove the person.',
@@ -87,6 +98,7 @@ export function dataCategories(policy: RetentionPolicy = DEFAULT_RETENTION): Dat
     },
     {
       key: 'worth_scores',
+      table: 'worth_scores',
       label: 'Your worth-it answers',
       what: 'Whether you marked a purchase worth it, not worth it, or neither.',
       retention: 'Kept until you delete the transaction they belong to.',
@@ -94,6 +106,7 @@ export function dataCategories(policy: RetentionPolicy = DEFAULT_RETENTION): Dat
     },
     {
       key: 'capture_log',
+      table: 'capture_log',
       label: 'Raw capture text',
       what: 'The exact lines you typed, kept so the parser can be measured and corrected.',
       retention: `Deleted automatically after ${policy.captureLogDays} days. It is diagnostic, and that purpose expires.`,
@@ -101,6 +114,7 @@ export function dataCategories(policy: RetentionPolicy = DEFAULT_RETENTION): Dat
     },
     {
       key: 'nudges',
+      table: 'nudges',
       label: 'Which nudges you were shown',
       what: 'What was surfaced, when, and whether you acted on it.',
       retention: `Deleted automatically after ${policy.nudgeDays} days.`,
@@ -108,6 +122,7 @@ export function dataCategories(policy: RetentionPolicy = DEFAULT_RETENTION): Dat
     },
     {
       key: 'preferences',
+      table: null,
       label: 'Settings',
       what: 'Theme, app lock, and the database key — the key in the keychain, the rest on disk.',
       retention: 'Kept until you delete the app.',

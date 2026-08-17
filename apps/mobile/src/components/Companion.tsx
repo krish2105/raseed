@@ -6,6 +6,7 @@ import { format, type Money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
+import { lifestyleGranted } from '@/lib/consent'
 import { Glass } from './Glass'
 
 /**
@@ -53,7 +54,13 @@ export function Companion({
   const [dismissed, setDismissed] = useState<string | null>(null)
 
   const supportive = supportiveMode(signals)
-  const { message } = narrate(facts, { hour, supportiveMode: supportive })
+  // The recorded consent, not a literal. `lifestyleMaySpeak()` in the tone engine refuses
+  // without it, and supportive mode suspends the layer regardless of what was granted.
+  const { message } = narrate(facts, {
+    hour,
+    supportiveMode: supportive,
+    lifestyleOptIn: lifestyleGranted(),
+  })
 
   const shown = message && message.theme !== dismissed ? message : null
 

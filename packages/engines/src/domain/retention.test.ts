@@ -43,6 +43,15 @@ describe('retention', () => {
       expect(categories.every((c) => c.leavesDevice === false)).toBe(true)
     })
 
+    /** The blank-count bug: a category naming a table nobody can count is a blank on screen. */
+    it('names a real table for everything that has one', () => {
+      const withTables = categories.filter((c) => c.table !== null)
+      expect(withTables.map((c) => c.table)).toEqual([
+        'transactions', 'people', 'worth_scores', 'capture_log', 'nudges',
+      ])
+      expect(categories.find((c) => c.key === 'preferences')!.table).toBeNull()
+    })
+
     it('states a retention for each, in words rather than a number', () => {
       for (const c of categories) {
         expect(c.retention.length, c.key).toBeGreaterThan(20)

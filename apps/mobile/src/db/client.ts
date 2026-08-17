@@ -1,4 +1,5 @@
 import { IOS_LIBRARY_PATH, isSQLCipher, open, type DB } from '@op-engineering/op-sqlite'
+import { File } from 'expo-file-system'
 import { drizzle, type OPSQLiteDatabase } from 'drizzle-orm/op-sqlite'
 import * as schema from '@raseed/schema/sqlite'
 import { databaseKey } from './encryption'
@@ -89,6 +90,7 @@ export function migratePlaintextIfPresent(): MigrationResult {
     return { status: 'nothing-to-do', verified: {} }
   }
 
+  let plainClosed = false
   const result = migrateToEncrypted({
     plain,
     /*
@@ -103,25 +105,30 @@ export function migratePlaintextIfPresent(): MigrationResult {
     encryptedPath: `${IOS_LIBRARY_PATH}/${DB_NAME}`,
     key,
     removePlaintext: () => {
-      // `moveAssetsDatabase` and friends are not the right tool; dropping every table empties
-      // the plaintext file in place. The file remains, containing nothing, which is a strictly
-      // better outcome than an orphaned readable copy if the unlink were to fail.
-      const names = plain!
-        .executeSync("SELECT name FROM sqlite_master WHERE type = 'table'")
-        .rows.map((r) => (r as { name: string }).name)
-      for (const name of names) {
-        if (name.startsWith('sqlite_')) continue
+      /*
+       * Delete the file, not its contents.
+       *
+       * The first version dropped every table and VACUUMed, which left a 176KB file reporting
+       * zero tables — no schema, no rows readable through SQL, and its freelist pages never
+       * overwritten. "You cannot query it" is not the same claim as "it is gone", and on the
+       * one file this whole feature exists to protect, only the second claim is worth making.
+       *
+       * The handle is closed first: unlinking a file SQLite still holds open leaves the pages
+       * alive until the descriptor goes, which is the same half-measure with extra steps.
+       */
+      plain!.close()
+      for (const suffix of ['', '-wal', '-shm']) {
         try {
-          plain!.executeSync(`DROP TABLE IF EXISTS "${name}"`)
+          new File(`${IOS_LIBRARY_PATH}/${PLAINTEXT_DB_NAME}${suffix}`).delete()
         } catch {
-          // Best effort; the encrypted copy is already verified at this point.
+          // A WAL or SHM sidecar that was never created is not an error.
         }
       }
-      plain!.executeSync('VACUUM')
+      plainClosed = true
     },
   })
 
-  plain.close()
+  if (!plainClosed) plain.close()
   return result
 }
 

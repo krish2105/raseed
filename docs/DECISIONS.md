@@ -2168,3 +2168,53 @@ saying we agreed not to look, which satisfies a policy document and nobody's pri
 
 **Not yet built: the privacy dashboard screen itself, the consent ledger, and mobile export.**
 The engine and the queries are done and tested; the surface is not.
+
+## The privacy dashboard, consent and export (S9) — and one rule about how it is written (2026-08-17)
+
+`/privacy` on the phone: know, take, correct, delete, in one place.
+
+**Every claim on the screen is read from the device at render.** The row counts are counted. The
+encryption badge asks the compiled binary through `isSQLCipher()`. The retention windows come
+from the same policy object the purge uses. A privacy page that states its promises in prose is
+a page that can be true the day it is written and wrong ever after — and nobody would notice,
+because prose does not fail a test.
+
+That rule caught its own bug immediately: "Your transactions" rendered with **no number beside
+it**, because the category key was `ledger` and the count was keyed `transactions`. On a screen
+whose entire claim is "these figures are counted, not written", a blank where a count belongs is
+the worst possible defect. `DataCategory` now carries the table it counts, with a test.
+
+**The consent ledger is short, and that is the honest answer.** Nothing leaves the device: no
+analytics, no crash reporting, no model, no server. A consent screen listing choices that do not
+exist is theatre, and theatre is how consent screens became something everyone clicks through.
+There are two entries — the **lifestyle layer**, which is real, off by default, and now actually
+wired into `narrate()` through `lifestyleOptIn` rather than being a parameter nobody passed; and
+**sync**, listed as unavailable rather than hidden, so it can never be switched on by a
+migration.
+
+It is a ledger rather than a boolean: each entry records **when** it changed and **which version
+of the wording** was agreed to. "They consented", with no date and no version, is not a record
+of anything.
+
+**Export on the phone**, which the dashboard has had since S22 and the device that actually
+holds the ledger did not. A deletion right without an export right is not a right, it is a
+shredder. Unfiltered by `v_spend` for the same reason the web export is: an export is your data,
+not a view of it, and a transfer you are not shown is one you cannot audit. Minor units, not
+formatted amounts — an export that writes "₹1,234.00" has turned an integer into a string
+somebody has to parse back, badly.
+
+**Deletion means deletion.** `DELETE`, not `deleted = 1`, on every table — a soft delete here
+would be the app telling you it had forgotten while keeping the rows. Reference data is re-seeded
+so the app works afterwards; nothing you entered comes back.
+
+### And the plaintext file is now deleted rather than emptied
+
+The earlier migration dropped every table and VACUUMed, leaving a 176KB file reporting zero
+tables — no schema, nothing readable through SQL, and its freelist pages never overwritten.
+*"You cannot query it"* is not the same claim as *"it is gone"*, and on the one file this whole
+feature exists to protect only the second claim is worth making. The handle is closed first,
+because unlinking a file SQLite still holds open leaves the pages alive until the descriptor
+does — the same half-measure with extra steps. The `-wal` and `-shm` sidecars go too.
+
+**1,083 tests.** Verified on device: the badge reads "Database encrypted on this device", and
+the counts on screen are the rows in the encrypted database.
