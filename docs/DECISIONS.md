@@ -2052,3 +2052,43 @@ means is the same class of problem as two definitions of spend, and it is on the
 than pretended away.
 
 **1,047 tests.**
+
+## Ledger Link — the split lives in the fragment (2026-08-17)
+
+A URL the other person opens with no install and no account. `share_link_id` had sat on the
+`splits` table since P1 with a single writer that hardcoded NULL.
+
+**The whole split is in the URL fragment, and that is the security model.** A fragment is never
+sent to a server: not in the request line, not in a proxy log, not in an access log, not in a CDN
+trace. The recipient's browser renders it entirely locally. **There is no row to leak because
+there is no row** — which is a stronger guarantee than any amount of RLS on a row that exists.
+
+The costs are stated in the code rather than discovered later. It cannot be revoked: once sent,
+whoever holds the link holds the data, so send it the way you would send a screenshot, because
+that is what it is. It cannot be updated — correcting a split means a new link. And it is long,
+though a four-person dinner still fits comfortably in a message and in a QR code.
+
+**Redaction is structural, not a filter someone has to remember to run.** `buildLink` accepts a
+description, a date, an amount, a sender and some names. There is nowhere to put an account id,
+a merchant id, a category or a balance, so a link cannot carry one even if a caller passes it —
+and there is a test that proves exactly that by trying.
+
+`decodeLink` never throws. A malformed fragment is something a stranger pasted, and the only
+correct response is a page that explains — not a stack trace, and certainly not a half-rendered
+split with one name missing. It refuses six distinct malformed shapes with six different
+sentences, and refuses a **newer version** by saying so rather than guessing at a format it does
+not know. That version field is what lets the server-backed version arrive later without
+breaking every link already sent.
+
+The page shows **the arithmetic, not just the number owed**. Being told you owe money without
+being shown how it was arrived at is the fastest route to a disagreement, so the shares, the
+sender's own share and the sum back to the bill are all on screen.
+
+`useSyncExternalStore` reads the fragment rather than an effect calling `setState` — idiomatic
+for a browser value, and the only version that does not trip the cascading-render rule. Its
+server snapshot is deliberately empty: the server has no fragment and never will.
+
+**Added to the axe sweep on the way in.** `/split` is not in `ROUTES` for the same structural
+reason `/` was not — no DuckDB, no Add button, so `waitForReady` cannot gate it. That excuse
+cost the landing page a real violation for weeks; this one got its own check immediately.
+**76 e2e.**

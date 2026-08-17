@@ -8,6 +8,7 @@ import { format, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
+import { shareSplit, splitUrl } from '@/lib/link'
 import { Glass } from '@/components/Glass'
 import {
   addPerson,
@@ -106,7 +107,34 @@ export default function SplitScreen() {
         {/* ── who owes what ─────────────────────────────────────────────── */}
         {outstanding.length > 0 && (
           <>
-            <Text style={s.section}>Outstanding</Text>
+            <View style={s.sectionRow}>
+              <Text style={s.section}>Outstanding</Text>
+              {/* Ledger Link. The whole split travels in the URL fragment, so the person you
+                  send it to needs no account and no install — and no server ever sees it. */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Share this split as a link"
+                hitSlop={8}
+                onPress={() => {
+                  const owedToYou = outstanding.filter((o) => o.minor > 0)
+                  if (owedToYou.length === 0) return
+                  const total = owedToYou.reduce((a, o) => a + o.minor, 0)
+                  void shareSplit(
+                    splitUrl({
+                      what: 'Split',
+                      at: Date.now(),
+                      currency,
+                      totalMinor: total,
+                      from: 'Me',
+                      people: owedToYou.map((o) => ({ name: o.name, owedMinor: o.minor })),
+                    }),
+                    'Split',
+                  )
+                }}
+              >
+                <Text style={s.shareText}>Share a link</Text>
+              </Pressable>
+            </View>
             <View style={s.card}>
               {outstanding.map((o, i) => (
                 <View key={o.personId} style={[s.row, i === 0 && s.rowFirst]}>
@@ -257,6 +285,7 @@ const styles = (c: Palette) =>
       fontVariant: ['tabular-nums'],
     },
     heroHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
+    shareText: { color: c.accent, fontFamily: font.bodyMedium, fontSize: 13 },
     section: {
       color: c['text-lo'],
       fontFamily: font.bodyMedium,

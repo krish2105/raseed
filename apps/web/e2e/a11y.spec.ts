@@ -83,6 +83,55 @@ for (const theme of THEMES) {
   })
 }
 
+/**
+ * A shared split, which is the one page a stranger sees.
+ *
+ * Not in `ROUTES` for the same structural reason the landing page was not: it has no DuckDB and
+ * no Add button, so `waitForReady` cannot gate it. That excuse cost the landing route a real
+ * violation for weeks, so this one gets its own check on the way in rather than later.
+ */
+const SPLIT_FRAGMENT = Buffer.from(
+  JSON.stringify({
+    v: 1,
+    what: 'Toit, Saturday',
+    at: 1_755_216_000_000,
+    currency: 'INR',
+    totalMinor: 220_000,
+    from: 'Krishna',
+    people: [
+      { name: 'Rahul', owedMinor: 60_000 },
+      { name: 'Asha', owedMinor: 55_000 },
+    ],
+    payTo: 'krishna@upi',
+  }),
+  'utf8',
+)
+  .toString('base64')
+  .replaceAll('+', '-')
+  .replaceAll('/', '_')
+  .replace(/=+$/, '')
+
+for (const theme of THEMES) {
+  test(`a shared split has no WCAG 2 AA violations in ${theme}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: theme })
+    await loadWithTheme(page, theme, `/split#${SPLIT_FRAGMENT}`)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Toit')
+
+    const { violations } = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('button:disabled')
+      .exclude('[aria-disabled="true"]')
+      .analyze()
+
+    const detail = violations.flatMap((v) =>
+      v.nodes.map(
+        (n) => `[${v.id}] ${n.target.join(' ')} — ${n.failureSummary?.split('\n')[1] ?? v.help}`,
+      ),
+    )
+    expect(detail, `shared split in ${theme}`).toEqual([])
+  })
+}
+
 for (const theme of THEMES) {
   test.describe(`${theme} theme`, () => {
     for (const route of ROUTES) {

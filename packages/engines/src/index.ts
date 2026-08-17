@@ -28,6 +28,7 @@ export * from './domain/parseReceipt'
 export * from './domain/parseCapture'
 export * from './domain/paydayRunway'
 export * from './domain/askLedger'
+export * from './domain/ledgerLink'
 
 // The eval harness ships with the package: a golden set nobody can run is a document.
 export * from './eval/golden'
