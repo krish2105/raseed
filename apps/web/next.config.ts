@@ -25,14 +25,29 @@ const nextConfig: NextConfig = {
  * calls — so most of this is about what a compromised dependency could do, not about
  * protecting a backend there isn't one of.
  *
- * **The CSP below is NOT applied yet, and the constant is kept deliberately.** Enabling it
- * loads the page, loads the DuckDB worker and the .wasm (both 200), reports no console
- * violation — and then never finishes instantiating, so the dashboard sits on its loading
- * state for ever. Measured by bisection: with the identical self-hosted bundles and the
- * headers removed, the same page is ready in under three seconds. Something in the policy
- * blocks WebAssembly instantiation *inside a blob-URL worker*, which is where Chromium's
- * violation reporting is weakest. A CSP that silently empties every figure on a finance
- * dashboard is worse than no CSP, so it does not ship until that is understood.
+ * **The CSP below is NOT applied, and the constant is kept deliberately.** Enabling it loads
+ * the page, serves the DuckDB worker and .wasm (both 200), reports **zero** console
+ * violations — and never finishes instantiating, so the dashboard sits on its loading state
+ * for ever.
+ *
+ * A second session bisected it properly. Recorded so the next attempt starts from data rather
+ * than from theory:
+ *
+ *   - maximally permissive CSP (`default-src *` etc.)  → READY. So it IS the policy.
+ *   - blob-URL worker replaced with a direct same-origin Worker → still blocked.
+ *     (Kept anyway: the blob wrapper only existed because the script used to be cross-origin,
+ *     and removing it is simpler regardless.)
+ *   - `connect-src` removed                            → still blocked.
+ *   - `default-src` AND `connect-src` removed          → still blocked.
+ *   - `upgrade-insecure-requests` removed              → still blocked.
+ *
+ * So the blocker is among script-src / worker-src / child-src / style-src / img-src /
+ * font-src / object-src / base-uri / form-action / frame-ancestors, and Chromium reports
+ * nothing for it. Next step is to bisect that remaining set one directive at a time, and to
+ * check whether the failure reproduces over HTTPS — every run above was against a local HTTP
+ * server, which is not how it will ship.
+ *
+ * A CSP that silently empties every figure on a finance dashboard is worse than no CSP.
  *
  * What ships is the rest, which is verified and carries no such risk. Notes on the CSP for
  * whoever picks it up:
@@ -57,8 +72,13 @@ const nextConfig: NextConfig = {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:",
-  "worker-src 'self' blob:",
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: data:",
+  // A blob-URL worker inherits this document's policy, and DuckDB's worker calls
+  // importScripts() and then compiles WASM from inside it. child-src is the legacy fallback
+  // some engines still consult for workers; declaring both costs nothing and removes a
+  // whole class of "works here, blank there".
+  "worker-src 'self' blob: data:",
+  "child-src 'self' blob: data:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

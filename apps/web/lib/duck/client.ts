@@ -39,17 +39,19 @@ async function create(): Promise<duckdb.AsyncDuckDB> {
     },
   })
 
-  // Wrapped in a Blob so the worker is same-origin regardless of where the script is served.
-  const workerUrl = URL.createObjectURL(
-    new Blob([`importScripts("${bundle.mainWorker!}");`], { type: 'text/javascript' }),
-  )
-
-  const worker = new Worker(workerUrl)
+  // The worker script is loaded directly, NOT wrapped in a Blob.
+  //
+  // The blob wrapper existed only because the script used to come from jsDelivr and a
+  // cross-origin script cannot be a Worker. Now that it is self-hosted the wrapper is
+  // unnecessary — and actively harmful under a CSP: a blob-URL worker inherits the document's
+  // policy but its own origin does not resolve to `'self'`, so `connect-src 'self'` blocked
+  // the worker's fetch of the .wasm. No error surfaced; the dashboard simply never finished
+  // loading. Removing the blob is what let the strict policy ship.
+  const worker = new Worker(bundle.mainWorker!)
   const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING)
   const db = new duckdb.AsyncDuckDB(logger, worker)
 
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker)
-  URL.revokeObjectURL(workerUrl)
 
   return db
 }
