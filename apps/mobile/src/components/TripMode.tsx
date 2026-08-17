@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { StyleSheet, Text, TextInput, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 
 import { tripProgress, type TripPace } from '@raseed/engines'
-import { format, fromMajor, money, type Currency } from '@raseed/money'
-import { radius, space, type Palette } from '@raseed/tokens'
+import { convert, format, fromMajor, money, type Currency, type Money } from '@raseed/money'
+import { space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
 import { useNow } from '@/hooks/useNow'
+import { AED_TO_INR } from '@/lib/fx'
 import { activeTripWithSpend, endActiveTrip, notifyChanged, startTrip, useQuery } from '@/db'
 import { endTripActivity, startTripActivity, updateTripActivity } from '@/lib/tripActivity'
-import { Badge, Card, PrimaryButton, SecondaryButton } from '@/components/ui'
+import { Badge, Card, Chip, Field, PrimaryButton, SecondaryButton } from '@/components/ui'
 
 /**
  * Trip Mode — the toggle from `MOBILE_ARCHITECTURE.md` F15.
@@ -42,6 +43,10 @@ export function TripMode() {
   const [name, setName] = useState('')
   const [country, setCountry] = useState('')
   const [budgetText, setBudgetText] = useState('')
+  // Defaults to AED because the corridor this app exists for runs India→UAE, and that is the
+  // overwhelmingly common trip. It is a default, not an assumption: a week in Goa is a trip too,
+  // and it spends rupees.
+  const [currency, setCurrency] = useState<Currency>('AED')
 
   if (!current) {
     const ready = name.trim().length > 0 && country.trim().length > 0
@@ -53,37 +58,42 @@ export function TripMode() {
           trip, so it can be totalled separately without being taken out of your month.
         </Text>
 
-        <TextInput
-          style={s.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Dubai, June"
-          placeholderTextColor={colors['text-lo']}
-          accessibilityLabel="Trip name"
-        />
-        <TextInput
-          style={s.input}
-          value={country}
-          onChangeText={setCountry}
-          placeholder="UAE"
-          placeholderTextColor={colors['text-lo']}
-          accessibilityLabel="Country"
-        />
-        <TextInput
-          style={s.input}
+        <Field label="Trip" value={name} onChangeText={setName} placeholder="Dubai, June" />
+        <Field label="Country" value={country} onChangeText={setCountry} placeholder="UAE" />
+
+        <View>
+          <Text style={s.fieldLabel}>Spending in</Text>
+          <View style={s.currencyRow}>
+            {(['AED', 'INR'] as const).map((c) => (
+              <Chip
+                key={c}
+                label={c}
+                role="radio"
+                selected={currency === c}
+                onPress={() => setCurrency(c)}
+              />
+            ))}
+          </View>
+          <Text style={s.currencyNote}>
+            The two currencies this ledger can record. A trip somewhere else is still worth
+            tracking — record what you spend in whichever of these you paid from, and the home
+            total stays right because the rate is frozen on every row.
+          </Text>
+        </View>
+
+        <Field
+          label={`Budget (${currency}), if you have one`}
+          accessibilityLabel="Budget, optional"
           value={budgetText}
           onChangeText={setBudgetText}
-          placeholder="Budget, if you have one"
-          placeholderTextColor={colors['text-lo']}
           keyboardType="decimal-pad"
-          accessibilityLabel="Budget, optional"
         />
 
         <PrimaryButton
           label="Start the trip"
           disabled={!ready}
           onPress={() => {
-            const budgetMinor = parseBudget(budgetText)
+            const budgetMinor = parseBudget(budgetText, currency)
             startTrip({
               name: name.trim(),
               country: country.trim(),
@@ -124,7 +134,7 @@ export function TripMode() {
     endsDay: null,
     today: epochDay(now),
     spent,
-    budget: trip.budget_minor === null ? null : money(trip.budget_minor, 'INR'),
+    budget: budgetInHome(trip),
     currency: 'INR',
   })
 
@@ -194,6 +204,24 @@ function TripActivitySync({
 }
 
 /**
+ * The budget, in the currency the totals are in.
+ *
+ * `tripSpend` sums `home_amount_minor`, which is always INR, so a budget stored in AED has to be
+ * converted before it can be subtracted from anything — otherwise "AED 3,000 left" would be
+ * computed against a rupee total and the number would be wrong by a factor of twenty-three.
+ *
+ * `AED_TO_INR` is the same constant the capture sheet uses. It is a live-ish rate rather than a
+ * frozen one, and that is correct here and only here: a budget is a plan, not a transaction. The
+ * rows themselves keep the rate frozen at the moment each was written, which is the invariant
+ * that matters and is untouched by this.
+ */
+function budgetInHome(trip: { budget_minor: number | null; currency: Currency }): Money | null {
+  if (trip.budget_minor === null) return null
+  const stated = money(trip.budget_minor, trip.currency)
+  return stated.currency === 'INR' ? stated : convert(stated, AED_TO_INR, 'INR')
+}
+
+/**
  * A budget, or none.
  *
  * `fromMajor` takes a string and throws on anything it cannot parse — which is the right
@@ -201,11 +229,11 @@ function TripActivitySync({
  * blank or unparseable budget means "no budget", which the rest of the feature already handles
  * as a first-class state, so there is nothing to report and nothing to block on.
  */
-function parseBudget(text: string): number | null {
+function parseBudget(text: string, currency: Currency): number | null {
   const trimmed = text.trim()
   if (!trimmed) return null
   try {
-    const m = fromMajor(trimmed, 'AED')
+    const m = fromMajor(trimmed, currency)
     return m.minor > 0 ? m.minor : null
   } catch {
     return null
@@ -252,15 +280,13 @@ const styles = (c: Palette) =>
       writingDirection: 'ltr',
     },
     lede: { color: c['text-lo'], fontFamily: font.body, fontSize: 13, lineHeight: 19 },
-    input: {
-      color: c['text-hi'],
+    fieldLabel: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginBottom: space[2] },
+    currencyRow: { flexDirection: 'row', gap: space[2] },
+    currencyNote: {
+      color: c['text-lo'],
       fontFamily: font.body,
-      fontSize: 15,
-      backgroundColor: c['surface-1'],
-      borderColor: c.line,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderRadius: radius.md,
-      paddingHorizontal: space[3],
-      paddingVertical: space[3],
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: space[2],
     },
   })

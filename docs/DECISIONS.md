@@ -2590,3 +2590,34 @@ primitive that makes the app worse while looking like a cleanup.
 `Row`, which is itself `space-between`; without `flex: 1` it sized to its content and sat at the
 start, so the amount floated in the middle of the card instead of reaching the edge. Every unit test
 was green. Fixed and confirmed against the pre-conversion layout.
+
+## `trips.currency` is corridor-only on purpose. The contract does not change.
+
+The open question was whether `trips.currency`'s `['INR','AED']` constraint is a limitation, since
+the planner offers Thailand, Singapore and Japan. Widening it would have been **incoherent**, and
+the reason is one level down:
+
+- `@raseed/money` knows exactly two currencies — `INR: {exponent 2, ₹, en-IN}` and
+  `AED: {exponent 2, AED, en-AE}`. A THB `Money` cannot be constructed, let alone formatted.
+- `transactions.currency` uses **the same enum**. The app cannot record a Thai baht transaction at
+  all.
+
+So a widened `trips.currency` buys a trip labelled THB whose every transaction is still INR or AED
+— a row that describes something the ledger beneath it cannot represent. RASEED is a two-currency
+corridor product and `trips` is consistent with that; the constraint is the design, not a gap.
+
+The planner is not affected, because **the planner never writes a trips row** (verified by grep).
+It estimates in rupees what a trip would cost — `Budget (₹)`, a night here in ₹, flights in ₹ —
+which is the right shape for planning and needs no persistence at all.
+
+**The actual defect was next door.** Trip Mode hardcoded `currency: 'AED'`, so a trip you labelled
+Thailand was stored as an AED trip. Now you choose, from the two the ledger can honestly record,
+and the note says why those two. The budget label carries the choice (`Budget (INR)` /
+`Budget (AED)`) so a number typed into it is never ambiguous.
+
+`budgetInHome` converts an AED budget to INR before `tripProgress` subtracts it, because
+`tripSpend` sums `home_amount_minor` and that is always INR — comparing AED 3,000 against a rupee
+total would have been wrong by a factor of twenty-three, and it would have looked like a plausible
+number. **`AED_TO_INR` is a live-ish rate and that is correct here and only here:** a budget is a
+plan, not a transaction. The rows keep the rate frozen at the moment each was written, which is the
+invariant that matters and is untouched.
