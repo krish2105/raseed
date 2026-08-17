@@ -1773,3 +1773,32 @@ a scroll container" is true and meaningless, which is exactly the kind of green 
 not produce. Both now wait for a row first.
 
 **74 e2e green, 24/24 tasks.**
+
+## Splitting a receipt by who ate what (2026-08-17)
+
+`splitByItems` shipped with the receipt parser and was imported by **no screen**. The engine that
+makes "three people at dinner, one had the wine" fair existed, was tested, and could not be
+reached from the app.
+
+It is now on `/receipt`: tap **Split by item**, and each line gets a row of chips. Multi-select,
+because a shared starter is the ordinary case and forcing one owner is what makes people give up
+and split evenly — which is the exact outcome the engine exists to avoid.
+
+**The whole bill splits; only your share is your spend.** The same rule `add.tsx` follows, and it
+has to be, or the two screens would disagree about what a split dinner cost you. What differs is
+how the shares are found: not by dividing, but by who ate what, with tax and service following
+the items they were charged on.
+
+**Unassigned lines are reported, not absorbed.** `splitByItems` ignores them, so a half-assigned
+receipt produces shares that quietly do not add up to the bill. The screen names the figure.
+Silently adding the remainder to you would be a guess presented as arithmetic.
+
+**`YOU` is not a row in `people`.** You are not someone who can owe you money, and putting
+yourself in that table would put you in "who owes you" the moment anyone forgot to filter.
+
+The decisions live in `lib/receiptSplit.ts` with 8 tests — including that ₹10 three ways loses no
+paisa, and that every part of a fully assigned bill adds back to the total. The screen holds none
+of the arithmetic. Also removed a second copy of `AED_TO_INR` that had survived in `receipt.tsx`;
+`lib/fx.ts` owns the rate, and two copies of one rate is the bug that DECISIONS already names.
+
+77 mobile tests.

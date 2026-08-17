@@ -10,9 +10,17 @@ import { format } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { commitAfterDismiss, insertTransaction, listAccounts, listCategories, useQuery } from '@/db'
-
-const AED_TO_INR = 23.45
+import {
+  commitAfterDismiss,
+  insertTransaction,
+  listAccounts,
+  listCategories,
+  listPeople,
+  recordSplit,
+  useQuery,
+} from '@/db'
+import { AED_TO_INR } from '@/lib/fx'
+import { YOU, itemisedSplit, toggleAssignment } from '@/lib/receiptSplit'
 
 /**
  * Photograph a receipt.
@@ -36,11 +44,16 @@ export default function ReceiptScreen() {
 
   const accounts = useQuery(listAccounts)
   const categories = useQuery(listCategories)
+  const people = useQuery(listPeople)
 
   const [busy, setBusy] = useState(false)
   const [receipt, setReceipt] = useState<ParsedReceipt | null>(null)
   const [rawLines, setRawLines] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
+
+  /** Line index → who ate it. Empty means unassigned, which is a state, not a default. */
+  const [assignment, setAssignment] = useState<Record<number, readonly string[]>>({})
+  const [assigning, setAssigning] = useState(false)
 
   async function capture(from: 'camera' | 'library') {
     setError(null)
@@ -84,6 +97,9 @@ export default function ReceiptScreen() {
     }
   }
 
+  /** Who owes what. The arithmetic and its edge cases live in `lib/receiptSplit.ts`. */
+  const itemised = receipt ? itemisedSplit(receipt, assignment) : null
+
   function commit() {
     if (!receipt?.total) return
     const category =
@@ -91,20 +107,44 @@ export default function ReceiptScreen() {
     const account =
       accounts.find((a) => a.currency === receipt.currency)?.id ?? accounts[0]?.id ?? ''
 
+    const provenance = receipt.reconciles
+      ? `From a photo. ${receipt.lines.length} items, checked against the printed total.`
+      : 'From a photo — the lines did not add up to the total, so check this one.'
+
+    /*
+     * The whole bill splits; only your share is your spend.
+     *
+     * The same rule `add.tsx` follows, and it has to be the same or the two screens would
+     * disagree about what a split expense costs you. The difference here is *how* the shares
+     * are found: not by dividing, but by who ate what, with the tax and service charge
+     * following the items they were charged on. Three people at dinner where one had the wine
+     * should not split it evenly, and nobody works that out by hand.
+     */
     const draft = {
-      amount: receipt.total,
+      amount: itemised ? itemised.yours : receipt.total,
       accountId: account,
       categoryId: category,
       merchantText: receipt.merchant ?? 'Receipt',
       occurredAt: receipt.occurredAt ?? undefined,
       fxRate: receipt.currency === 'AED' ? AED_TO_INR : 1,
-      note: receipt.reconciles
-        ? `From a photo. ${receipt.lines.length} items, checked against the printed total.`
-        : 'From a photo — the lines did not add up to the total, so check this one.',
+      note: itemised
+        ? `Your items. Paid ${format(receipt.total)}, ${format(itemised.owedToYou)} owed to you. ${provenance}`
+        : provenance,
     }
 
+    const owed = itemised
+      ? itemised.others.map((o) => ({
+          personId: o.personId,
+          owedMinor: o.owes.minor,
+          currency: receipt.currency,
+        }))
+      : []
+
     router.back()
-    commitAfterDismiss(() => insertTransaction(draft))
+    commitAfterDismiss(() => {
+      const id = insertTransaction(draft)
+      if (owed.length > 0) recordSplit({ transactionId: id, method: 'itemised', owed })
+    })
   }
 
   return (
@@ -224,18 +264,87 @@ export default function ReceiptScreen() {
 
             {receipt.lines.length > 0 && (
               <>
-                <Text style={s.section}>{receipt.lines.length} items</Text>
+                <View style={s.sectionRow}>
+                  <Text style={s.section}>{receipt.lines.length} items</Text>
+                  {people.length > 0 && (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => setAssigning((v) => !v)}
+                      hitSlop={8}
+                    >
+                      <Text style={s.sectionAction}>
+                        {assigning ? 'Done' : 'Split by item'}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
                 <View style={s.card}>
                   {receipt.lines.map((line, i) => (
                     <View key={`${line.description}-${i}`} style={[s.row, i === 0 && s.rowFirst]}>
-                      <Text style={s.rowKey} numberOfLines={1}>
-                        {line.quantity > 1 ? `${line.quantity} × ` : ''}
-                        {line.description}
-                      </Text>
-                      <Text style={s.rowValue}>{format(line.amount)}</Text>
+                      <View style={s.lineMain}>
+                        <Text style={s.rowKey} numberOfLines={1}>
+                          {line.quantity > 1 ? `${line.quantity} × ` : ''}
+                          {line.description}
+                        </Text>
+                        <Text style={s.rowValue}>{format(line.amount)}</Text>
+                      </View>
+
+                      {/* One row of chips per line. Multi-select, because a shared starter is
+                          the ordinary case and forcing it to one owner is what makes people
+                          give up and split evenly. */}
+                      {assigning && (
+                        <View style={s.chips}>
+                          {[{ id: YOU, name: 'You' }, ...people].map((person) => {
+                            const on = (assignment[i] ?? []).includes(person.id)
+                            return (
+                              <Pressable
+                                key={person.id}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: on }}
+                                accessibilityLabel={`${person.name}: ${line.description}`}
+                                onPress={() => setAssignment((prev) => toggleAssignment(prev, i, person.id))}
+                                style={[s.chip, on && s.chipOn]}
+                              >
+                                <Text style={[s.chipText, on && s.chipTextOn]}>{person.name}</Text>
+                              </Pressable>
+                            )
+                          })}
+                        </View>
+                      )}
                     </View>
                   ))}
                 </View>
+
+                {itemised && (
+                  <View style={s.card}>
+                    <View style={[s.row, s.rowFirst]}>
+                      <Text style={s.rowKey}>Your items</Text>
+                      <Text style={[s.rowValue, s.rowTotal]}>{format(itemised.yours)}</Text>
+                    </View>
+                    {itemised.others.map((o) => (
+                      <View key={o.personId} style={s.row}>
+                        <Text style={s.rowKey}>
+                          {people.find((p) => p.id === o.personId)?.name ?? o.personId} owes you
+                        </Text>
+                        <Text style={s.rowValue}>{format(o.owes)}</Text>
+                      </View>
+                    ))}
+                    {itemised.unassigned.minor > 0 && (
+                      <View style={s.row}>
+                        <Text style={[s.rowKey, { color: colors.warn }]}>
+                          {format(itemised.unassigned)} not assigned to anyone
+                        </Text>
+                        <Text style={s.rowValue}>—</Text>
+                      </View>
+                    )}
+                    <Text style={s.splitNote}>
+                      Tax and service follow the items they were charged on, in proportion —
+                      so the wine one person ordered carries its own share of both. Unassigned
+                      lines belong to nobody and are counted for nobody; the figure above says
+                      so rather than quietly adding them to you.
+                    </Text>
+                  </View>
+                )}
               </>
             )}
 
@@ -283,6 +392,27 @@ const styles = (c: Palette) =>
     save: { color: c.inr, fontFamily: font.bodyMedium, fontSize: 15 },
     saveDisabled: { color: c['text-lo'], opacity: 0.5 },
     content: { padding: space[4], paddingBottom: space[8], gap: space[2] },
+    sectionRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+    sectionAction: { color: c.inr, fontFamily: font.bodyMedium, fontSize: 13 },
+    lineMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[3] },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1], marginTop: space[2] },
+    chip: {
+      borderRadius: radius.full,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.line,
+      paddingHorizontal: space[3],
+      paddingVertical: space[1],
+    },
+    chipOn: { backgroundColor: c['text-hi'], borderColor: c['text-hi'] },
+    chipText: { color: c['text-lo'], fontFamily: font.body, fontSize: 12 },
+    chipTextOn: { color: c['surface-0'], fontFamily: font.bodyMedium },
+    splitNote: {
+      color: c['text-lo'],
+      fontFamily: font.body,
+      fontSize: 11,
+      lineHeight: 17,
+      paddingVertical: space[3],
+    },
     actions: { flexDirection: 'row', gap: space[2] },
     action: {
       flex: 1,
