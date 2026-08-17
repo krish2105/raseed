@@ -2015,3 +2015,40 @@ beside the words "you owe" says the same thing twice and reads as a negative deb
 you meet it.
 
 **1,034 tests.**
+
+## Payday Runway and Ask-your-ledger — Mobile P9 closed (2026-08-17)
+
+**Payday Runway** answers the question under Safe-to-Spend. An allowance divides what remains
+and says nothing about what you keep doing; this asks whether, at the rate you are actually
+going, you arrive at payday with anything left — and if not, which day you run out on and what
+you would have to hold to.
+
+The burn is a **median**, not a mean, and there is a test for why: one rent day in thirty pulls
+a mean up by a third and produces a runway wrong in the *reassuring* direction, which is the
+direction that costs you money. Quiet days stay in the sample, because the runway counts days
+rather than spending days.
+
+**One bug the simulator found and no unit test would have.** On a sparse ledger the median daily
+spend is zero, zero burn divides into an infinite runway, and the screen rendered a green
+**"Yes"** directly above the words "₹0.00 of room". Arithmetically true; as an answer, the most
+dangerous kind of reassurance a finance app can offer. The pool is now checked first — with
+nothing left you have not reached payday, you have arrived at today with nothing, which is a
+different sentence and now says so. The screen also stops offering to hold you to ₹0.00 a day.
+
+**Ask-your-ledger returns an intent, never SQL.** `parseAsk` lives in `@raseed/engines` and can
+only produce one of six intents; each surface maps those onto its own tables. That is the whole
+safety story — there is no string from the user anywhere near a database, so there is nothing to
+escape and nothing to sanitise, and it cannot be talked into a seventh intent because a seventh
+does not exist. It is also why the phone and the dashboard answer the same question the same
+way: one parser, two renderings, the same pattern the spend predicate uses.
+
+It returns `null` rather than guessing. A query tool that answers *something* for every input
+teaches you to trust an answer it had no basis for, and on a finance screen that is worse than a
+shrug — so an unreadable question says what it *can* answer instead.
+
+**Known and named:** the dashboard's `lib/duck/nl.ts` still has its own richer parser with 27
+tests. Unifying them behind `parseAsk` is a real follow-up; two definitions of what a question
+means is the same class of problem as two definitions of spend, and it is on the list rather
+than pretended away.
+
+**1,047 tests.**

@@ -1,4 +1,4 @@
-import { normaliseMerchant } from '@raseed/engines'
+import { normaliseMerchant, type AskIntent } from '@raseed/engines'
 import { format, money, type Currency, type Money } from '@raseed/money'
 import type { Scalar } from '@op-engineering/op-sqlite'
 import type { RatableRow, Score } from '@/lib/reckoning'
@@ -1265,4 +1265,99 @@ export function recordOwedExpense(input: {
   })
 
   return transactionId
+}
+
+// ── ask your ledger ─────────────────────────────────────────────────────────
+
+export interface AskAnswer {
+  /** A single figure, when the question had one. */
+  readonly total?: Money
+  readonly count?: number
+  readonly rows?: readonly { label: string; amount: Money }[]
+}
+
+/**
+ * Answer an intent against SQLite.
+ *
+ * The question was read by `parseAsk` in `@raseed/engines`, which returns an **intent and never
+ * SQL**. That is the whole safety story: there is no string from the user anywhere near this
+ * function, so there is nothing to escape and nothing to sanitise. The dashboard renders the
+ * same intents against DuckDB; both surfaces answer the same question because both parsed it
+ * with the same parser.
+ *
+ * Every read goes through `v_spend`, so an answer here and a total on Today cannot disagree
+ * about what counts.
+ */
+export function answerAsk(intent: AskIntent): AskAnswer {
+  const since = Date.now() - intent.days * 86_400_000
+
+  switch (intent.kind) {
+    case 'total': {
+      const r = rows<{ total: number | null }>(
+        'SELECT SUM(home_amount_minor) AS total FROM v_spend WHERE occurred_at >= ?',
+        [since],
+      )[0]
+      return { total: money(Math.round(r?.total ?? 0), 'INR') }
+    }
+
+    case 'count': {
+      const r = rows<{ n: number }>(
+        'SELECT COUNT(*) AS n FROM v_spend WHERE occurred_at >= ?',
+        [since],
+      )[0]
+      return { count: r?.n ?? 0 }
+    }
+
+    case 'average': {
+      // Per *day*, not per transaction — "a typical day" is a question about days, and
+      // dividing by the transaction count answers a different one that sounds the same.
+      const r = rows<{ total: number | null; days: number }>(
+        `SELECT SUM(home_amount_minor) AS total,
+                COUNT(DISTINCT CAST(occurred_at / 86400000 AS INTEGER)) AS days
+           FROM v_spend WHERE occurred_at >= ?`,
+        [since],
+      )[0]
+      const total = r?.total ?? 0
+      return { total: money(Math.round(total / Math.max(1, intent.days)), 'INR'), count: r?.days ?? 0 }
+    }
+
+    case 'largest': {
+      return {
+        rows: rows<{ label: string; minor: number }>(
+          `SELECT COALESCE(m.canonical_name, s.raw_text, 'Unknown') AS label,
+                  s.home_amount_minor AS minor
+             FROM v_spend s LEFT JOIN merchants m ON m.id = s.merchant_id
+            WHERE s.occurred_at >= ?
+            ORDER BY s.home_amount_minor DESC LIMIT ?`,
+          [since, intent.limit],
+        ).map((r) => ({ label: r.label, amount: money(r.minor, 'INR') })),
+      }
+    }
+
+    case 'byMerchant': {
+      return {
+        rows: rows<{ label: string; minor: number }>(
+          `SELECT COALESCE(m.canonical_name, s.raw_text, 'Unknown') AS label,
+                  SUM(s.home_amount_minor) AS minor
+             FROM v_spend s LEFT JOIN merchants m ON m.id = s.merchant_id
+            WHERE s.occurred_at >= ?
+            GROUP BY label ORDER BY minor DESC LIMIT ?`,
+          [since, intent.limit],
+        ).map((r) => ({ label: r.label, amount: money(Math.round(r.minor), 'INR') })),
+      }
+    }
+
+    case 'byCategory': {
+      return {
+        rows: rows<{ label: string; minor: number }>(
+          `SELECT COALESCE(c.name, 'Uncategorised') AS label,
+                  SUM(s.home_amount_minor) AS minor
+             FROM v_spend s LEFT JOIN categories c ON c.id = s.category_id
+            WHERE s.occurred_at >= ?
+            GROUP BY label ORDER BY minor DESC LIMIT ?`,
+          [since, intent.limit],
+        ).map((r) => ({ label: r.label, amount: money(Math.round(r.minor), 'INR') })),
+      }
+    }
+  }
 }

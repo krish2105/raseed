@@ -1,22 +1,35 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 
+import { useState } from 'react'
+
 import {
+  ASK_EXAMPLES,
   changePoints,
   detectRecurrence,
   detectRemittance,
   flagAnomalies,
   median,
+  parseAsk,
+  paydayRunway,
 } from '@raseed/engines'
 import { format, money } from '@raseed/money'
-import { space, type Palette } from '@raseed/tokens'
+import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
 import { useNow } from '@/hooks/useNow'
 import { Glass } from '@/components/Glass'
 import { Sparkline } from '@/components/Sparkline'
-import { dailySpend, recurrenceCandidates, remittanceLegs, useQuery } from '@/db'
+import {
+  answerAsk,
+  dailySpend,
+  liquidBalanceMinor,
+  recurrenceCandidates,
+  remittanceLegs,
+  useQuery,
+} from '@/db'
+import { DAYS_TO_PAYDAY, SAFETY_BUFFER, committedBills } from '@/lib/commitments'
 import { midMarket, remittanceCaveat } from '@/lib/fx'
 
 /** Below this many days of history, the statistics say more about the sample than about you. */
@@ -81,6 +94,22 @@ export default function NumbersScreen() {
   const remittances = detectRemittance(legs, midMarket)
   const corridorCost = remittances.reduce((a, r) => a + r.costMinor, 0)
 
+  // ── payday runway ──────────────────────────────────────────────────────
+  const balanceMinor = useQuery(liquidBalanceMinor)
+  const runway = paydayRunway({
+    liquidBalance: money(balanceMinor, 'INR'),
+    committedBills: committedBills(),
+    safetyBuffer: SAFETY_BUFFER,
+    dailySpend: series,
+    today: now,
+    nextIncomeAt: now + DAYS_TO_PAYDAY * 86_400_000,
+  })
+
+  // ── ask your ledger ────────────────────────────────────────────────────
+  const [question, setQuestion] = useState('')
+  const ask = parseAsk(question)
+  const answer = useQuery(() => (ask ? answerAsk(ask.intent) : null))
+
   const monthlyRecurring = recurring.reduce(
     (a, r) => a + Math.round((r.amountMinor * 30) / Math.max(1, r.periodDays)),
     0,
@@ -120,6 +149,111 @@ export default function NumbersScreen() {
                 median and MAD, so one very large day cannot make every other day look normal.
               </Text>
             )}
+          </View>
+        </Glass>
+
+        {/* ── payday runway ─────────────────────────────────────────────── */}
+        <Text style={s.section}>Does it reach payday?</Text>
+        <Glass style={s.card}>
+          <View style={s.cardInner}>
+            {!enough ? (
+              <Text style={s.empty}>Needs about three weeks of history before a rate means anything.</Text>
+            ) : (
+              <>
+                <Text style={[s.big, { color: runway.reachesPayday ? colors.good : colors.warn }]}>
+                  {runway.reachesPayday
+                    ? 'Yes'
+                    : runway.pool.minor === 0
+                      ? 'Already there'
+                      : `Runs out ${new Date(runway.runsOutAt ?? now).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
+                </Text>
+                <Text style={s.note}>
+                  {runway.pool.minor === 0
+                    ? `No room left after commitments and the buffer, with ${runway.daysUntilIncome} days to go.`
+                    : `${format(runway.pool)} of room, ${format(runway.burnPerDay)} on an ordinary day, ${runway.daysUntilIncome} days to go.`}
+                  {/* Only when there is something to hold to. "Hold to ₹0.00 a day" is not
+                      advice, it is arithmetic with nothing left to divide. */}
+                  {!runway.reachesPayday &&
+                    runway.requiredPerDay.minor > 0 &&
+                    ` Holding to ${format(runway.requiredPerDay)} a day would get you there.`}
+                </Text>
+                <Text style={s.note}>
+                  The rate is a median rather than an average: one rent day in thirty pulls a mean up
+                  by a third and produces a runway that is wrong in the reassuring direction.
+                  Quiet days stay in the sample, because this counts days rather than spending
+                  days.
+                </Text>
+              </>
+            )}
+          </View>
+        </Glass>
+
+        {/* ── ask your ledger ───────────────────────────────────────────── */}
+        <Text style={s.section}>Ask your ledger</Text>
+        <Glass style={s.card}>
+          <View style={s.cardInner}>
+            <TextInput
+              value={question}
+              onChangeText={setQuestion}
+              placeholder={ASK_EXAMPLES[0]}
+              placeholderTextColor={colors['text-lo']}
+              accessibilityLabel="Ask a question about your ledger"
+              style={s.askInput}
+            />
+
+            {question.trim().length > 0 && !ask && (
+              <Text style={s.note}>
+                Not a question this understands. It answers totals, counts, averages, the largest
+                spends, and breakdowns by merchant or category — and it says so rather than
+                answering something adjacent, because a query tool that always replies teaches
+                you to trust an answer it had no basis for.
+              </Text>
+            )}
+
+            {ask && answer && (
+              <>
+                <Text style={s.cardLabel}>{ask.restated}</Text>
+                {answer.total && (
+                  <Text style={s.big}>{format(answer.total)}</Text>
+                )}
+                {answer.count !== undefined && !answer.total && (
+                  <Text style={s.big}>{answer.count.toLocaleString('en-IN')}</Text>
+                )}
+                {answer.rows && (
+                  <View style={s.rows}>
+                    {answer.rows.map((r) => (
+                      <View key={r.label} style={s.row}>
+                        <Text style={s.rowName} numberOfLines={1}>
+                          {r.label}
+                        </Text>
+                        <Text style={s.rowAmount}>{format(r.amount)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
+            {question.trim().length === 0 && (
+              <View style={s.examples}>
+                {ASK_EXAMPLES.slice(0, 3).map((e) => (
+                  <Pressable
+                    key={e}
+                    accessibilityRole="button"
+                    onPress={() => setQuestion(e)}
+                    style={s.example}
+                  >
+                    <Text style={s.exampleText}>{e}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            <Text style={s.note}>
+              The question is read into one of six intents, never into SQL — so there is no string
+              from you anywhere near the database. The dashboard runs the same intents against
+              DuckDB, which is why both surfaces answer the same question the same way.
+            </Text>
           </View>
         </Glass>
 
@@ -304,6 +438,28 @@ const styles = (c: Palette) =>
     card: { marginBottom: space[2] },
     cardInner: { padding: space[4] },
     cardLabel: { color: c['text-lo'], fontFamily: font.bodyMedium, fontSize: 12 },
+
+    askInput: {
+      color: c['text-hi'],
+      backgroundColor: c['surface-0'],
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius.md,
+      paddingHorizontal: space[3],
+      paddingVertical: space[3],
+      fontFamily: font.body,
+      fontSize: 15,
+    },
+    examples: { gap: space[2], marginTop: space[3] },
+    example: {
+      borderColor: c.line,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: radius.full,
+      paddingHorizontal: space[3],
+      paddingVertical: space[2],
+      alignSelf: 'flex-start',
+    },
+    exampleText: { color: c['text-lo'], fontFamily: font.body, fontSize: 12 },
 
     big: {
       color: c['text-hi'],

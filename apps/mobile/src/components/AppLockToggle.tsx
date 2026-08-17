@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
+import { StyleSheet, Switch, Text, View } from 'react-native'
 
 import { radius, space, type Palette } from '@raseed/tokens'
 import { font, useTheme } from '@/theme'
