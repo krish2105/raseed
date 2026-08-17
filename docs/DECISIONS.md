@@ -2559,3 +2559,11 @@ nowhere near it.**
 `useQuery` re-reads on that bump and on focus, and neither fires by itself for a write made on the
 screen you are already looking at. Mine didn't, so the card sat on the pre-write state. Fixed and
 verified on the device: the card now flips back to the start form.
+
+**Verified on the Lock Screen, not asserted.** Trip started on `/trip`, screen locked: the banner
+renders the trip name and `Day 1` in the accent green passed across the process boundary, with the
+figure bold beneath it, and iOS's own "Allow Live Activities from RASEED?" prompt appeared over it —
+which is itself the proof that the activity was genuinely registered with ActivityKit rather than
+silently swallowed by the error handling. The bottom row is empty, which is correct: no budget was
+set and it is day one, so there is neither a remaining figure nor an average to show, and the design
+prints nothing rather than a placeholder.

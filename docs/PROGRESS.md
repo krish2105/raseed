@@ -40,7 +40,7 @@ Claude reads this at the start of every session. Tick sessions as they complete.
   **reversal pairing is not built** — `pairReversals` is never imported by mobile and
   `reversal_of_id` is written NULL (`db/queries.ts:166`). Re-marked from [x] by the 17 Aug audit
 - [x] **#14** Web P4 — Tier 0 complete: net-worth timeline and calendar heatmap shipped
-- [~] **#15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips) and **mobile** (`/trip`: `planTrip` over habits read from the ledger, Numbeo price ratios, unconstrained plan with the budget asked separately). Goals ship alongside it (`/goals`: new `goals` table, `savingsPlan` against real monthly surplus, copy through the tone gate). The Live Activity remains
+- [~] **#15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips) and **mobile** (`/trip`: `planTrip` over habits read from the ledger, Numbeo price ratios, unconstrained plan with the budget asked separately). Goals ship alongside it (`/goals`: new `goals` table, `savingsPlan` against real monthly surplus, copy through the tone gate). **Trip Mode itself now ships** — the F15 toggle: start a trip, spend tags to it by date, end it, with `tripProgress` (18 tests) as the only place the burn rate and pace are computed. **The Live Activity ships too** and is verified on the Lock Screen, not asserted
 - [x] **#16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
 - [x] **#17** worth-it loop, Weekly Reckoning and the 4-nudge cap — live on **both** surfaces.
   Mobile P6 landed the phone half: `/reckoning`, ratings in `worth_scores`, nudges in `nudges`,
@@ -73,11 +73,20 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - 🚧 **Three items remain from the 17 Aug batch, and none is started:**
   **Arabic + RTL** (with the tone gate extended to Arabic — Krishna reaffirmed full translation;
   the Arabic rule set must be reviewed by a native speaker before it can be trusted),
-  **voice capture** (`expo-speech-recognition@56.0.1` targets SDK **56** and we are pinned to
-  57 — untested combination, try it on a throwaway prebuild since `ios/` is gitignored and
-  therefore recoverable), and the **Trip Live Activity** (Swift Widget Extension via
-  `@bacons/apple-targets@5.0.0`). Also outstanding: several phone screens still carry their own
-  card and pill styles instead of `components/ui.tsx`.
+  **voice capture** (shipped — `expo-speech-recognition`, on-device only, refuses rather than
+  falling back to the network) and the **Trip Live Activity** (shipped — see below).
+
+  The Live Activity did **not** use `@bacons/apple-targets`, and that plan should not be
+  revived: it ships no ActivityKit surface at all, so it meant hand-writing both the
+  `ActivityAttributes` and a native Swift module. `expo-widgets@57.0.10` is first-party, carries
+  the whole stack, and the layout is TypeScript under a `'widget'` directive. Verified on the
+  simulator — Apple's docs say Live Activities run there, and `com.apple.liveactivitiesd` is
+  registered on the booted device.
+
+  Still outstanding on the restyle: `Chip`, `RowList`/`Row`, `TextLink` and a `danger` tone now
+  exist in `components/ui.tsx` and four screens are converted, but `NavRow` (7 repeats in `you`),
+  `LedgerRow` (3 independent copies) and a shared `Field` are specified in DECISIONS.md and not
+  built.
 
 - ✅ **SQLCipher ships** — `raseed-enc.db`, key in the keychain at
   `WHEN_UNLOCKED_THIS_DEVICE_ONLY`, with a verified copy-then-delete migration off the old
