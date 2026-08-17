@@ -9,6 +9,7 @@ import { font, useTheme } from '@/theme'
 import { countSpend, listAccounts, listCategories, useQuery } from '@/db'
 import { WalletCount } from '@/components/WalletCount'
 import { COMMITMENTS } from '@/lib/commitments'
+import { AppLockToggle } from '@/components/AppLockToggle'
 
 
 export default function YouScreen() {
@@ -127,6 +128,9 @@ export default function YouScreen() {
             </View>
           ))}
         </View>
+
+        <Text style={s.section}>Privacy</Text>
+        <AppLockToggle />
 
         <Text style={s.section}>About</Text>
         <View style={s.card}>

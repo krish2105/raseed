@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Stack } from 'expo-router'
+import { AppLock } from '@/components/AppLock'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import { useFonts } from 'expo-font'
@@ -41,7 +42,9 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null
 
   return (
-    <>
+    // AppLock wraps everything, so the privacy shield covers every route rather than only the
+    // one that remembered to ask for it.
+    <AppLock>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
@@ -53,6 +56,6 @@ export default function RootLayout() {
         {/* Capture is a sheet over the ledger, not a destination you navigate away to. */}
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
       </Stack>
-    </>
+    </AppLock>
   )
 }
