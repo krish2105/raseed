@@ -2621,3 +2621,32 @@ total would have been wrong by a factor of twenty-three, and it would have looke
 number. **`AED_TO_INR` is a live-ish rate and that is correct here and only here:** a budget is a
 plan, not a transaction. The rows keep the rate frozen at the moment each was written, which is the
 invariant that matters and is untouched.
+
+## The Arrow 21 bump: correct, and still declined
+
+Dependabot proposed `apache-arrow` 17.0.0 → 21.2.0. It was checked out and run rather than
+reasoned about, because a major bump under a WASM database is exactly the class that typechecks
+and then returns wrong numbers.
+
+**It works.** 76/76 e2e passed on the bumped branch, including `routes.spec.ts`'s "every route
+loads, computes, and shows no zeroed figures" — the spec that exists to catch precisely this. The
+reason it works is architectural and was already written down: the worker emits **Arrow IPC bytes**,
+not an `arrow.Table`, and IPC is a wire format that is stable across majors. DuckDB reads those
+bytes with its own Arrow. The two versions never share an object.
+
+**It was still declined**, on cost rather than correctness. `@duckdb/duckdb-wasm@1.33.1-dev57.0`
+declares `apache-arrow: 17.0.0` as a direct dependency, so taking the bump puts **both majors in
+the tree** — 17.0.0 hoisted at the root for DuckDB, 21.2.0 nested under `apps/web` for us. That
+ships two copies of a library this codebase itself calls "not small" and keeps one worker alive for
+the tab's lifetime specifically to avoid instantiating twice.
+
+And the benefit is zero. The app touches eight Arrow symbols — `Bool`, `Float`, `Int`, `Table`,
+`Utf8`, `tableFromArrays`, `tableToIPC`, `vectorFromArray` — and not one of them changed between 17
+and 21. Held at 17 in `dependabot.yml` with that reasoning, to be revisited when duckdb-wasm moves,
+at which point the bump becomes free and the ignore should be deleted.
+
+**A separate finding, and the reason all three PRs were red:** the secret scan, not their contents.
+`gitleaks` failed with *"failed to scan Git repository / stderr is not empty"* because
+`actions/checkout` clones a single commit and gitleaks needs the merge-base to know which commits
+are new. On a push to `main` it has what it needs, which is why main stayed green and hid it. The
+giveaway was PR #1 — one action version, no code, same failure. Fixed with `fetch-depth: 0`.

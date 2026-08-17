@@ -23,6 +23,21 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: typescript
         update-types: [version-update:semver-major]
+      # apache-arrow is held at 17 to match `@duckdb/duckdb-wasm`, which declares
+      # `apache-arrow: 17.0.0` as a direct dependency. The 21.2.0 bump was checked out and run,
+      # not guessed at: 76/76 e2e passed, including the spec that asserts every route "loads,
+      # computes, and shows no zeroed figures" — so it is CORRECT, because the boundary between
+      # our code and DuckDB is Arrow IPC bytes, a wire format that is stable across majors.
+      #
+      # It is still the wrong trade. Taking it puts BOTH majors in the tree — 17.0.0 hoisted at
+      # the root for DuckDB, 21.2.0 nested under apps/web for us — and ships two copies of a
+      # library the code itself describes as "not small" (lib/workers/client.ts). The benefit is
+      # zero: the app uses eight Arrow symbols (Bool, Float, Int, Table, Utf8, tableFromArrays,
+      # tableToIPC, vectorFromArray) and none of them changed between the two versions.
+      #
+      # Revisit when duckdb-wasm moves. At that point the bump is free and this entry should go.
+      - dependency-name: apache-arrow
+        update-types: [version-update:semver-major]
       # Expo pins its own native module versions to the SDK. Bumping one out of step with
       # `expo install --check` produces a build that fails on device, not in CI.
       - dependency-name: expo*
