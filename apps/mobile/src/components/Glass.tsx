@@ -22,6 +22,12 @@ import { useTheme } from '@/theme'
  *
  * The fallback is a solid surface with a hairline border — plainer, equally legible, and
  * never a translucent panel with nothing behind it.
+ *
+ * **The radius is `xl` because `ui.Card`'s is, and the two render side by side.** They
+ * disagreed until now — glass at 14, `Card` at 20 — and six screens draw both, so the seam
+ * was visible on every one of them without ever being wrong enough to look like a bug. Every
+ * `<Glass>` in the app is a card or a hero; none is a pill or a chip, so there is nothing that
+ * wanted the tighter corner. A caller who needs a different one still passes `style`.
  */
 export function Glass({
   style,
@@ -60,11 +66,11 @@ export function Glass({
 const styles = (c: Palette) =>
   StyleSheet.create({
     glass: {
-      borderRadius: radius.lg,
+      borderRadius: radius.xl,
       overflow: 'hidden',
     },
     fallback: {
-      borderRadius: radius.lg,
+      borderRadius: radius.xl,
       overflow: 'hidden',
       backgroundColor: c['surface-1'],
       borderWidth: StyleSheet.hairlineWidth,

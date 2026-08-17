@@ -482,6 +482,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 14,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     rowTotal: { fontFamily: font.monoMedium, fontSize: 16 },
     warnings: { marginTop: space[3], gap: space[1] },

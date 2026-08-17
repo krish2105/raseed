@@ -13,7 +13,15 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
+      # `fetch-depth: 0` for the secret scan below, and it is not optional on pull requests.
+      # `actions/checkout` clones one commit by default; gitleaks needs the merge-base to know
+      # which commits are new, and without it fails with the unhelpful "failed to scan Git
+      # repository / stderr is not empty". Every open PR was red for this reason and none of
+      # them for their own contents — including one that changes a single action version and no
+      # code at all, which is what gave it away.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
@@ -23,6 +31,18 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Vercel builds from a tarball, not a checkout. A lifecycle script that assumes a git
+      # repository takes `pnpm install` down with it — exit 128, deploy fails, and CI stays
+      # green, because `actions/checkout` above DOES give us a `.git` and Vercel does not.
+      # That gap cost a production deploy. Run the scripts where there is no repository.
+      - name: Lifecycle scripts survive a non-git checkout
+        run: |
+          tmp="$(mktemp -d)"
+          cp package.json "$tmp/"
+          cd "$tmp"
+          git rev-parse --git-dir > /dev/null 2>&1 && { echo "mktemp dir is inside a repo; test is void"; exit 1; }
+          npm run prepare
 
       # A leaked key is not a bug you can fix in a follow-up commit — git history is public
       # the moment the repo is, and rotation is the only remedy. Scanned on every push.

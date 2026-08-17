@@ -12,8 +12,9 @@ import {
   type ParsedStatement,
 } from '@raseed/engines'
 import { format, money } from '@raseed/money'
-import { radius, space, type Palette } from '@raseed/tokens'
+import { space, type Palette } from '@raseed/tokens'
 
+import { Chip, PrimaryButton } from '@/components/ui'
 import { font, useTheme } from '@/theme'
 import { Glass } from '@/components/Glass'
 import {
@@ -148,9 +149,11 @@ export default function ImportScreen() {
           Nothing is written until you have seen what was understood.
         </Text>
 
-        <Pressable onPress={pick} accessibilityRole="button" style={s.primary}>
-          <Text style={s.primaryText}>{text ? 'Choose a different file' : 'Choose a file'}</Text>
-        </Pressable>
+        <PrimaryButton
+          label={text ? 'Choose a different file' : 'Choose a file'}
+          onPress={pick}
+          style={s.primarySpacing}
+        />
 
         {error && <Text style={s.error}>{error}</Text>}
         {done !== null && (
@@ -197,17 +200,13 @@ export default function ImportScreen() {
                         ['mdy', 'Month first · 03/04 is 4 March'],
                       ] as const
                     ).map(([value, label]) => (
-                      <Pressable
+                      <Chip
                         key={value}
+                        label={label}
+                        role="radio"
+                        selected={order === value}
                         onPress={() => setOrder(value)}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: order === value }}
-                        style={[s.chip, order === value && s.chipActive]}
-                      >
-                        <Text style={[s.chipText, order === value && s.chipTextActive]}>
-                          {label}
-                        </Text>
-                      </Pressable>
+                      />
                     ))}
                   </View>
                 </View>
@@ -267,17 +266,14 @@ export default function ImportScreen() {
               </View>
             </Glass>
 
-            <Pressable
+            <PrimaryButton
+              label={
+                blocked ?? `Import ${willWrite.length} ${willWrite.length === 1 ? 'row' : 'rows'}`
+              }
               onPress={commit}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: blocked !== null }}
-              style={[s.primary, blocked !== null && s.primaryDisabled]}
               disabled={blocked !== null}
-            >
-              <Text style={s.primaryText}>
-                {blocked ?? `Import ${willWrite.length} ${willWrite.length === 1 ? 'row' : 'rows'}`}
-              </Text>
-            </Pressable>
+              style={s.primarySpacing}
+            />
 
             <Text style={s.footnote}>
               Credits are shown so you can check the file was read correctly, but only
@@ -301,6 +297,7 @@ function Stat({ label, value, c }: { label: string; value: string; c: Palette })
           fontFamily: font.displayBold,
           fontSize: 20,
           fontVariant: ['tabular-nums'],
+          writingDirection: 'ltr',
         }}
       >
         {value}
@@ -362,17 +359,6 @@ const styles = (c: Palette) =>
     struck: { opacity: 0.45, textDecorationLine: 'line-through' },
 
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], marginTop: space[3] },
-    chip: {
-      borderColor: c.line,
-      borderWidth: 1,
-      borderRadius: radius.full,
-      paddingHorizontal: space[3],
-      paddingVertical: space[2],
-      backgroundColor: c['surface-1'],
-    },
-    chipActive: { backgroundColor: c['surface-2'], borderColor: c.inr },
-    chipText: { color: c['text-lo'], fontFamily: font.body, fontSize: 12 },
-    chipTextActive: { color: c['text-hi'] },
 
     note: {
       color: c['text-lo'],
@@ -384,15 +370,7 @@ const styles = (c: Palette) =>
     error: { color: c.warn, fontFamily: font.body, fontSize: 13, marginTop: space[3] },
     good: { color: c.good, fontFamily: font.bodyMedium, fontSize: 13, marginTop: space[3] },
 
-    primary: {
-      marginTop: space[4],
-      borderRadius: radius.md,
-      backgroundColor: c.inr,
-      paddingVertical: space[3],
-      alignItems: 'center',
-    },
-    primaryDisabled: { opacity: 0.45 },
-    primaryText: { color: c['surface-0'], fontFamily: font.bodyMedium, fontSize: 15 },
+    primarySpacing: { marginTop: space[4] },
 
     footnote: {
       color: c['text-lo'],

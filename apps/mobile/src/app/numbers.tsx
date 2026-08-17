@@ -466,6 +466,7 @@ const styles = (c: Palette) =>
       fontFamily: font.displayBold,
       fontSize: 30,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
       marginTop: space[1],
     },
     bigUnit: { color: c['text-lo'], fontFamily: font.body, fontSize: 14 },
@@ -489,6 +490,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 13,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     footnote: {

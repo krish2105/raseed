@@ -280,6 +280,7 @@ const styles = (c: Palette) =>
       fontFamily: font.monoMedium,
       fontSize: 14,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     note: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, lineHeight: 18 },
     retention: { color: c['text-lo'], fontFamily: font.body, fontSize: 11, lineHeight: 17 },

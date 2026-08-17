@@ -516,3 +516,93 @@ describe('splits in both directions', () => {
     expect(outstanding()).toEqual([])
   })
 })
+
+/**
+ * Trip Mode.
+ *
+ * These assert the SQL semantics the trip queries rely on, against the same DDL the device
+ * renders. The query functions themselves cannot be imported here — they call `getConnection()`,
+ * which is op-sqlite and native — so what is proven is the part that would silently misbehave:
+ * what "active" means, what a trip's spend counts, and that starting one closes the last.
+ */
+describe('trip mode', () => {
+  const trip = (over: Record<string, unknown> = {}) => {
+    const id = over.id ?? `trip-${++seq}`
+    db.exec(
+      `INSERT INTO trips (id, name, country, currency, started_at, ended_at, budget_minor,
+                          user_id, updated_at, deleted)
+       VALUES ('${id}', '${over.name ?? 'Dubai'}', '${over.country ?? 'UAE'}', 'AED',
+               ${over.started_at ?? 1000}, ${over.ended_at ?? 'NULL'},
+               ${over.budget_minor ?? 300000}, 'local', 1, ${over.deleted ?? 0})`,
+    )
+    return id as string
+  }
+
+  const active = () =>
+    db
+      .prepare('SELECT id FROM trips WHERE ended_at IS NULL AND deleted = 0 ORDER BY started_at DESC')
+      .all() as { id: string }[]
+
+  it('an open trip is one with no ended_at — there is no status column to consult', () => {
+    trip({ id: 'open' })
+    trip({ id: 'closed', ended_at: 2000 })
+    expect(active().map((r) => r.id)).toEqual(['open'])
+  })
+
+  it('a soft-deleted trip is not active, even with no end date', () => {
+    trip({ id: 'gone', deleted: 1 })
+    expect(active()).toHaveLength(0)
+  })
+
+  it('ending closes every open trip, so a second start cannot leave two', () => {
+    trip({ id: 'first', started_at: 1000 })
+    db.exec('UPDATE trips SET ended_at = 5000 WHERE ended_at IS NULL AND deleted = 0')
+    trip({ id: 'second', started_at: 6000 })
+    expect(active().map((r) => r.id)).toEqual(['second'])
+  })
+
+  it('ending a trip never deletes it — soft delete only, and you look back on trips', () => {
+    trip({ id: 'done' })
+    db.exec('UPDATE trips SET ended_at = 5000 WHERE ended_at IS NULL AND deleted = 0')
+    const row = db.prepare("SELECT ended_at, deleted FROM trips WHERE id = 'done'").get() as {
+      ended_at: number
+      deleted: number
+    }
+    expect(row.ended_at).toBe(5000)
+    expect(row.deleted).toBe(0)
+  })
+
+  it("a trip's spend goes through v_spend, so it inherits every exclusion", () => {
+    const id = trip()
+    insertTxn({ trip_id: id, home_amount_minor: 10_000 })
+    insertTxn({ trip_id: id, home_amount_minor: 5_000 })
+    // Each of these is excluded by the one spend predicate, and so must not reach a trip total.
+    insertTxn({ trip_id: id, home_amount_minor: 90_000, txn_type: 'income' })
+    insertTxn({ trip_id: id, home_amount_minor: 90_000, txn_type: 'transfer' })
+    insertTxn({ trip_id: id, home_amount_minor: 90_000, status: 'pending' })
+    insertTxn({ trip_id: id, home_amount_minor: 90_000, deleted: 1 })
+
+    const total = db
+      .prepare('SELECT SUM(home_amount_minor) AS total FROM v_spend WHERE trip_id = ?')
+      .get(id) as { total: number }
+    expect(total.total).toBe(15_000)
+  })
+
+  it('untagged spend belongs to no trip and is not swept into one', () => {
+    const id = trip()
+    insertTxn({ trip_id: id, home_amount_minor: 10_000 })
+    insertTxn({ trip_id: null, home_amount_minor: 77_000 })
+    const total = db
+      .prepare('SELECT SUM(home_amount_minor) AS total FROM v_spend WHERE trip_id = ?')
+      .get(id) as { total: number }
+    expect(total.total).toBe(10_000)
+  })
+
+  it('a trip with no spend totals to null, not zero — the caller must coalesce', () => {
+    const id = trip()
+    const total = db
+      .prepare('SELECT SUM(home_amount_minor) AS total FROM v_spend WHERE trip_id = ?')
+      .get(id) as { total: number | null }
+    expect(total.total).toBeNull()
+  })
+})

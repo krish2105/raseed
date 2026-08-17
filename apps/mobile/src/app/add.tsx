@@ -18,6 +18,7 @@ import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
 import { AED_TO_INR } from '@/lib/fx'
+import { Chip } from '@/components/ui'
 import {
   commitAfterDismiss,
   insertTransaction,
@@ -186,24 +187,19 @@ export default function AddScreen() {
             </Text>
           ) : (
             <View style={s.chips}>
-              {people.map((p) => {
-                const on = withPeople.includes(p.id)
-                return (
-                  <Pressable
-                    key={p.id}
-                    onPress={() =>
-                      setWithPeople((prev) =>
-                        on ? prev.filter((x) => x !== p.id) : [...prev, p.id],
-                      )
-                    }
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: on }}
-                    style={[s.chip, on && s.chipActive]}
-                  >
-                    <Text style={[s.chipText, on && s.chipTextActive]}>{p.name}</Text>
-                  </Pressable>
-                )
-              })}
+              {people.map((p) => (
+                <Chip
+                  key={p.id}
+                  label={p.name}
+                  role="checkbox"
+                  selected={withPeople.includes(p.id)}
+                  onPress={() =>
+                    setWithPeople((prev) =>
+                      prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id],
+                    )
+                  }
+                />
+              ))}
             </View>
           )}
 
@@ -235,32 +231,26 @@ export default function AddScreen() {
           <Text style={s.label}>Category</Text>
           <View style={s.chips}>
             {categories.map((c) => (
-              <Pressable
+              <Chip
                 key={c.id}
+                label={c.name}
+                role="radio"
+                selected={categoryId === c.id}
                 onPress={() => setCategoryId(c.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: categoryId === c.id }}
-                style={[s.chip, categoryId === c.id && s.chipActive]}
-              >
-                <Text style={[s.chipText, categoryId === c.id && s.chipTextActive]}>{c.name}</Text>
-              </Pressable>
+              />
             ))}
           </View>
 
           <Text style={s.label}>Account</Text>
           <View style={s.chips}>
             {accounts.map((a) => (
-              <Pressable
+              <Chip
                 key={a.id}
+                label={a.name}
+                role="radio"
+                selected={accountId === a.id}
                 onPress={() => setAccountId(a.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: accountId === a.id }}
-                style={[s.chip, accountId === a.id && s.chipActive]}
-              >
-                <Text style={[s.chipText, accountId === a.id && s.chipTextActive]}>
-                  {a.name}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
 
@@ -314,6 +304,7 @@ const styles = (c: Palette) =>
       fontSize: 48,
       letterSpacing: -1,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
       paddingVertical: space[1],
     },
 
@@ -344,17 +335,6 @@ const styles = (c: Palette) =>
     },
 
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-    chip: {
-      borderColor: c.line,
-      borderWidth: 1,
-      borderRadius: radius.full,
-      paddingHorizontal: space[3],
-      paddingVertical: space[2],
-      backgroundColor: c['surface-1'],
-    },
-    chipActive: { backgroundColor: c['surface-2'], borderColor: c.inr },
-    chipText: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
-    chipTextActive: { color: c['text-hi'] },
 
     error: { color: c.warn, fontFamily: font.body, fontSize: 13, marginTop: space[3] },
     fxNote: {

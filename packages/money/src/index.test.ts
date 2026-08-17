@@ -18,6 +18,7 @@ import {
   sub,
   sum,
   zero,
+  divide,
 } from './index'
 
 describe('construction', () => {
@@ -234,5 +235,46 @@ describe('format', () => {
   it('formatMinor is code-prefixed and symbol-free', () => {
     expect(formatMinor(money(74000, 'INR'))).toBe('INR 740.00')
     expect(formatMinor(money(9250, 'AED'))).toBe('AED 92.50')
+  })
+})
+
+describe('divide', () => {
+  it('gives a per-day rate', () => {
+    // ₹12,400 over 5 days.
+    expect(divide(money(1_240_000, 'INR'), 5)).toEqual(money(248_000, 'INR'))
+  })
+
+  it('rounds half away from zero, so ±x stay symmetric', () => {
+    expect(divide(money(5, 'INR'), 2)).toEqual(money(3, 'INR'))
+    expect(divide(money(-5, 'INR'), 2)).toEqual(money(-3, 'INR'))
+  })
+
+  it('never returns a fractional minor unit', () => {
+    for (const d of [3, 6, 7, 9, 11, 13]) {
+      expect(Number.isInteger(divide(money(1_000_00, 'AED'), d).minor)).toBe(true)
+    }
+  })
+
+  it('throws on zero rather than returning zero or Infinity', () => {
+    // The morning a trip starts, days-elapsed is 0. A silent 0 would render "₹0 a day" on a
+    // trip that has already cost something — a wrong number that looks like a fine one.
+    expect(() => divide(money(100, 'INR'), 0)).toThrow(/divide money by zero/)
+  })
+
+  it('throws on a non-finite divisor', () => {
+    expect(() => divide(money(100, 'INR'), Number.NaN)).toThrow(/finite/)
+    expect(() => divide(money(100, 'INR'), Number.POSITIVE_INFINITY)).toThrow(/finite/)
+  })
+
+  it('is NOT a bill split — that is what allocate is for', () => {
+    // The distinction the doc comment exists for, asserted rather than described.
+    const hundred = money(10_000, 'INR')
+    const byDivide = [1, 2, 3].map(() => divide(hundred, 3))
+    expect(sum(byDivide, 'INR')).not.toEqual(hundred) // 33.33 x 3 = 99.99 — a paisa is gone
+    expect(sum(allocate(hundred, 3), 'INR')).toEqual(hundred) // 34/33/33 — exact
+  })
+
+  it('keeps the currency', () => {
+    expect(divide(money(900, 'AED'), 3).currency).toBe('AED')
   })
 })

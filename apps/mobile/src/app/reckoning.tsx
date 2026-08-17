@@ -501,6 +501,7 @@ const styles = (c: Palette) =>
       fontFamily: font.displayBold,
       fontSize: 34,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
       marginTop: space[1],
     },
     cardMeta: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginTop: space[1] },
@@ -547,6 +548,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 13,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     nudges: { gap: space[4] },

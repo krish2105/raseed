@@ -1,11 +1,12 @@
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native'
+import { SectionList, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 
 import { format } from '@raseed/money'
-import { radius, space, type Palette } from '@raseed/tokens'
+import { space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
+import { LedgerRow } from '@/components/ui'
 import { countSpend, recentSpend, useQuery, type LedgerEntry } from '@/db'
 
 /**
@@ -78,25 +79,15 @@ export default function LedgerScreen() {
         renderItem={({ item }) => (
           // The whole row opens the editor. A transaction you cannot correct is one you learn
           // to distrust, and P1's own done-when has always included edit and delete.
-          <Pressable
-            style={s.row}
-            onPress={() => router.push({ pathname: '/edit', params: { id: item.id } })}
-            accessibilityRole="button"
-            accessibilityLabel={`Edit ${item.merchant}, ${format(item.amount)}`}
-          >
-            <View style={s.rowLeft}>
-              <View
-                style={[s.dot, { backgroundColor: item.currency === 'AED' ? colors.aed : colors.inr }]}
-              />
-              <View style={s.rowText}>
-                <Text style={s.rowName} numberOfLines={1}>
-                  {item.merchant}
-                </Text>
-                <Text style={s.rowMeta}>{item.category}</Text>
-              </View>
-            </View>
-            <Text style={s.rowAmount}>{format(item.amount)}</Text>
-          </Pressable>
+          <View style={s.rowSeparator}>
+            <LedgerRow
+              name={item.merchant}
+              meta={item.category}
+              amount={format(item.amount)}
+              dotColor={item.currency === 'AED' ? colors.aed : colors.inr}
+              onPress={() => router.push({ pathname: '/edit', params: { id: item.id } })}
+            />
+          </View>
         )}
       />
     </SafeAreaView>
@@ -122,25 +113,9 @@ const styles = (c: Palette) =>
     dayTitle: { color: c['text-hi'], fontFamily: font.bodyMedium, fontSize: 13 },
     dayTotal: { color: c['text-lo'], fontFamily: font.mono, fontSize: 11 },
 
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+    rowSeparator: {
       borderBottomColor: c.line,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      paddingVertical: space[3],
-      gap: space[3],
-    },
-    rowLeft: { flexDirection: 'row', alignItems: 'center', gap: space[3], flexShrink: 1 },
-    dot: { width: 6, height: 6, borderRadius: radius.full },
-    rowText: { flexShrink: 1 },
-    rowName: { color: c['text-hi'], fontFamily: font.body, fontSize: 15 },
-    rowMeta: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginTop: 1 },
-    rowAmount: {
-      color: c['text-hi'],
-      fontFamily: font.monoMedium,
-      fontSize: 15,
-      fontVariant: ['tabular-nums'],
     },
     empty: {
       color: c['text-lo'],

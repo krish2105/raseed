@@ -154,3 +154,32 @@ body {
     animation: none !important;
   }
 }
+
+/*
+ * The Arabic face, applied by the document's own language rather than by a class.
+ *
+ * `:lang(ar)` matches on the `lang` attribute the pre-paint script writes, so the switch happens
+ * at the same instant `dir` does and no component has to remember to opt in. Selecting on the
+ * language is also correct for mixed content: an Arabic label inside an English page gets the
+ * right face without anything being wrapped.
+ *
+ * Latin digits and symbols still come from the Latin stack — the fallback order matters, and
+ * putting the Arabic face second means ₹ and AED keep the metrics every figure beside them has.
+ */
+:lang(ar) body {
+  font-family: var(--font-arabic), var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/*
+ * Money is a self-contained left-to-right run, always.
+ *
+ * `format()` builds an amount as sign + symbol + digits. In an RTL paragraph a leading ASCII
+ * hyphen-minus is a neutral: UAX#9 resolves it to the paragraph direction, so `-₹1,993.25`
+ * renders as `₹1,993.25-` and a debt starts looking like a footnote. Isolating the run pins the
+ * sign where it was written without changing a single stored string.
+ */
+.tabular,
+[data-money] {
+  unicode-bidi: isolate;
+  direction: ltr;
+}

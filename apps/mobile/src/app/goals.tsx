@@ -8,6 +8,7 @@ import { format, fromMajor, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
+import { PrimaryButton, Field } from '@/components/ui'
 import { Glass } from '@/components/Glass'
 import {
   addGoal,
@@ -127,35 +128,31 @@ export default function GoalsScreen() {
 
         <View style={s.row}>
           <View style={s.half}>
-            <Text style={s.label}>Amount (₹)</Text>
-            <TextInput
+            <Field
+              label="Amount (₹)"
+              accessibilityLabel="Target amount in rupees"
               value={amountText}
               onChangeText={(t) => {
                 setAmountText(t)
                 setError(null)
               }}
               keyboardType="decimal-pad"
-              accessibilityLabel="Target amount in rupees"
-              style={s.input}
             />
           </View>
           <View style={s.half}>
-            <Text style={s.label}>Months</Text>
-            <TextInput
+            <Field
+              label="Months"
+              accessibilityLabel="Months from now"
               value={monthsText}
               onChangeText={setMonthsText}
               keyboardType="number-pad"
-              accessibilityLabel="Months from now"
-              style={s.input}
             />
           </View>
         </View>
 
         {error && <Text style={s.error}>{error}</Text>}
 
-        <Pressable onPress={create} accessibilityRole="button" style={s.primary}>
-          <Text style={s.primaryText}>Add goal</Text>
-        </Pressable>
+        <PrimaryButton label="Add goal" onPress={create} style={s.primarySpacing} />
       </ScrollView>
     </SafeAreaView>
   )
@@ -355,12 +352,14 @@ const styles = (c: Palette) =>
       fontFamily: font.displayBold,
       fontSize: 24,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     savedDone: {
       color: c.good,
       fontFamily: font.displayBold,
       fontSize: 24,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     of: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
 
@@ -395,6 +394,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 12,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     label: {
@@ -419,12 +419,5 @@ const styles = (c: Palette) =>
     },
     error: { color: c.warn, fontFamily: font.body, fontSize: 13, marginTop: space[3] },
 
-    primary: {
-      marginTop: space[5],
-      borderRadius: radius.md,
-      backgroundColor: c.inr,
-      paddingVertical: space[3],
-      alignItems: 'center',
-    },
-    primaryText: { color: c['surface-0'], fontFamily: font.bodyMedium, fontSize: 15 },
+    primarySpacing: { marginTop: space[5] },
   })

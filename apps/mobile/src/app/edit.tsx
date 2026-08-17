@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { format, fromMajor, type Money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
+import { Chip } from '@/components/ui'
 import { font, useTheme } from '@/theme'
 import {
   commitAfterDismiss,
@@ -201,34 +202,26 @@ export default function EditScreen() {
           <Text style={s.label}>Category</Text>
           <View style={s.chips}>
             {categories.map((c) => (
-              <Pressable
+              <Chip
                 key={c.id}
+                label={c.name}
+                role="radio"
+                selected={categoryValue === c.id}
                 onPress={() => setCategoryId(c.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: categoryValue === c.id }}
-                style={[s.chip, categoryValue === c.id && s.chipActive]}
-              >
-                <Text style={[s.chipText, categoryValue === c.id && s.chipTextActive]}>
-                  {c.name}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
 
           <Text style={s.label}>Account</Text>
           <View style={s.chips}>
             {accounts.map((a) => (
-              <Pressable
+              <Chip
                 key={a.id}
+                label={a.name}
+                role="radio"
+                selected={accountValue === a.id}
                 onPress={() => setAccountId(a.id)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: accountValue === a.id }}
-                style={[s.chip, accountValue === a.id && s.chipActive]}
-              >
-                <Text style={[s.chipText, accountValue === a.id && s.chipTextActive]}>
-                  {a.name}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
 
@@ -293,6 +286,7 @@ const styles = (c: Palette) =>
       fontSize: 40,
       letterSpacing: -1,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
       paddingVertical: space[1],
     },
     input: {
@@ -308,17 +302,6 @@ const styles = (c: Palette) =>
     },
 
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-    chip: {
-      borderColor: c.line,
-      borderWidth: 1,
-      borderRadius: radius.full,
-      paddingHorizontal: space[3],
-      paddingVertical: space[2],
-      backgroundColor: c['surface-1'],
-    },
-    chipActive: { backgroundColor: c['surface-2'], borderColor: c.inr },
-    chipText: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
-    chipTextActive: { color: c['text-hi'] },
 
     error: { color: c.warn, fontFamily: font.body, fontSize: 13, marginTop: space[3] },
 

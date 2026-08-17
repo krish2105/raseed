@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "prepare": "git config core.hooksPath .githooks",
+    "prepare": "git rev-parse --git-dir > /dev/null 2>&1 && git config core.hooksPath .githooks || echo 'prepare: not a git checkout, skipping hooks path'",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "test": "turbo test",

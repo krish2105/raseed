@@ -155,6 +155,7 @@ export interface NewTransaction {
 export function insertTransaction(input: NewTransaction): string {
   const id = `txn-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
   const homeMinor = Math.round(input.amount.minor * input.fxRate)
+  const occurredAt = input.occurredAt ?? Date.now()
 
   // Resolve on write, not on read. The raw text stays on the row either way — it is what you
   // actually typed, and losing it would make a wrong resolution impossible to audit.
@@ -166,10 +167,10 @@ export function insertTransaction(input: NewTransaction): string {
         account_id, merchant_id, category_id, raw_text, source, txn_type, transfer_group_id,
         reversal_of_id, trip_id, status, confidence, note, user_id, updated_at, deleted)
      VALUES (?, ?, 'out', ?, ?, ?, ?, ?, ?, ?, ?, 'manual', 'spend', NULL,
-             NULL, NULL, 'confirmed', 1.0, ?, ?, ?, 0)`,
+             NULL, ?, 'confirmed', 1.0, ?, ?, ?, 0)`,
     [
       id,
-      input.occurredAt ?? Date.now(),
+      occurredAt,
       input.amount.minor,
       input.amount.currency,
       homeMinor,
@@ -178,6 +179,7 @@ export function insertTransaction(input: NewTransaction): string {
       merchantId,
       input.categoryId,
       input.merchantText,
+      tripIdFor(occurredAt),
       input.note ?? null,
       USER,
       Date.now(),
@@ -1442,4 +1444,152 @@ export function deleteEverything(): void {
       // deletion. Failing halfway through "delete everything" is worse than a missing table.
     }
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Trip Mode
+//
+// `MOBILE_ARCHITECTURE.md` F15: "Trip Mode. Toggle (or auto-detect via timezone/locale change)."
+//
+// **A toggle, and deliberately not the detector.** `detectTrips` needs `days >= 2` before a run
+// counts, so nothing exists to show on day one — and day one is the whole point of a lock-screen
+// activity. A person starting a trip also supplies the `name` and `country` the table requires
+// and the ledger cannot invent, and gives "no thanks" somewhere to live: there is no status
+// column, so a *declined* proposal could not have been remembered anyway.
+//
+// The `trips` table has been in the contract, in every device's SQLite, and empty, since it was
+// added. Nothing here changes the schema; `parity.test.ts` is untouched.
+// ---------------------------------------------------------------------------------------------
+
+export interface TripRow {
+  id: string
+  name: string
+  country: string
+  currency: Currency
+  started_at: number
+  ended_at: number | null
+  budget_minor: number | null
+}
+
+/**
+ * The trip you are on, if any.
+ *
+ * `ended_at IS NULL` is the only possible encoding of "active" — there is no status column, and
+ * adding one would be a contract change for a state the absence of an end date already expresses.
+ *
+ * `LIMIT 1` with a newest-first order rather than an assertion that only one is open. `startTrip`
+ * closes any open trip before opening the next, so two should be impossible; if a bug ever makes
+ * it possible, this returns the one you most recently started instead of throwing on the home
+ * screen. A ledger that will not render is worse than one that renders the likelier answer.
+ */
+export function activeTrip(): TripRow | null {
+  return (
+    rows<TripRow>(
+      `SELECT id, name, country, currency, started_at, ended_at, budget_minor
+         FROM trips
+        WHERE ended_at IS NULL AND deleted = 0
+        ORDER BY started_at DESC
+        LIMIT 1`,
+    )[0] ?? null
+  )
+}
+
+export function listTrips(): TripRow[] {
+  return rows<TripRow>(
+    `SELECT id, name, country, currency, started_at, ended_at, budget_minor
+       FROM trips
+      WHERE deleted = 0
+      ORDER BY started_at DESC`,
+  )
+}
+
+/**
+ * Start a trip. Closes any trip still open first.
+ *
+ * Two open trips would make "the active trip" ambiguous, and the active trip is what tags new
+ * spend — so the ambiguity would not stay cosmetic, it would misfile money. Closing first is one
+ * statement and removes the state entirely rather than defending against it everywhere later.
+ */
+export function startTrip(input: {
+  name: string
+  country: string
+  currency: Currency
+  budgetMinor: number | null
+}): string {
+  const id = `trip-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  const now = Date.now()
+  endActiveTrip()
+  getConnection().executeSync(
+    `INSERT INTO trips
+       (id, name, country, currency, started_at, ended_at, budget_minor, user_id, updated_at, deleted)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, 0)`,
+    [id, input.name, input.country, input.currency, now, input.budgetMinor, USER, now],
+  )
+  return id
+}
+
+/**
+ * End the trip you are on.
+ *
+ * Sets `ended_at`; never deletes. Soft delete only is the invariant, and a finished trip is not
+ * a deleted one in any case — it is the thing you look back on, and the rows tagged to it keep
+ * pointing at a row that still exists.
+ */
+export function endActiveTrip(): void {
+  const now = Date.now()
+  getConnection().executeSync(
+    'UPDATE trips SET ended_at = ?, updated_at = ? WHERE ended_at IS NULL AND deleted = 0',
+    [now, now],
+  )
+}
+
+/**
+ * What the current trip has cost so far.
+ *
+ * Through `v_spend`, like everything else that counts as spend — the predicate is defined once
+ * and this is not the place to start a second opinion. `home_amount_minor` rather than
+ * `amount_minor`, so a trip that mixes currencies still totals to one number, using the rate
+ * frozen on each row rather than today's.
+ */
+/**
+ * The active trip and what it has cost, in one stable function.
+ *
+ * **Stable is the operative word.** `useQuery` lists `read` in its `useMemo` dependencies, so an
+ * inline arrow passed at the call site is a new reference on every render — the query re-runs on
+ * every keystroke, and the store churn was enough to wipe the text out of a `TextInput` mid-typing.
+ * Caught on the device, not by a type. Module-level functions are the contract this hook is
+ * written against; a closure is not.
+ *
+ * Reading both halves here also means the total can never be a trip behind the trip it is
+ * labelled with, which two separate reads could manage between renders.
+ */
+export function activeTripWithSpend(): { trip: TripRow; spent: Money } | null {
+  const trip = activeTrip()
+  return trip ? { trip, spent: tripSpend(trip.id) } : null
+}
+
+export function tripSpend(tripId: string): Money {
+  const result = rows<{ total: number | null }>(
+    'SELECT SUM(home_amount_minor) AS total FROM v_spend WHERE trip_id = ?',
+    [tripId],
+  )
+  return money(Math.round(result[0]?.total ?? 0), 'INR')
+}
+
+/**
+ * Which trip a transaction belongs to, if any.
+ *
+ * Folded into `insertTransaction` rather than called beside it at each capture path. There are
+ * three paths — the sheet, the parser and the receipt scanner — and a fourth will be added; a
+ * tagging step that every caller has to remember is a step one of them will forget, and the
+ * failure is silent. The row just quietly belongs to no trip.
+ *
+ * **The date decides, not the clock.** A row is tagged only if it happened after the trip
+ * started. `add` lets you backdate, so tagging on "is a trip running right now" would file last
+ * month's rent into this week's Dubai trip the moment you corrected it mid-trip. The trip is a
+ * window; membership is a question about the transaction's date, not about when you typed it.
+ */
+function tripIdFor(occurredAt: number): string | null {
+  const trip = activeTrip()
+  return trip && occurredAt >= trip.started_at ? trip.id : null
 }

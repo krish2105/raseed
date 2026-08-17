@@ -283,6 +283,7 @@ const styles = (c: Palette) =>
       fontFamily: font.displayBold,
       fontSize: 32,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     heroHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
     shareText: { color: c.accent, fontFamily: font.bodyMedium, fontSize: 13 },
@@ -318,6 +319,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 15,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     settleLine: { color: c['text-hi'], fontFamily: font.body, fontSize: 14, flex: 1 },
     settle: {

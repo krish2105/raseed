@@ -9,6 +9,7 @@ import { format, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
+import { LedgerRow, Row } from '@/components/ui'
 import { liquidBalanceMinor, ratableSpend, spendBetween, spendTotal, useQuery, worthScores } from '@/db'
 import { DAYS_TO_PAYDAY, SAFETY_BUFFER, committedBills } from '@/lib/commitments'
 import { ratingQueue } from '@/lib/reckoning'
@@ -189,20 +190,14 @@ export default function TodayScreen() {
         <View style={s.card}>
           {entries.length > 0 ? (
             entries.map((t, i) => (
-              <View key={t.id} style={[s.row, i === 0 && s.rowFirst]}>
-                <View style={s.rowLeft}>
-                  <View
-                    style={[s.dot, { backgroundColor: t.currency === 'AED' ? colors.aed : colors.inr }]}
-                  />
-                  <View style={s.rowText}>
-                    <Text style={s.rowName} numberOfLines={1}>
-                      {t.merchant}
-                    </Text>
-                    <Text style={s.rowMeta}>{t.category}</Text>
-                  </View>
-                </View>
-                <Text style={s.rowAmount}>{format(t.amount)}</Text>
-              </View>
+              <Row key={t.id} first={i === 0}>
+                <LedgerRow
+                  name={t.merchant}
+                  meta={t.category}
+                  amount={format(t.amount)}
+                  dotColor={t.currency === 'AED' ? colors.aed : colors.inr}
+                />
+              </Row>
             ))
           ) : (
             // Empty states are invitations, not apologies.
@@ -280,6 +275,7 @@ const styles = (c: Palette) =>
       fontSize: 52,
       letterSpacing: -1.5,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     heroHint: { color: c['text-lo'], fontFamily: font.body, fontSize: 13 },
 
@@ -297,6 +293,7 @@ const styles = (c: Palette) =>
       fontFamily: font.mono,
       fontSize: 11,
       fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
 
     section: {
@@ -312,27 +309,6 @@ const styles = (c: Palette) =>
       borderWidth: 1,
       borderRadius: radius.lg,
       paddingHorizontal: space[4],
-    },
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      borderTopColor: c.line,
-      borderTopWidth: 1,
-      paddingVertical: space[3],
-      gap: space[3],
-    },
-    rowFirst: { borderTopWidth: 0 },
-    rowLeft: { flexDirection: 'row', alignItems: 'center', gap: space[3], flexShrink: 1 },
-    dot: { width: 6, height: 6, borderRadius: radius.full },
-    rowText: { flexShrink: 1 },
-    rowName: { color: c['text-hi'], fontFamily: font.body, fontSize: 15 },
-    rowMeta: { color: c['text-lo'], fontFamily: font.body, fontSize: 12, marginTop: 1 },
-    rowAmount: {
-      color: c['text-hi'],
-      fontFamily: font.monoMedium,
-      fontSize: 15,
-      fontVariant: ['tabular-nums'],
     },
 
     empty: {
