@@ -10,6 +10,7 @@ import { countSpend, listAccounts, listCategories, useQuery } from '@/db'
 import { WalletCount } from '@/components/WalletCount'
 import { COMMITMENTS } from '@/lib/commitments'
 import { AppLockToggle } from '@/components/AppLockToggle'
+import { ThemeChoice } from '@/components/ui'
 
 
 export default function YouScreen() {
@@ -141,6 +142,9 @@ export default function YouScreen() {
           ))}
         </View>
 
+        <Text style={s.section}>Appearance</Text>
+        <ThemeChoice />
+
         <Text style={s.section}>Privacy</Text>
         <AppLockToggle />
 
@@ -152,7 +156,7 @@ export default function YouScreen() {
           </View>
           <View style={s.row}>
             <Text style={s.rowName}>Theme</Text>
-            <Text style={s.rowAmount}>{scheme} (follows system)</Text>
+            <Text style={s.rowAmount}>{scheme}</Text>
           </View>
           <View style={s.row}>
             <Text style={s.rowName}>Home currency</Text>

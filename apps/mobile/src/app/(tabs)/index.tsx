@@ -62,7 +62,9 @@ export default function TodayScreen() {
 
   const allowance = Math.max(1, sts.baseDaily.minor + sts.carryover.minor)
   const usedPct = Math.min(100, Math.max(0, (spentToday.minor / allowance) * 100))
-  const accent = sts.overspent ? colors.warn : colors.inr
+  // Money, not chrome — deliberately not called `accent` any more, now that the word means
+  // the green. The dial takes the temperature of what it is showing.
+  const dialColour = sts.overspent ? colors.warn : colors.inr
   const [showNumbers, setShowNumbers] = useState(false)
 
   const hour = new Date(now).getHours()
@@ -150,7 +152,7 @@ export default function TodayScreen() {
               <DayDial progress={usedPct / 100} overspent={sts.overspent}>
                 <Text style={s.heroLabel}>You&apos;ve got</Text>
                 <Text
-                  style={[s.heroAmount, { color: accent }]}
+                  style={[s.heroAmount, { color: dialColour }]}
                   adjustsFontSizeToFit
                   numberOfLines={1}
                   accessibilityLabel={`${format(sts.amount)} left for today`}
@@ -359,9 +361,9 @@ const styles = (c: Palette) =>
       alignItems: 'center',
       justifyContent: 'center',
       gap: space[2],
-      backgroundColor: c['text-hi'],
+      backgroundColor: c.accent,
       borderRadius: radius.full,
       paddingVertical: space[4],
     },
-    captureText: { color: c['surface-0'], fontFamily: font.bodyMedium, fontSize: 15 },
+    captureText: { color: c['accent-ink'], fontFamily: font.bodyMedium, fontSize: 15 },
   })

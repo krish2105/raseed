@@ -189,14 +189,14 @@ const styles = (c: Palette) =>
       paddingVertical: space[2],
     },
     button: {
-      backgroundColor: c['text-hi'],
+      backgroundColor: c.accent,
       borderRadius: radius.md,
       paddingHorizontal: space[4],
       paddingVertical: space[3],
     },
     buttonDisabled: { opacity: 0.4 },
     buttonText: {
-      color: c['surface-0'],
+      color: c['accent-ink'],
       fontFamily: font.bodyMedium,
       fontSize: 14,
     },

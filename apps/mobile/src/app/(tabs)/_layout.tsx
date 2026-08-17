@@ -14,7 +14,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.inr,
+        // Chrome, not currency — the same law the dashboard follows.
+        tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors['text-lo'],
         tabBarStyle: { backgroundColor: colors['surface-1'], borderTopColor: colors.line },
         tabBarLabelStyle: { fontFamily: font.body, fontSize: 11 },

@@ -1877,3 +1877,43 @@ recorded earlier.
 
 **Verified:** 24/24 tasks, 1,022 unit tests, **74 e2e** including axe WCAG 2 AA on all eleven
 routes plus the landing in both themes, and the Lighthouse gate with nothing exempt.
+
+## Phase 2 — the phone gets dark mode, and a decision gets reversed (2026-08-17)
+
+`theme.ts` hard-coded light and read `useColorScheme` only to throw the value away. It now
+follows the system, with a three-way override — System / Light / Dark — on the You screen.
+
+**This reverses a recorded decision, and the reversal is the interesting part.** The original
+argument was real: the phone comes out in daylight, in a queue, for four seconds, and a light
+surface is easier to read at arm's length outdoors. What it got wrong is *whose choice it is*.
+Someone running their phone dark has usually decided that deliberately — glare, battery, their
+eyes — and an app that overrides it is not being thoughtful, it is being certain about a
+stranger's context.
+
+**Three options, not a switch.** "Follow the system" is a real answer and a two-state toggle
+cannot express it: it forces a choice the phone has usually already made.
+
+The preference lives in the keychain and is read through `useSyncExternalStore` rather than
+context — the same pattern `db/index.ts` already established here, and a third of the code of a
+provider for one string. A failed keychain write is deliberately not rolled back: the UI has
+already moved, and it reverts on next launch, which is visible and honest.
+
+`useColorScheme` returns null before the first native read, and that falls back to **light**
+rather than dark, so the very first frame is never a black flash on a light phone.
+
+### The colour law crossed over
+
+Everything that was ink-on-ink or currency-as-chrome is now the accent: the capture bar, the
+Companion's affirmative choice, the wallet-count button, the receipt screen's primary and its
+assignment chips, and the **tab bar's active tint**, which was `colors.inr` — a tab bar is not a
+currency. Today's dial keeps the temperature and its local variable was renamed from `accent` to
+`dialColour`, because the word now means the green and a variable that means the opposite of the
+token it shares a name with is a trap.
+
+`components/ui.tsx` is new: Card, Badge, PrimaryButton, SecondaryButton and the appearance
+control. Thirteen screens each carried their own card, their own pill and their own idea of a
+radius — survivable while each was built once, not survivable through a redesign where the same
+edit has to land thirteen times and will not.
+
+**Verified on device in both themes**, including that the override applies instantly and the
+resolved theme is reported back on the About row.

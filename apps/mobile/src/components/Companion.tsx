@@ -153,7 +153,7 @@ const styles = (c: Palette) =>
       paddingHorizontal: space[3],
       paddingVertical: space[2],
     },
-    choicePrimary: { backgroundColor: c['text-hi'], borderColor: c['text-hi'] },
+    choicePrimary: { backgroundColor: c.accent, borderColor: c.accent },
     choiceText: { color: c['text-lo'], fontFamily: font.bodyMedium, fontSize: 13 },
-    choiceTextPrimary: { color: c['surface-0'] },
+    choiceTextPrimary: { color: c['accent-ink'] },
   })
