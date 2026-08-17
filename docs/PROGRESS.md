@@ -2,7 +2,7 @@
 
 Claude reads this at the start of every session. Tick sessions as they complete. Keep "Open threads" honest — it's the handoff between sessions.
 
-**Current session: #27** — audit, then the queue: dark redesign, WebGL corridor, Tier 0 charts, mobile Numbers, edit on both surfaces — S10/S12/S14/S16 partially landed early (charts, Sankey, variance, query bar)
+**Current session: #28** — Mobile P6: the worth-it loop, the Weekly Reckoning and the nudge budget are on the phone. `regretRate` and `rankNudges` had zero mobile callers until now
 
 ---
 
@@ -38,7 +38,9 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 - [x] **#14** Web P4 — Tier 0 complete: net-worth timeline and calendar heatmap shipped
 - [~] **#15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips) and **mobile** (`/trip`: `planTrip` over habits read from the ledger, Numbeo price ratios, unconstrained plan with the budget asked separately). Goals ship alongside it (`/goals`: new `goals` table, `savingsPlan` against real monthly surplus, copy through the tone gate). The Live Activity remains
 - [x] **#16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
-- [~] **#17** worth-it loop, Weekly Reckoning and the 4-nudge cap are live on WEB; the mobile surface remains
+- [x] **#17** worth-it loop, Weekly Reckoning and the 4-nudge cap — live on **both** surfaces.
+  Mobile P6 landed the phone half: `/reckoning`, ratings in `worth_scores`, nudges in `nudges`,
+  a rolling seven-day cap tested over four simulated weeks. In-app, not push
 - [x] **#18** Web P6 — Comlink worker; Arrow encoding moved off the main thread (837ms → 16ms longest block, measured)
 - [~] **#19** 🚩 splits + cash live on **web and phone** (one engine, 1,600-case test); blocked on the read-lags-one-write bug below, and the store question
 - [~] **#20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
@@ -53,6 +55,15 @@ Claude reads this at the start of every session. Tick sessions as they complete.
 ## Open threads
 
 *Anything left unfinished or unresolved. Clear it or carry it forward — never let it sit for more than two sessions.*
+
+- **Node 24 is required, not preferred** — `.nvmrc` says 24 and `package.json` says `>=24`.
+  Under Node 20 `node:sqlite` does not exist and the device schema suite fails to *load*, and
+  turbo aborts siblings on the first failure, so that one failure also reports `schema` and
+  `web` as failed. `nvm use` first; add `--continue` when diagnosing.
+
+- ✅ **The worth-it loop is on the phone** — `/reckoning`: five cards a session, regret by
+  category, and at most four nudges in any rolling seven days. `acted` is written and feeds
+  fatigue. **In-app only** — push notifications are not built and no permission is requested.
 
 - **EAS unverified** — steps written up in `docs/RUNBOOK_EAS.md`; needs Krishna's Expo
   credentials so it is his to run. iOS Simulator is the only proven mobile target.

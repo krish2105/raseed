@@ -9,8 +9,9 @@ import { format, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
-import { liquidBalanceMinor, spendBetween, spendTotal, useQuery } from '@/db'
+import { liquidBalanceMinor, ratableSpend, spendBetween, spendTotal, useQuery, worthScores } from '@/db'
 import { DAYS_TO_PAYDAY, SAFETY_BUFFER, committedBills } from '@/lib/commitments'
+import { ratingQueue } from '@/lib/reckoning'
 import { useNow } from '@/hooks/useNow'
 import { DayDial } from '@/components/DayDial'
 import { Companion } from '@/components/Companion'
@@ -66,6 +67,12 @@ export default function TodayScreen() {
 
   const hour = new Date(now).getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+
+  // The same 90-day window the Reckoning reads, on purpose: a count here that disagrees with
+  // what you find when you tap it is worse than no count.
+  const ratable = useQuery(() => ratableSpend(90))
+  const scores = useQuery(worthScores)
+  const toRate = ratingQueue(ratable, scores, now).length
 
   /**
    * Facts are computed here and formatted here; the narrator receives strings only, so it
@@ -161,6 +168,19 @@ export default function TodayScreen() {
               </Text>
             </View>
           </View>
+        )}
+
+        {/* Navigation, not an observation — the Companion above still owns the one thing the
+            screen is allowed to say. This appears only when there is something to answer, so
+            it is a count rather than a permanent entry that teaches you to skip it. */}
+        {toRate > 0 && (
+          <Link href="/reckoning" asChild>
+            <Pressable accessibilityRole="button" style={s.disclosure}>
+              <Text style={s.disclosureText}>
+                {toRate} to look back on — was it worth it?
+              </Text>
+            </Pressable>
+          </Link>
         )}
 
         <Text style={s.section}>Today&apos;s ledger</Text>

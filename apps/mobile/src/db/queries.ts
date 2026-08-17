@@ -1,6 +1,7 @@
 import { normaliseMerchant } from '@raseed/engines'
 import { money, type Currency, type Money } from '@raseed/money'
 import type { Scalar } from '@op-engineering/op-sqlite'
+import type { RatableRow, Score } from '@/lib/reckoning'
 import { getConnection } from './client'
 
 /**
@@ -986,4 +987,175 @@ export function remittanceLegs(days = 400): RemittanceLegRow[] {
       occurredAt: row.occurred_at,
     }
   })
+}
+
+// ── the worth-it loop ───────────────────────────────────────────────────────
+
+/**
+ * Every confirmed spend recent enough to be worth a question, carrying the names a card shows.
+ *
+ * Ninety days rather than the seven the queue asks about: the same rows feed the Reckoning's
+ * regret panel, and a rating you gave six weeks ago is still a rating. `ratingQueue` narrows
+ * to its own windows — the last thirty days for the percentile, the last seven for the ask.
+ */
+export function ratableSpend(days = 90): RatableRow[] {
+  const since = Date.now() - days * 86_400_000
+  return rows<{
+    id: string
+    occurred_at: number
+    amount_minor: number
+    currency: Currency
+    home_amount_minor: number
+    merchant: string
+    category_id: string
+    category_name: string
+  }>(
+    `SELECT s.id, s.occurred_at, s.amount_minor, s.currency, s.home_amount_minor,
+            COALESCE(m.canonical_name, s.raw_text, 'Unknown') AS merchant,
+            COALESCE(s.category_id, 'uncategorised')          AS category_id,
+            COALESCE(c.name, 'Uncategorised')                 AS category_name
+       FROM v_spend s
+       LEFT JOIN merchants  m ON m.id = s.merchant_id
+       LEFT JOIN categories c ON c.id = s.category_id
+      WHERE s.occurred_at >= ?
+      ORDER BY s.occurred_at DESC`,
+    [since],
+  ).map((r) => ({
+    id: r.id,
+    merchant: r.merchant,
+    categoryId: r.category_id,
+    categoryName: r.category_name,
+    amountMinor: r.amount_minor,
+    currency: r.currency,
+    homeAmountMinor: r.home_amount_minor,
+    occurredAt: r.occurred_at,
+  }))
+}
+
+/** Every answer you have given. Soft-deleted rows are cleared ratings, not answers. */
+export function worthScores(): Map<string, Score> {
+  return new Map(
+    rows<{ transaction_id: string; score: number }>(
+      'SELECT transaction_id, score FROM worth_scores WHERE deleted = 0',
+    ).map((r) => [r.transaction_id, r.score as Score]),
+  )
+}
+
+/**
+ * Record an answer. Upsert, because changing your mind is allowed and is not a new row.
+ *
+ * `deleted = 0` in the update clause is what makes re-rating a cleared row work: the clear
+ * is a soft delete, so without this the row would come back still flagged as gone.
+ */
+export function rateTransaction(transactionId: string, score: Score): void {
+  const at = Date.now()
+  getConnection().executeSync(
+    `INSERT INTO worth_scores (transaction_id, score, rated_at, user_id, updated_at, deleted)
+     VALUES (?, ?, ?, ?, ?, 0)
+     ON CONFLICT(transaction_id) DO UPDATE SET
+       score = excluded.score, rated_at = excluded.rated_at,
+       updated_at = excluded.updated_at, deleted = 0`,
+    [transactionId, score, at, USER, at],
+  )
+}
+
+/** Undo a rating. Soft delete — the row stays, so the correction syncs like any other edit. */
+export function clearRating(transactionId: string): void {
+  getConnection().executeSync(
+    'UPDATE worth_scores SET deleted = 1, updated_at = ? WHERE transaction_id = ?',
+    [Date.now(), transactionId],
+  )
+}
+
+// ── the nudge budget ────────────────────────────────────────────────────────
+
+export interface StoredNudge {
+  kind: string
+  title: string
+  body: string
+  score: number
+  sentAt: number
+  acted: boolean
+}
+
+/**
+ * What has already been shown, newest first.
+ *
+ * The Reckoning renders **these**, plus whatever new ones the week can still afford. Showing
+ * the screen must not itself spend a slot: reopening it half an hour later would otherwise
+ * burn the week's four in an afternoon of ordinary use.
+ */
+export function recentNudges(days = 7): StoredNudge[] {
+  const since = Date.now() - days * 86_400_000
+  return rows<{
+    kind: string
+    payload: string
+    score: number
+    sent_at: number
+    acted: number
+  }>(
+    `SELECT kind, payload, score, sent_at, acted
+       FROM nudges
+      WHERE deleted = 0 AND sent_at IS NOT NULL AND sent_at >= ?
+      ORDER BY sent_at DESC`,
+    [since],
+  ).map((r) => {
+    const payload = JSON.parse(r.payload) as { title: string; body: string }
+    return {
+      kind: r.kind,
+      title: payload.title,
+      body: payload.body,
+      score: r.score,
+      sentAt: r.sent_at,
+      acted: r.acted === 1,
+    }
+  })
+}
+
+/** When each kind last appeared, over a window long enough to cover the novelty ramp. */
+export function lastNudgeByKind(days = 30): Map<string, number> {
+  const since = Date.now() - days * 86_400_000
+  return new Map(
+    rows<{ kind: string; last: number }>(
+      `SELECT kind, MAX(sent_at) AS last
+         FROM nudges
+        WHERE deleted = 0 AND sent_at IS NOT NULL AND sent_at >= ?
+        GROUP BY kind`,
+      [since],
+    ).map((r) => [r.kind, r.last]),
+  )
+}
+
+/** Spend a slot. Called once, at the moment a nudge first reaches the screen. */
+export function recordNudgeShown(n: {
+  kind: string
+  title: string
+  body: string
+  score: number
+  createdAt: number
+}): void {
+  const at = Date.now()
+  const id = `nudge-${at.toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
+  getConnection().executeSync(
+    `INSERT INTO nudges
+       (id, kind, payload, score, created_at, sent_at, acted, user_id, updated_at, deleted)
+     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, 0)`,
+    [id, n.kind, JSON.stringify({ title: n.title, body: n.body }), n.score, n.createdAt, at, USER, at],
+  )
+}
+
+/**
+ * You did something about it.
+ *
+ * Feeds the fatigue term on the next cycle: four nudges you opened are a lighter load than
+ * four you scrolled past, and an app that cannot tell the difference gets quieter at exactly
+ * the person who is using it.
+ */
+export function markNudgeActed(kind: string): void {
+  getConnection().executeSync(
+    `UPDATE nudges SET acted = 1, updated_at = ?
+      WHERE kind = ? AND deleted = 0 AND sent_at IS NOT NULL
+      AND sent_at = (SELECT MAX(sent_at) FROM nudges WHERE kind = ? AND deleted = 0)`,
+    [Date.now(), kind, kind],
+  )
 }

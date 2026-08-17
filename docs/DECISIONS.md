@@ -1466,3 +1466,104 @@ because the script used to be cross-origin.
 **Not started, and honestly so:** voice capture, Arabic/RTL, Lighthouse measurement, chart axes
 beyond the net-worth line, ledger virtualisation, `splitByItems` UI, bidirectional splits, and
 the mobile worth-it/Reckoning loop.
+
+## Mobile P6 — the worth-it loop, the Reckoning and the nudge budget (2026-08-17)
+
+`regretRate` and `rankNudges` were written and tested five sessions ago and imported by
+**nothing on the phone**. The device that owns the ledger could not tell you whether the money
+you spent was money you wanted to spend — the one question a bank statement cannot answer and
+the whole reason this is a mirror rather than a ledger. Both engines are now on device, behind
+`/reckoning`, with an entry on You and a count on Today.
+
+**The third button is "Neither", not "Skip".** The engine types a score as `-1 | 0 | 1 | null`
+and counts `0` in the denominator, while a previous note claimed a skipped rating stays out of
+it. Both cannot be true. Resolved in favour of the type: `0` means "I looked and had no strong
+feeling", which is information and belongs in the denominator. Skipping is a *separate* gesture
+— **Later** — which writes nothing at all, leaves the row unrated and brings it back next time.
+Had skip written `0`, the regret rate would fall every time someone was in a hurry; had it
+written nothing while still being the third button, the same card would be offered for ever.
+
+**The batch is chosen once, on open.** P8's spec says five per session, and a queue that
+recomputes after every answer does not deliver that — it refills from the backlog, so the count
+sits at five however many you answer and the session never ends. Picking the set up front is
+what makes "five" a real number rather than a page size, and it is what lets the empty state
+say something true.
+
+**The cap is a rolling seven days, not the calendar week.** A calendar week permits four on
+Sunday and four more on Monday — eight inside forty-eight hours, while satisfying "four a week"
+on both counts. That burst is exactly what the cap exists to prevent, and the rolling window
+also removes every timezone question a week boundary would have introduced.
+
+**Three independent mechanisms have to agree before a nudge appears**, and the redundancy is
+deliberate: a free slot, a score above zero, and the tone gate. The test asserts slots and
+fatigue reach their limits at the same point, so a later edit to one cannot quietly reopen the
+tap.
+
+**Novelty is a cooldown, not a ranking penalty.** Ranking a repeat lower does not suppress it —
+with four free slots and six candidates, "lower" still ships. So novelty is *zero* for fourteen
+days and ramps back to one by thirty, and `rankNudges` never ships a zero score even when slots
+are free. Proved by mutation: making the cooldown return 1 fails exactly the repeat test.
+
+**`acted` feeds fatigue, not slots.** Four nudges you opened are a lighter burden than four you
+scrolled past, and an app that cannot tell the difference gets quieter at precisely the person
+who is using it. But acting does not buy a fifth slot — the hard cap counts everything shown.
+This is why the column is written at all; it was declared in the contract and never used.
+
+**Opening the screen must not spend a slot.** The Reckoning renders only nudges already
+recorded; a single effect, guarded by a ref, is the one thing that adds to that list.
+Recomputing on render would burn the week's four in an afternoon, and recomputing on focus
+would do it in a week of ordinary navigation.
+
+**Undo is a soft delete, and the upsert says `deleted = 0`.** Without that clause a cleared
+rating can never be given again: the row revives with its tombstone still set and stays
+invisible for ever. There is a test for exactly this, because it is invisible until someone
+changes their mind twice.
+
+### Three things the simulator found that no test would have
+
+**The card showed ₹1,993.25 for a charge recorded as AED 85.** The arithmetic was right — home
+minor units are what make categories comparable — but a rating card asks you to *remember* a
+purchase, and a Careem ride you know as AED 85 does not become more recognisable converted. The
+card now shows what you paid, with the home figure appended only when the two differ.
+
+**The runway nudge fired with negative room:** *"9 days until money comes in, with -₹1,993.25 of
+room left."* That is not a nudge, it is a rub, and it arrives exactly when supportive mode says
+the app should be getting quieter. A runway nudge is a statement about how much room remains;
+with none remaining it has nothing to say the home screen has not already said more kindly.
+Both fixes shipped with tests.
+
+**"Where the regret is" listed a category at 0%.** Rating something positively is a good
+outcome, not a line item in a list of regrets — and the panel's own empty state said as much.
+
+### What this is not
+
+**These are in-app nudges, not push notifications.** No notification permission is requested and
+none is scheduled; `expo-notifications` is not a dependency. The cap, the ranking and the
+feedback loop are the substance and they are real, but delivery is a screen you open. P6's
+done-when says "≤4 notifications in a simulated week" and that is what the test simulates —
+four weeks of it, asserting every rolling window, with the history fed back each day. `rankNudges`
+is stateless and will ship four every time it is called; the cap is a property of the caller,
+which is why the test lives here rather than in the engine.
+
+**Nothing is animated.** The design system licenses a showy Reckoning card stack and this is not
+it. The app has no Reanimated usage anywhere yet, and introducing the first of it inside a
+session about the worth-it loop would be shipping a dependency for decoration.
+
+### Verified
+
+`turbo typecheck lint test` — 24/24, **1,007 tests**, of which 69 are the phone's (31 before).
+The new pure module was mutation-checked three ways: removing the history feedback fails the
+three cap tests, removing the top-regret branch fails the small-transaction test, and disabling
+the cooldown fails the repeat test.
+
+On the simulator, end to end: the batch counted 5 → 4 → empty with the right copy at each step;
+a rating wrote `worth_scores` and the regret panel updated; undo soft-deleted the row and the
+card came back; the nudge's **Noted** wrote `acted = 1`; and after deleting the pre-fix `runway`
+row from the device database, reopening the screen with three free slots correctly created **no**
+runway nudge. Device state read directly out of `raseed.db` at each step rather than inferred
+from the screen.
+
+**One environment note worth keeping.** The repo pins Node 24 (`.nvmrc`, `engines: ">=24"`).
+Under Node 20 `node:sqlite` does not exist and the device schema suite fails to load — and since
+turbo aborts siblings on first failure, that one failure also reported `schema` and `web` as
+failed when they were fine. Use `--continue` when diagnosing.

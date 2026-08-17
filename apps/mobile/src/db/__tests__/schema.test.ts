@@ -282,3 +282,139 @@ describe('the spend predicate text', () => {
     expect(spendViewSql('transactions', 'v_spend', false)).toContain(spendPredicate())
   })
 })
+
+/**
+ * The two tables P6 turns on. Both were declared in the contract and created on every device
+ * from the first launch, and neither had ever been written to.
+ */
+describe('rating a transaction', () => {
+  const NOW = 1_755_300_000_000
+
+  /** The SQL from `rateTransaction`, verbatim apart from the parameters. */
+  function rate(transactionId: string, score: number, at: number) {
+    db.prepare(
+      `INSERT INTO worth_scores (transaction_id, score, rated_at, user_id, updated_at, deleted)
+       VALUES (?, ?, ?, ?, ?, 0)
+       ON CONFLICT(transaction_id) DO UPDATE SET
+         score = excluded.score, rated_at = excluded.rated_at,
+         updated_at = excluded.updated_at, deleted = 0`,
+    ).run(transactionId, score, at, 'local-user', at)
+  }
+
+  function scores(): { transaction_id: string; score: number }[] {
+    return db
+      .prepare('SELECT transaction_id, score FROM worth_scores WHERE deleted = 0')
+      .all() as unknown as { transaction_id: string; score: number }[]
+  }
+
+  it('records an answer', () => {
+    const txn = insertTxn()
+    rate(txn.id as string, -1, NOW)
+    expect(scores()).toEqual([{ transaction_id: txn.id, score: -1 }])
+  })
+
+  it('lets you change your mind without leaving two answers behind', () => {
+    const txn = insertTxn()
+    rate(txn.id as string, -1, NOW)
+    rate(txn.id as string, 1, NOW + 1000)
+    expect(scores()).toEqual([{ transaction_id: txn.id, score: 1 }])
+  })
+
+  /** Undo is a soft delete, like every other removal in this schema. */
+  it('clears a rating without dropping the row', () => {
+    const txn = insertTxn()
+    rate(txn.id as string, 0, NOW)
+    db.prepare('UPDATE worth_scores SET deleted = 1, updated_at = ? WHERE transaction_id = ?').run(
+      NOW + 1,
+      txn.id as string,
+    )
+
+    expect(scores()).toEqual([])
+    expect(db.prepare('SELECT COUNT(*) c FROM worth_scores').get()).toMatchObject({ c: 1 })
+  })
+
+  /**
+   * The `deleted = 0` in the upsert's UPDATE clause. Without it a cleared rating can never be
+   * given again — the row revives with its tombstone still set and stays invisible for ever.
+   */
+  it('revives a cleared rating when you answer again', () => {
+    const txn = insertTxn()
+    rate(txn.id as string, -1, NOW)
+    db.prepare('UPDATE worth_scores SET deleted = 1 WHERE transaction_id = ?').run(txn.id as string)
+    rate(txn.id as string, 1, NOW + 2000)
+    expect(scores()).toEqual([{ transaction_id: txn.id, score: 1 }])
+  })
+})
+
+describe('the nudge budget on the device', () => {
+  const NOW = 1_755_300_000_000
+  const DAY = 86_400_000
+  let n = 0
+
+  function show(kind: string, sentAt: number) {
+    db.prepare(
+      `INSERT INTO nudges
+         (id, kind, payload, score, created_at, sent_at, acted, user_id, updated_at, deleted)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, 0)`,
+    ).run(`n${++n}`, kind, '{"title":"t","body":"b"}', 0.5, sentAt, sentAt, 'local-user', sentAt)
+  }
+
+  function sentSince(since: number): number {
+    return (
+      db
+        .prepare(
+          'SELECT COUNT(*) c FROM nudges WHERE deleted = 0 AND sent_at IS NOT NULL AND sent_at >= ?',
+        )
+        .get(since) as { c: number }
+    ).c
+  }
+
+  /**
+   * The count the cap is computed from. A rolling window, not a calendar week — four on Sunday
+   * and four on Monday is eight in two days and satisfies "four a week" on both counts.
+   */
+  it('counts only what was shown inside the rolling window', () => {
+    show('corridor', NOW - 8 * DAY)
+    show('runway', NOW - 6 * DAY)
+    show('regret:cat-food', NOW - DAY)
+    expect(sentSince(NOW - 7 * DAY)).toBe(2)
+  })
+
+  it('reports when each kind last appeared, which is what silences a repeat', () => {
+    show('corridor', NOW - 20 * DAY)
+    show('corridor', NOW - 3 * DAY)
+    show('runway', NOW - 5 * DAY)
+
+    const last = new Map(
+      (
+        db
+          .prepare(
+            `SELECT kind, MAX(sent_at) AS last FROM nudges
+              WHERE deleted = 0 AND sent_at IS NOT NULL AND sent_at >= ?
+              GROUP BY kind`,
+          )
+          .all(NOW - 30 * DAY) as unknown as { kind: string; last: number }[]
+      ).map((r) => [r.kind, r.last]),
+    )
+
+    expect(last.get('corridor')).toBe(NOW - 3 * DAY)
+    expect(last.get('runway')).toBe(NOW - 5 * DAY)
+  })
+
+  /** Acting marks the one you were looking at, not every corridor nudge you have ever seen. */
+  it('marks only the most recent of a kind as acted on', () => {
+    show('corridor', NOW - 20 * DAY)
+    show('corridor', NOW - 3 * DAY)
+
+    db.prepare(
+      `UPDATE nudges SET acted = 1, updated_at = ?
+        WHERE kind = ? AND deleted = 0 AND sent_at IS NOT NULL
+        AND sent_at = (SELECT MAX(sent_at) FROM nudges WHERE kind = ? AND deleted = 0)`,
+    ).run(NOW, 'corridor', 'corridor')
+
+    const acted = db
+      .prepare('SELECT sent_at FROM nudges WHERE acted = 1')
+      .all() as unknown as { sent_at: number }[]
+    expect(acted).toEqual([{ sent_at: NOW - 3 * DAY }])
+  })
+})

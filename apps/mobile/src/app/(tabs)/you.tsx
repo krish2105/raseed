@@ -42,6 +42,18 @@ export default function YouScreen() {
 
         {cashCategoryId !== '' && <WalletCount categoryId={cashCategoryId} />}
 
+        <Link href="/reckoning" asChild>
+          <Pressable accessibilityRole="button" style={s.entry}>
+            <View style={s.entryText}>
+              <Text style={s.entryTitle}>The Reckoning</Text>
+              <Text style={s.entryHint}>
+                Was it worth it? The one question a statement cannot answer
+              </Text>
+            </View>
+            <Text style={s.entryChevron}>›</Text>
+          </Pressable>
+        </Link>
+
         <Link href="/split" asChild>
           <Pressable accessibilityRole="button" style={s.entry}>
             <View style={s.entryText}>

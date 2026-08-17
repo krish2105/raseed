@@ -53,7 +53,7 @@ R-3).
 | P3 | Capture router rules→alias→LLM, confirm sheet, `capture_log`, golden set ≥0.90 | **not started** | No router, no LLM. `capture_log` is declared (`contract.ts:271`) and created on device but **never read or written**. No eval harness or golden set exists anywhere — a find for `*/eval/*` and `*golden*` returns only CocoaPods headers |
 | P4 | Merchant resolver + alias learning + reversal pairing | **[fixed] built** | Refunds recorded from the row they reverse (`a1183f5`), which is exact rather than inferred. | `resolveMerchant`/`learnAlias` (`queries.ts:314`, `:346`) are on the real write path at `insertTransaction` (`:159`). **Reversal pairing absent** — `pairReversals` never imported; `reversal_of_id` written NULL unconditionally (`:166-168`) |
 | P5 | Multi-currency, FX freeze, remittance detection, Trip Mode | **[fixed] built** | Remittance detection on `/numbers` (`74e494c`), rate unified in `lib/fx.ts` |
-| P6 | Worth-it loop + Weekly Reckoning + nudge budget | **not started** | `regretRate`/`rankNudges` not imported by mobile |
+| P6 | Worth-it loop + Weekly Reckoning + nudge budget | **[fixed] built** | `src/app/reckoning.tsx` + `src/lib/reckoning.ts` (29 tests). Ratings write `worth_scores`, nudges write `nudges`, cap is a **rolling seven days** and holds across four simulated weeks. **In-app, not push** — no notification permission is requested. Original: `regretRate`/`rankNudges` not imported by mobile |
 | P7 | Splits, Ledger Link, cash reconciliation | **partial** | `src/app/split.tsx` + `engines/domain/settle.ts`; `WalletCount.tsx` + `reconcileCash`. **Ledger Link does not exist** — only a nullable `share_link_id` column whose single writer hardcodes NULL (`queries.ts:411-413`) |
 | P8 | Voice capture + receipt OCR | **partial** | `src/app/receipt.tsx` (Apple Vision), `engines/domain/parseReceipt.ts`. **Voice capture not built** — no microphone permission, no STT dependency |
 | P9 | Recurrence radar, Payday Runway, Ask-your-ledger | **[fixed] partial** | `/numbers` (`a180593`): recurrence radar, CUSUM change points, MAD outliers, all on-device. Payday Runway and Ask-your-ledger remain |
@@ -164,7 +164,9 @@ is a hand-rolled `useSyncExternalStore`; the DB is plain op-sqlite.
 
 **D-10 · `packages/ai` is a placeholder** occupying a real workspace slot.
 
-**[fixed] D-11 · `apps/mobile` had zero automated tests.** 23 now, against `node:sqlite` (`bf5d27a`). Original text: All 874 workspace tests live in `packages/*`
+**[fixed] D-11 · `apps/mobile` had zero automated tests.** 69 now — 38 against `node:sqlite`
+using the contract DDL, 31 over the pure decision modules in `src/lib`. Workspace total 1,007.
+Original text: All 874 workspace tests live in `packages/*`
 (schema 412, engines 342, money 39, tokens 34, fixtures 20) plus 27 in `apps/web`. Every
 mobile-specific claim rests on manual simulator runs narrated in `DECISIONS.md`.
 
