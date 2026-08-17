@@ -36,9 +36,11 @@ Claude reads this at the start of every session. Tick sessions as they complete.
   still has no surface and airplane mode stays fully supported. Gate clears every metric the
   spec names; four cases are labelled beyond-a-regex and stay failing on purpose
 - [x] **#12** Web P3 — Sankey hero (hand-built SVG); totals read through `v_spend`
-- [~] **#13** Mobile P4 — merchant resolver and alias learning are live and on the write path;
-  **reversal pairing is not built** — `pairReversals` is never imported by mobile and
-  `reversal_of_id` is written NULL (`db/queries.ts:166`). Re-marked from [x] by the 17 Aug audit
+- [x] **#13** Mobile P4 — merchant resolver and alias learning live and on the write path.
+  The 17 Aug audit re-marked this because `reversal_of_id` was written NULL; refunds have since
+  shipped and it is written from the row being reversed (`db/queries.ts:810`). `pairReversals`
+  is still deliberately unused on mobile — it infers pairs from amount and time, which is right
+  for an imported statement and wrong when the user is pointing at the row
 - [x] **#14** Web P4 — Tier 0 complete: net-worth timeline and calendar heatmap shipped
 - [~] **#15** Trip Mode is live on **web** (`detectTrips` + 11 tests + /trips) and **mobile** (`/trip`: `planTrip` over habits read from the ledger, Numbeo price ratios, unconstrained plan with the budget asked separately). Goals ship alongside it (`/goals`: new `goals` table, `savingsPlan` against real monthly surplus, copy through the tone gate). **Trip Mode itself now ships** — the F15 toggle: start a trip, spend tags to it by date, end it, with `tripProgress` (18 tests) as the only place the burn rate and pace are computed. **The Live Activity ships too** and is verified on the Lock Screen, not asserted
 - [x] **#16** Web P5 — ⌘K bar, deterministic parser, SELECT-only sandbox; 12 adversarial strings covered by 27 tests
@@ -46,12 +48,17 @@ Claude reads this at the start of every session. Tick sessions as they complete.
   Mobile P6 landed the phone half: `/reckoning`, ratings in `worth_scores`, nudges in `nudges`,
   a rolling seven-day cap tested over four simulated weeks. In-app, not push
 - [x] **#18** Web P6 — Comlink worker; Arrow encoding moved off the main thread (837ms → 16ms longest block, measured)
-- [~] **#19** 🚩 splits + cash live on **web and phone** (one engine, 1,600-case test); blocked on the read-lags-one-write bug below, and the store question
+- [~] **#19** splits + cash live on **web and phone** (one engine, 1,600-case test). The
+  read-lags-one-write bug is fixed (React Compiler memoisation — see DECISIONS). What remains is
+  **sync**: neither app has a Supabase or Legend-State client, so `user_id`/`updated_at`/`deleted`
+  and every RLS policy are currently written for a reconciler that does not exist
 - [~] **#20** Web P7 — Monte Carlo fan, Holt-Winters, anomalies, FX attribution and the Lab (Benford/Lorenz/Pareto) are live
-- [~] **#21** Web **P9** — landing route and Lenis are live (`app/page.tsx`,
-  `components/landing/`); **Lighthouse ≥95 never measured**, which is the actual done-when
+- [x] **#21** Web **P9** — landing route and Lenis live; Lighthouse measured and gated (desktop
+  100/100/100/100, mobile 95/100/100/100). The **mobile restyle onto shared primitives** is also
+  finished: `Chip`, `RowList`/`Row`, `NavRow`, `LedgerRow`, `TextLink`, `Field` and a `danger`
+  tone now exist in `components/ui.tsx`, and every duplication the inventory measured is at zero
 - [x] **#22** Web **P10** — deploy, nuqs share links, a11y sweep and **data export** all done
-- [~] **#23** Mobile P8 — receipt OCR live (`/receipt`, Apple Vision); **voice capture remains** (native deps approved, not started)
+- [x] **#23** Mobile P8 — receipt OCR live (`/receipt`, Apple Vision) and **voice capture ships**: `expo-speech-recognition` with `requiresOnDeviceRecognition: true`, which refuses rather than falling back to the network, so the "nothing leaves the phone" claim stays true
 - [ ] **#24** Both — buffer, eval regression, hardening
 
 ---
@@ -139,6 +146,59 @@ Claude reads this at the start of every session. Tick sessions as they complete.
   instantiation inside the blob worker. Everything else in S6 ships. See `docs/AUDIT.md`.
 - **DuckDB is now self-hosted**, not from jsDelivr. An e2e asserts zero third-party requests.
 - ✅ **Mobile stale-read fixed** — it was React Compiler memoisation, and the earlier disproof of that theory was invalid. See DECISIONS.md.
+
+## Session of 17 Aug — what shipped
+
+Grouped by what it was, not by commit order.
+
+**Arabic and RTL, on both surfaces.** New `packages/i18n` — one dictionary, and `gateFor(locale)`
+as the only way to reach a tone gate, so Arabic copy cannot flow past English rules. `toneAr.ts`
+carries the Arabic rule set; its first version was broken because JS `\b` is ASCII-only, so every
+pattern matched nothing and the gate reported *allowed* for everything it exists to block. Tests
+caught it on the first run. On the phone, direction applies at startup and the settings row asks for
+a restart, because `I18nManager.forceRTL` is read when the native views are built. On the web it
+applies before paint, and `Noto_Sans_Arabic` is loaded — Geist and Plus Jakarta Sans are latin-only
+and have no Arabic glyphs at all.
+
+**A bug that would have printed a wrong number.** `format()` builds an amount by concatenation, and
+ASCII hyphen-minus is Bidi_Class ES: in an RTL paragraph `-₹1,993.25` renders as `₹1,993.25-`, so a
+debt reads as a positive figure with a stray dash. Fixed with `unicode-bidi: isolate` on the web and
+`writingDirection: 'ltr'` across all 26 figure styles on the phone — verified complete by script,
+not by sampling. The app already shipped Arabic RTL, so this was live.
+
+**Trip Mode — F15, as a toggle.** I proposed detect-then-propose and was refuted: F15 already
+settled it as a toggle, and detection could not have worked anyway, since `detectTrips` needs
+`days >= 2` and a lock-screen activity appearing on day three of a five-day trip is worse than none.
+Shipped: `@raseed/money` gains `divide` (it had none), `tripProgress` computes burn and pace in one
+place with 18 tests, `trips` gains its first reader and writer, and `trip_id` is written by
+`insertTransaction` itself — by the transaction's **date**, not by whether a trip happens to be
+running when you type it.
+
+**The Trip Live Activity, on `expo-widgets`.** `PROGRESS` named `@bacons/apple-targets`; that plan is
+dead and should not be revived — it ships no ActivityKit surface at all. Layout is TypeScript under
+a `'widget'` directive, money arrives pre-formatted and colours arrive as props, so the Lock Screen
+cannot disagree with the app and the zero-hex-literals rule holds across a process boundary.
+**Verified on the Lock Screen**, with iOS's own consent prompt as proof it really registered.
+
+**Two production incidents, both mine, both fixed with a guard.** `pnpm install` exited 128 on
+Vercel because `prepare` ran `git config` and Vercel builds from a tarball — CI stayed green because
+`actions/checkout` gives it a `.git`. And every open PR was red on the **secret scan**, not on its
+contents, because gitleaks needs the merge-base and checkout clones one commit. Both now have CI
+steps that would have caught them.
+
+**Three dependency decisions, all measured rather than argued.** Arrow 17→21 **works** (76/76 e2e,
+including the spec asserting no zeroed figures) and was still declined, because DuckDB pins Arrow 17
+directly so the bump ships two majors for eight symbols that did not change. Skia 2.11.0 refused:
+out of step with the SDK pin, and carrying an **open upstream regression** naming the two symbols
+this app imports. `gitleaks-action` v2→v3 merged. Six packages brought back in step with
+`expo install --fix`.
+
+**Also:** the last hex literal outside `@raseed/tokens` is gone (`app.config.ts` sources the splash
+colour from a token — static JSON could not); `metro.config.js` now exists at all, which
+`CLAUDE.md` had specified from the start; and the `dependabot.yml` ignore list had a hole that let
+a native bump through, now closed with the measurement beside it.
+
+---
 
 ## Deferred decisions
 
