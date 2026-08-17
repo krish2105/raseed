@@ -2373,3 +2373,63 @@ screen, `LedgerRow` 3 independent implementations, `TextLink` 3, a `danger` tone
 **Still open:** `app.json:25` carries `"backgroundColor": "#0F1419"` for the splash — the last hex
 literal outside `@raseed/tokens` in the mobile app. Static JSON cannot import a token, so closing
 it means moving to `app.config.ts`.
+
+## Trip Mode: the direction I proposed was wrong, and the doc already said so
+
+I proposed detect-from-AED-spend → propose → confirm, reasoning by analogy from the web's trip
+detector and from "the parser proposes, the sheet commits". An adversarial pass refuted it, and
+every load-bearing correction reproduces:
+
+**`MOBILE_ARCHITECTURE.md:94` had already settled it.** F15 reads *"Trip Mode. **Toggle** (or
+auto-detect via timezone/locale change)."* Detection-first was not a new idea, it was a settled
+decision being quietly reversed — the thing the session protocol exists to prevent.
+
+**Detection cannot fire on day one, which is the only day that matters here.**
+`detectTrips` filters `t.days >= minDays` with `minDays = 2`
+(`packages/engines/src/domain/detectTrips.ts:60,:104`). A Live Activity that appears on day three
+of a five-day trip is worse than none — it is a lock-screen widget for a trip you are already most
+of the way through. The toggle starts on the morning you land.
+
+**A toggle also answers four of the "open questions" for free.** `trips.name` and `trips.country`
+are `NOT NULL` and detection supplies neither — a person starting a trip supplies both. There is
+no status column, so a *declined* proposal has nowhere to live; a toggle has nothing to decline.
+Two simultaneously-active rows become impossible if starting one closes any other. And re-proposing
+a trip the user already dismissed — `detectTrips` is stateless and re-derives all 13 seeded windows
+on every call — stops being a problem that needs solving.
+
+**Three factual corrections worth keeping, because each would have produced confident wrong code:**
+
+- **There are no foreign keys on device.** `migrations.ts` generates zero `REFERENCES` clauses
+  (grep: 0), so `PRAGMA foreign_keys = ON` guards a schema with no constraints in it. The only FK
+  is hand-written Postgres DDL at `init.sql:234`, and it is non-deferred — which is a real latent
+  hazard for any future sync that pushes `transactions` before `trips`.
+- **Neither app has a Supabase or Legend-State dependency.** There is no sync runtime to reason
+  about. Any design that argues about phone-to-Postgres divergence is arguing about something that
+  does not exist yet.
+- **`@raseed/money` has no division.** The exports are `add sub sum mul negate abs allocate convert`
+  — a per-day burn rate is not expressible today. If Trip Mode needs one it belongs in that package
+  with its own test, not as integer division inlined in a screen.
+
+**The rule must not be written a third time.** `detectTrips` holds it in the engine, `Q.tripDays`
+renders it in DuckDB SQL, and `travelHabitsRaw` hand-copies it into mobile SQL — already two
+renderings too many, and `queries.ts:476` asserts a parity the code does not have. Trip Mode adds
+no fourth: a toggle needs no detection rule at all.
+
+**Live Activities are testable here — verified, not assumed.** `com.apple.liveactivitiesd` is
+registered on the booted simulator (`xcrun simctl spawn booted launchctl list`), the iOS SDK ships
+`ActivityKit.framework` with an `arm64-apple-ios-simulator.swiftinterface`, and the booted
+iPhone 17 Pro has a Dynamic Island, so Lock Screen and all three Dynamic Island presentations are
+checkable. Only *push*-driven updates need a real APNs path, and Trip Mode updates locally.
+
+**`expo-widgets@57.0.10` supersedes the `@bacons/apple-targets` plan in `PROGRESS.md:78`.** It is
+first-party, published 2026-08-14, and carries the whole stack — the Live Activity layout is
+written in TypeScript against `@expo/ui/swift-ui` under a `'widget'` directive, with no Swift and
+no hand-rolled Expo Module. `@bacons/apple-targets` ships **no ActivityKit surface at all**; its
+only bridge is `ExtensionStorage` over an App Group, so that route meant writing both the
+`ActivityAttributes` and a native module by hand. The extension's deployment target defaults to
+`16.4`, which is exactly this app's, so no config change. `expo-live-activity` is deprecated by its
+own README, which points at `expo-widgets`.
+
+**Not yet decided, and genuinely the user's call:** `trips.currency` is CHECK-constrained to
+`['INR','AED']` while the planner plans Thailand and Singapore, so either the table is deliberately
+corridor-only and the planner never writes a row, or the contract needs a third currency.
