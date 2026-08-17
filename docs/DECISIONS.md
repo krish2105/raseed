@@ -2503,3 +2503,59 @@ React Native needs `writingDirection: 'ltr'` on the figure styles, and that swee
 and friends) that will not mirror, listed by the audit with logical equivalents available; 22
 hardcoded `en-IN` call sites; and inline SVG, where geometry does not mirror under `dir` but the
 inherited `direction` property does — so charts split unless each `<svg>` is pinned.
+
+## The Trip Live Activity
+
+**`expo-widgets@57.0.10`, not `@bacons/apple-targets`.** `PROGRESS.md:78` named apple-targets and a
+Swift Widget Extension. That plan was made before this package existed as a first-party option, and
+it is now the wrong one: apple-targets ships **no ActivityKit surface at all** — its only runtime
+bridge is `ExtensionStorage` over an App Group — so that route meant hand-writing both the
+`ActivityAttributes` and a native Expo Module in Swift. `expo-widgets` carries the whole stack, and
+the layout is TypeScript. `expo-live-activity` is deprecated by its own README, which points here.
+
+**The layout runs in an isolated runtime, and that shapes the whole design.** Code under the
+`'widget'` directive is compiled into a separate bundle inside the extension: no React hooks, no app
+state, no async, and only `@expo/ui/swift-ui`. Two consequences that look like sloppiness otherwise:
+
+- **The money arrives pre-formatted.** `format()` cannot run there, so the app formats and passes
+  strings. That is the better direction anyway — the Lock Screen renders the exact characters the
+  app renders, instead of a second formatter that could round differently and put two different
+  totals for the same money on one phone.
+- **The colours arrive as props.** The widget runtime cannot read a theme. A hex literal there would
+  have been the only one in the mobile app outside `@raseed/tokens`, so the app reads the palette
+  and passes it across the process boundary — including `dimInk` for the always-on display, which is
+  always `palette.dark['text-hi']` because a dimmed screen is a dark surface whatever the app is.
+
+**`getInstances()` rather than a stored handle.** A Live Activity outlives the process that started
+it. Holding the instance in a module variable works until the app is killed mid-trip, at which point
+the widget sits on the Lock Screen showing yesterday's total with nothing able to update it. Asking
+the system each time is the only version that survives a cold start.
+
+**Ending uses `'immediate'`.** The default policy leaves a finished activity up for hours — right for
+a delivery whose receipt you might check, wrong here. You ended the trip; a widget still counting it
+on a phone in a drawer is a wrong number on a Lock Screen.
+
+**Failure is swallowed everywhere.** The user can disable Live Activities per-app, the system
+throttles and can refuse, and `expo-widgets` exposes no `areActivitiesEnabled` to ask first. A trip
+whose widget did not appear is a trip with no widget — never a trip that failed to start. The
+database is the truth; the activity is a view of it.
+
+### Three things the build found
+
+**`pod install` crashed inside its own error reporter.** CocoaPods 1.17 hit
+`Encoding::CompatibilityError` in `error_report.rb` while *formatting* a failure, hiding the real
+one. `LANG=en_US.UTF-8` makes it report properly — and the underlying install then succeeds. Worth
+knowing before anyone spends an hour on the traceback that is printed.
+
+**The `'widget'` directive silently did nothing, and the error said so precisely.**
+`createLiveActivity`'s second argument "cannot be cast to type String" — because the transform
+compiles a marked component into a bundle *reference*, and untransformed it passes a raw function.
+The plugin is gated on `hasModule(api, 'expo-widgets/package.json')` in `babel-preset-expo`, which
+resolved fine; the problem was that Metro had been running since before the package was installed
+and was holding a stale Babel config. **A cache clear is the fix, and the error message points
+nowhere near it.**
+
+**Ending a trip changed nothing on screen.** Writes in this app must call `notifyChanged()`;
+`useQuery` re-reads on that bump and on focus, and neither fires by itself for a write made on the
+screen you are already looking at. Mine didn't, so the card sat on the pre-write state. Fixed and
+verified on the device: the card now flips back to the start form.

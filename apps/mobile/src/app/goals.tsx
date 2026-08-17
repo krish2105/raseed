@@ -8,6 +8,7 @@ import { format, fromMajor, money } from '@raseed/money'
 import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
+import { PrimaryButton } from '@/components/ui'
 import { Glass } from '@/components/Glass'
 import {
   addGoal,
@@ -153,9 +154,7 @@ export default function GoalsScreen() {
 
         {error && <Text style={s.error}>{error}</Text>}
 
-        <Pressable onPress={create} accessibilityRole="button" style={s.primary}>
-          <Text style={s.primaryText}>Add goal</Text>
-        </Pressable>
+        <PrimaryButton label="Add goal" onPress={create} style={s.primarySpacing} />
       </ScrollView>
     </SafeAreaView>
   )
@@ -422,12 +421,5 @@ const styles = (c: Palette) =>
     },
     error: { color: c.warn, fontFamily: font.body, fontSize: 13, marginTop: space[3] },
 
-    primary: {
-      marginTop: space[5],
-      borderRadius: radius.md,
-      backgroundColor: c.inr,
-      paddingVertical: space[3],
-      alignItems: 'center',
-    },
-    primaryText: { color: c['surface-0'], fontFamily: font.bodyMedium, fontSize: 15 },
+    primarySpacing: { marginTop: space[5] },
   })

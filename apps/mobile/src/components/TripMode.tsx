@@ -7,7 +7,7 @@ import { radius, space, type Palette } from '@raseed/tokens'
 
 import { font, useTheme } from '@/theme'
 import { useNow } from '@/hooks/useNow'
-import { activeTripWithSpend, endActiveTrip, startTrip, useQuery } from '@/db'
+import { activeTripWithSpend, endActiveTrip, notifyChanged, startTrip, useQuery } from '@/db'
 import { endTripActivity, startTripActivity, updateTripActivity } from '@/lib/tripActivity'
 import { Badge, Card, PrimaryButton, SecondaryButton } from '@/components/ui'
 
@@ -108,6 +108,10 @@ export function TripMode() {
             setName('')
             setCountry('')
             setBudgetText('')
+            // Every write in this app notifies the store; `useQuery` re-reads on the bump and
+            // on focus, and neither fires by itself for a write made on the screen you are
+            // already looking at. Without this the card sits on the pre-write state.
+            notifyChanged()
           }}
         />
       </Card>
@@ -152,6 +156,7 @@ export function TripMode() {
           // frame where the trip is over and the Lock Screen is still counting it.
           endTripActivity(trip, p, colors)
           endActiveTrip()
+          notifyChanged()
         }}
       />
     </Card>
