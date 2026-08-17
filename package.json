@@ -6,11 +6,13 @@
     "node": ">=24"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "test": "turbo test",
     "build": "turbo build",
-    "dev": "turbo dev"
+    "dev": "turbo dev",
+    "coverage": "vitest run --config vitest.coverage.config.ts --coverage"
   },
   "pnpm": {
     "overrides": {
@@ -29,6 +31,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "4.1.10",
     "eslint": "^9.39.5",
     "prettier": "^3.6.2",
     "turbo": "^2.10.10",

@@ -1,0 +1,34 @@
+version: 2
+
+# S7. gitleaks catches a key that is already committed; this catches the dependency that ships
+# the next advisory. `pnpm audit --audit-level high` in CI fails the build once a vulnerable
+# version is in the lockfile — which is late. This opens the PR before that happens.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # One PR per ecosystem for the routine noise, so a solo maintainer reviews one diff a week
+    # rather than fifteen. Anything with a CVE arrives on its own, immediately, ungrouped.
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Pinned deliberately — ESLint 10 breaks eslint-plugin-react, which both
+      # eslint-config-next and eslint-config-expo depend on, and typescript-eslint does not
+      # support TS 7 yet. Documented in docs/PROGRESS.md; revisit when the plugins catch up.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # Expo pins its own native module versions to the SDK. Bumping one out of step with
+      # `expo install --check` produces a build that fails on device, not in CI.
+      - dependency-name: expo*
+      - dependency-name: react-native*
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

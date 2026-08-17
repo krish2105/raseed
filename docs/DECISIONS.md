@@ -1640,3 +1640,60 @@ will meet.
 `pnpm --filter web lighthouse` now runs both form factors against a production build and exits
 non-zero below the floor, with that one exemption named in the file rather than hidden by a
 lower threshold. The point is that "never measured" cannot recur.
+
+## The gates that were named and never built — S7, S10, C3, C5 (2026-08-17)
+
+Four items that had one thing in common: each was a *stated* guarantee resting on nothing
+enforcing it.
+
+**A pre-commit secret scan (D-14).** gitleaks ran only after a push, which is precisely the case
+CI-only scanning cannot prevent: once a key reaches a public remote, rotation is the only
+remedy, and the commit that removes it does not remove it from history. `.githooks/pre-commit`
+scans what is staged, wired by `core.hooksPath` from the `prepare` script so it needs no new
+dependency and installs itself with `pnpm install`. **It refuses rather than warns** — verified
+by staging a synthetic `service_role`-shaped JWT and watching the commit be rejected, then
+confirming `HEAD` had not moved. Where gitleaks is not installed it says so loudly and lets the
+commit through: blocking every commit on every machine missing a Homebrew package is how a hook
+gets deleted rather than installed, and CI still scans the full history.
+
+**Dependabot.** gitleaks catches the key already committed; this catches the dependency that
+ships the next advisory, before `pnpm audit --audit-level high` fails a build on it. Minor and
+patch are grouped into one weekly PR so a solo maintainer reviews one diff rather than fifteen;
+anything with a CVE arrives ungrouped and immediately. ESLint, TypeScript and every Expo/React
+Native package are ignored for majors — the first two are pinned for reasons already recorded,
+and Expo pins native module versions to the SDK, so a bump out of step with `expo install
+--check` produces a build that fails on device rather than in CI.
+
+**A coverage floor (C3), on `packages/*` only.** Measured before it was set: 95.35 statements,
+89.47 branches, 98.42 functions, 97.13 lines across 891 tests. C3 asked for 80, which these
+clear so comfortably that the gate would catch nothing — a package could lose a sixth of its
+coverage and still pass. Set a point or two under the real numbers instead. The apps are
+excluded deliberately rather than forgotten: their real coverage is 72 Playwright specs against
+a production build and a simulator someone opens, neither of which a line counter can see, and
+a number there would be measuring the wrong thing and then defending it.
+
+One trap worth recording. The root config **cannot** be named `vitest.config.ts`. Every package
+runs a bare `vitest run` with no config of its own, so a root config is auto-discovered and
+inherited — and `projects: ['packages/*']` then resolves against that package's own directory,
+matches nothing, and fails every package's tests with "No projects were found". It is
+`vitest.coverage.config.ts`, passed explicitly.
+
+**The performance budget, gated instead of printed (C5).** `WEB_ARCHITECTURE.md` P1 names
+"<400ms at 100k rows" and the Lab has printed the number since S8 — but printing is not gating,
+and the way this rots is silent: someone adds a view to `ALL_VIEWS`, the rebuild creeps past the
+budget, and the only place it shows is a panel most visitors never open. `e2e/perf.spec.ts`
+clicks the real 100k benchmark and asserts on **the Lab's own verdict cell**, so the test and
+the UI cannot disagree about what the budget is. It also logs the measurement, so a run that is
+merely near the budget is visible before it is a failure.
+
+**Demo isolation as a test rather than as an absence (S10).** Today it holds structurally —
+there is no Supabase client anywhere, so a visitor's rows have nowhere to go but their own tab.
+That is a fact about code that does not exist, which is the least durable guarantee there is: it
+stops being true on the first commit that adds a client, and nothing would fail. Four claims are
+now pinned while they are still easy to state: two visitors never see each other's rows (driven
+through the real Add dialog in two browser contexts, not by injecting a row shape the app might
+never write), everything a visitor adds is namespaced under `raseed.`, the shared seed offers no
+delete control that would edit it for everyone, and nothing leaves the origin.
+
+**Verified:** 24/24 turbo tasks, 1,007 unit tests, 891 of them under the coverage gate, and
+**72 e2e** — up from 65, under the CSP shipped earlier today.

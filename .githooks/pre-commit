@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# D-14: gitleaks ran only after a push, which is precisely the case CI-only scanning cannot
+# prevent. Once a key reaches a public remote, rotation is the only remedy — the commit that
+# removes it does not remove it from history, and history is public the moment the repo is.
+#
+# This scans what is staged, before it becomes a commit at all. It is deliberately not a
+# replacement for the CI job: this catches the key you are about to add, that one catches the
+# key already in history and cannot be bypassed with --no-verify.
+#
+# Enabled by `pnpm install` (the `prepare` script sets core.hooksPath).
+
+set -e
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  # A hook that silently skips is theatre — it reports success while checking nothing, which
+  # is worse than no hook because it is believed. Say so, loudly, and let the commit through:
+  # blocking every commit on every machine that lacks a Homebrew package is how a hook gets
+  # deleted rather than installed.
+  printf '\033[33m! gitleaks is not installed — staged changes were NOT scanned for secrets.\033[0m\n' >&2
+  printf '  brew install gitleaks   (CI still scans the full history on every push)\n' >&2
+  exit 0
+fi
+
+gitleaks protect --staged --redact --no-banner || {
+  printf '\n\033[31m✗ A secret was found in the staged changes. The commit was refused.\033[0m\n' >&2
+  printf '  Remove it and re-stage. If this is a false positive, add a rule to .gitleaks.toml\n' >&2
+  printf '  rather than passing --no-verify — the CI job will fail on it either way.\n' >&2
+  exit 1
+}
