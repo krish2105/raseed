@@ -19,7 +19,14 @@ import { compare, divide, mul, sub, zero, type Currency, type Money } from '@ras
  */
 
 /** Whether the trip is tracking under, over, or too early to say. */
-export type TripPace = 'under' | 'over' | 'on-track' | 'no-budget' | 'too-early'
+export type TripPace =
+  | 'under'
+  | 'over'
+  | 'on-track'
+  /** A budget exists, but the trip has no end date, so there is nothing to project onto. */
+  | 'no-projection'
+  | 'no-budget'
+  | 'too-early'
 
 export interface TripProgress {
   /** 1 on the day you started. Never 0, and never negative. */
@@ -108,7 +115,11 @@ function pace({
   dayNumber: number
   currency: Currency
 }): TripPace {
-  if (budget === null || projectedTotal === null) return 'no-budget'
+  // These two were one branch, and the device caught it: an open-ended trip WITH a budget
+  // showed the badge "No budget" directly above the words "₹3,000.00 of the budget left".
+  // Missing a budget and missing an end date are different absences and must read differently.
+  if (budget === null) return 'no-budget'
+  if (projectedTotal === null) return 'no-projection'
   if (dayNumber < 2) return 'too-early'
 
   const overshoot = sub(projectedTotal, budget)

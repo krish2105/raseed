@@ -2433,3 +2433,34 @@ own README, which points at `expo-widgets`.
 **Not yet decided, and genuinely the user's call:** `trips.currency` is CHECK-constrained to
 `['INR','AED']` while the planner plans Thailand and Singapore, so either the table is deliberately
 corridor-only and the planner never writes a row, or the contract needs a third currency.
+
+## Trip Mode, built — and two bugs only the device could find
+
+Both survived a green typecheck, a green lint and a green test run, and both were visible within a
+minute of putting the feature on a phone.
+
+**The fields emptied as you typed.** `useQuery` lists `read` in its `useMemo` dependencies — a
+deliberate choice, documented there, because the store drives the query through the database rather
+than through the closure. I passed an **inline arrow function** for the trip's spend, which is a new
+reference on every render, so the query re-ran on every keystroke and the resulting store churn wiped
+the `TextInput` out from under the typing. Nothing in the type system objects to an arrow where a
+function is expected. Fixed by making it `activeTripWithSpend()` at module level, which also means
+the total can never be a trip behind the trip it is labelled with. **The rule: `useQuery` takes a
+module-level function, never a closure.**
+
+**The badge contradicted the sentence under it.** It read *"No budget"* directly above
+*"₹3,000.00 of the budget left"*. `pace` had `budget === null || projectedTotal === null` as one
+branch, and an open-ended trip has no projection even when it has a budget — so a real budget was
+reported as no budget. Missing a budget and missing an end date are different absences and now read
+differently: `no-budget` and `no-projection`. Two tests pin the distinction.
+
+**`trip_id` is written by `insertTransaction`, not beside it.** There are three capture paths — the
+sheet, the parser, the receipt scanner — and a fourth is coming. A tagging step every caller has to
+remember is one a caller will forget, and the failure is silent: the row just quietly belongs to no
+trip. **The date decides, not the clock:** a row is tagged only if it happened at or after the trip
+started, because `add` allows backdating and "is a trip running right now" would file last month's
+rent into this week's Dubai trip the moment you corrected it mid-trip.
+
+**Also found, unfixed:** `import.tsx`'s "Choose a file" button is painted in the INR brass. A button
+is chrome, not money — the same colour-law violation the chip conversion fixed in `add.tsx`, still
+present here and probably elsewhere. Listed rather than claimed.

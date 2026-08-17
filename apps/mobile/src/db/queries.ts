@@ -155,6 +155,7 @@ export interface NewTransaction {
 export function insertTransaction(input: NewTransaction): string {
   const id = `txn-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`
   const homeMinor = Math.round(input.amount.minor * input.fxRate)
+  const occurredAt = input.occurredAt ?? Date.now()
 
   // Resolve on write, not on read. The raw text stays on the row either way — it is what you
   // actually typed, and losing it would make a wrong resolution impossible to audit.
@@ -166,10 +167,10 @@ export function insertTransaction(input: NewTransaction): string {
         account_id, merchant_id, category_id, raw_text, source, txn_type, transfer_group_id,
         reversal_of_id, trip_id, status, confidence, note, user_id, updated_at, deleted)
      VALUES (?, ?, 'out', ?, ?, ?, ?, ?, ?, ?, ?, 'manual', 'spend', NULL,
-             NULL, NULL, 'confirmed', 1.0, ?, ?, ?, 0)`,
+             NULL, ?, 'confirmed', 1.0, ?, ?, ?, 0)`,
     [
       id,
-      input.occurredAt ?? Date.now(),
+      occurredAt,
       input.amount.minor,
       input.amount.currency,
       homeMinor,
@@ -178,6 +179,7 @@ export function insertTransaction(input: NewTransaction): string {
       merchantId,
       input.categoryId,
       input.merchantText,
+      tripIdFor(occurredAt),
       input.note ?? null,
       USER,
       Date.now(),
@@ -1549,6 +1551,23 @@ export function endActiveTrip(): void {
  * `amount_minor`, so a trip that mixes currencies still totals to one number, using the rate
  * frozen on each row rather than today's.
  */
+/**
+ * The active trip and what it has cost, in one stable function.
+ *
+ * **Stable is the operative word.** `useQuery` lists `read` in its `useMemo` dependencies, so an
+ * inline arrow passed at the call site is a new reference on every render — the query re-runs on
+ * every keystroke, and the store churn was enough to wipe the text out of a `TextInput` mid-typing.
+ * Caught on the device, not by a type. Module-level functions are the contract this hook is
+ * written against; a closure is not.
+ *
+ * Reading both halves here also means the total can never be a trip behind the trip it is
+ * labelled with, which two separate reads could manage between renders.
+ */
+export function activeTripWithSpend(): { trip: TripRow; spent: Money } | null {
+  const trip = activeTrip()
+  return trip ? { trip, spent: tripSpend(trip.id) } : null
+}
+
 export function tripSpend(tripId: string): Money {
   const result = rows<{ total: number | null }>(
     'SELECT SUM(home_amount_minor) AS total FROM v_spend WHERE trip_id = ?',
@@ -1558,18 +1577,19 @@ export function tripSpend(tripId: string): Money {
 }
 
 /**
- * Tag a transaction to the trip that was open when it was written.
+ * Which trip a transaction belongs to, if any.
  *
- * Called after the insert rather than folded into it, because `insertTransaction` is shared with
- * every capture path and none of them should have to know whether a trip is running. A row
- * written with no trip open simply never gets tagged.
+ * Folded into `insertTransaction` rather than called beside it at each capture path. There are
+ * three paths — the sheet, the parser and the receipt scanner — and a fourth will be added; a
+ * tagging step that every caller has to remember is a step one of them will forget, and the
+ * failure is silent. The row just quietly belongs to no trip.
+ *
+ * **The date decides, not the clock.** A row is tagged only if it happened after the trip
+ * started. `add` lets you backdate, so tagging on "is a trip running right now" would file last
+ * month's rent into this week's Dubai trip the moment you corrected it mid-trip. The trip is a
+ * window; membership is a question about the transaction's date, not about when you typed it.
  */
-export function tagToActiveTrip(transactionId: string): void {
+function tripIdFor(occurredAt: number): string | null {
   const trip = activeTrip()
-  if (!trip) return
-  getConnection().executeSync('UPDATE transactions SET trip_id = ?, updated_at = ? WHERE id = ?', [
-    trip.id,
-    Date.now(),
-    transactionId,
-  ])
+  return trip && occurredAt >= trip.started_at ? trip.id : null
 }

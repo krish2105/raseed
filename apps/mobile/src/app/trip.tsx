@@ -17,6 +17,7 @@ import { radius, space, type Palette } from '@raseed/tokens'
 import { Chip } from '@/components/ui'
 import { font, useTheme } from '@/theme'
 import { Glass } from '@/components/Glass'
+import { TripMode } from '@/components/TripMode'
 import { travelHabitsRaw, useQuery } from '@/db'
 
 const INTENTS: readonly { key: Intent; label: string }[] = [
@@ -140,6 +141,8 @@ export default function TripScreen() {
       </View>
 
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        <TripMode />
+
         <Text style={s.lede}>
           Built from what you actually spend, not from what a travel guide says a trip costs.
         </Text>

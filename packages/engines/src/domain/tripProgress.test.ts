@@ -111,8 +111,14 @@ describe('tripProgress', () => {
       expect(p.daysRemaining).toBeNull()
     })
 
-    it('cannot have a pace verdict, because there is nothing to project onto', () => {
-      expect(tripProgress(open).pace).toBe('no-budget')
+    it('says no-projection, NOT no-budget, when a budget exists but no end date does', () => {
+      // The device caught this as one branch: the badge read "No budget" directly above
+      // "₹3,000.00 of the budget left". Two different absences, two different words.
+      expect(tripProgress(open).pace).toBe('no-projection')
+    })
+
+    it('still says no-budget when there genuinely is no budget', () => {
+      expect(tripProgress({ ...open, budget: null }).pace).toBe('no-budget')
     })
 
     it('still reports remaining, which does not need an end date', () => {
