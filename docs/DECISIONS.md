@@ -1439,3 +1439,30 @@ decisions were extracted to `lib/import.ts` and tested directly instead.
 **Still open, and honestly so:** voice capture and device security (native deps approved, not
 started), Arabic/RTL, the CSP, Lighthouse, chart axes beyond the net-worth line, ledger
 virtualisation, `splitByItems` UI, and bidirectional splits.
+
+### Fourth wave — device security, and the CSP bisected
+
+**App lock and privacy shield** (`a0f66a3`). Two protections that get conflated. The shield
+covers the screen on `inactive` — not `background` — because iOS takes its switcher snapshot
+during that transition, so waiting for background means your balance is already in the
+multitasking carousel. The lock demands Face ID after five minutes, deliberately not instantly:
+re-prompting on every notification glance is what makes people turn the feature off.
+
+`setAppLock` refuses rather than storing a preference the device cannot honour — a lock behind
+an unenrolled biometric has no way to open. **Stated in the file: this protects the screen, not
+the file.** The security doc specifies SQLCipher and that is not done, so op-sqlite here is
+unencrypted and a lock over it is exactly as strong as the phone's passcode.
+
+**The CSP is bisected but still not shipping.** The previous note ("something blocks WASM in
+the blob worker") was a theory. Four hypotheses are now eliminated by measurement — permissive
+policy works, the blob worker is not the cause, `connect-src` is not, `default-src` is not,
+`upgrade-insecure-requests` is not — and Chromium reports zero violations throughout. The
+remaining suspects are named in `next.config.ts`, and the next attempt should also try HTTPS,
+since every run was against a local HTTP server.
+
+Kept regardless: the DuckDB worker no longer goes through a Blob. That indirection only existed
+because the script used to be cross-origin.
+
+**Not started, and honestly so:** voice capture, Arabic/RTL, Lighthouse measurement, chart axes
+beyond the net-worth line, ledger virtualisation, `splitByItems` UI, bidirectional splits, and
+the mobile worth-it/Reckoning loop.
