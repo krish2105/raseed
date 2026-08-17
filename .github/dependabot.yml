@@ -40,8 +40,28 @@ updates:
         update-types: [version-update:semver-major]
       # Expo pins its own native module versions to the SDK. Bumping one out of step with
       # `expo install --check` produces a build that fails on device, not in CI.
+      #
+      # The two globs below have a gap, and it was not theoretical — dependabot proposed exactly
+      # the bump they exist to prevent. `@shopify/react-native-skia` does not match
+      # `react-native*` because the name begins with the scope, and `react`/`react-dom` match
+      # neither glob. SDK 57's `bundledNativeModules.json` pins all three:
+      #
+      #     @shopify/react-native-skia: 2.6.2   react: 19.2.3   react-dom: 19.2.3
+      #
+      # Measured, not assumed: with that PR applied, `expo install --check` reports
+      # "@shopify/react-native-skia@2.11.0 - expected version: 2.6.2". Skia draws `DayDial` and
+      # `Sparkline`, so a break lands on the charts, on a device, and CI never builds the app.
+      #
+      # The React half of it was fiction anyway: `package.json` would have said 19.2.8 while the
+      # installed tree stayed on 19.2.3, because react-native 0.86.2 pins React exactly. A
+      # manifest that disagrees with `node_modules` is worse than an old manifest.
+      #
+      # These come back in step when the SDK moves, via `expo install --check`, not via here.
       - dependency-name: expo*
       - dependency-name: react-native*
+      - dependency-name: '@shopify/react-native-skia'
+      - dependency-name: react
+      - dependency-name: react-dom
 
   - package-ecosystem: github-actions
     directory: /

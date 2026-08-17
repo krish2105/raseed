@@ -2650,3 +2650,43 @@ at which point the bump becomes free and the ignore should be deleted.
 `actions/checkout` clones a single commit and gitleaks needs the merge-base to know which commits
 are new. On a push to `main` it has what it needs, which is why main stayed green and hid it. The
 giveaway was PR #1 — one action version, no code, same failure. Fixed with `fetch-depth: 0`.
+
+## The dependabot PRs: one merged, one refused, and the ignore list had a hole
+
+**PR #1 — `gitleaks-action` v2 → v3.** A one-line action version bump, no code. Rebased onto main
+so its CI runs with the `fetch-depth: 0` fix, then merged.
+
+**PR #2 — Skia 2.6.2 → 2.11.0 with React 19.2.3 → 19.2.8. Refused, and CI green would have been a
+false signal.**
+
+Expo SDK 57's `bundledNativeModules.json` pins all three of those packages to exactly the versions
+already installed:
+
+    @shopify/react-native-skia: 2.6.2    react: 19.2.3    react-dom: 19.2.3
+
+Measured rather than argued: the branch was checked out, installed, and `expo install --check` run
+against it. It reports `@shopify/react-native-skia@2.11.0 - expected version: 2.6.2`. On `main` the
+same command flags six unrelated packages and **not** Skia or React — so the drift is introduced by
+this PR, not pre-existing.
+
+That matters because Skia draws `DayDial` and `Sparkline`, two live chart components on the phone,
+and **CI never builds the iOS app**. `pnpm exec turbo typecheck lint test` and Playwright would all
+have gone green on a bump that breaks charts on a device. `CLAUDE.md` says this in as many words:
+*"Bumping one out of step with `expo install --check` produces a build that fails on device, not in
+CI."*
+
+The React half was fiction regardless. `package.json` would have declared 19.2.8 while the installed
+tree stayed on **19.2.3**, because react-native 0.86.2 pins React exactly — verified by reading
+`node_modules/react/package.json` after the install. A manifest that disagrees with `node_modules`
+is worse than an out-of-date manifest, because it looks current.
+
+**The ignore list had a hole and this is what fell through it.** `dependabot.yml` already ignored
+`expo*` and `react-native*` for exactly this reason, but `@shopify/react-native-skia` does not match
+`react-native*` — the name begins with the scope — and `react`/`react-dom` match neither. Three
+explicit entries added, with the measurement recorded beside them. These come back in step when the
+SDK moves, through `expo install --check`, not through dependabot.
+
+**Also noted, pre-existing and not addressed here:** `expo install --check` on `main` reports six
+packages behind their SDK pins (`expo-constants`, `expo-dev-client`, `expo-image-picker`,
+`expo-router`, `expo-splash-screen`, and `react-native-svg` which is *ahead*). Worth a deliberate
+`expo install --fix` in its own commit rather than folded into this one.
