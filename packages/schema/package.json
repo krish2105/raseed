@@ -34,9 +34,9 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.5"
+    "@electric-sql/pglite": "^0.5.8"
   }
 }
