@@ -14,8 +14,8 @@
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/geist-mono": "^0.4.3",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
-    "@expo/ui": "~57.0.11",
-    "@op-engineering/op-sqlite": "^18.0.0",
+    "@expo/ui": "~57.0.19",
+    "@op-engineering/op-sqlite": "^18.2.3",
     "@raseed/ai": "workspace:*",
     "@raseed/engines": "workspace:*",
     "@raseed/fixtures": "workspace:*",
@@ -48,7 +48,7 @@
     "expo-text-extractor": "^2.0.0",
     "expo-web-browser": "~57.0.2",
     "expo-widgets": "~57.0.10",
-    "lucide-react-native": "^1.31.0",
+    "lucide-react-native": "^1.47.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.2",
@@ -63,6 +63,6 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "drizzle-kit": "^0.31.10",
-    "eslint-config-expo": "^57.0.1"
+    "eslint-config-expo": "^57.0.2"
   }
 }
