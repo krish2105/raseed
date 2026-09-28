@@ -14,8 +14,8 @@
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/geist-mono": "^0.4.3",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
-    "@expo/ui": "~57.0.11",
-    "@op-engineering/op-sqlite": "^18.0.0",
+    "@expo/ui": "~57.0.20",
+    "@op-engineering/op-sqlite": "^18.2.5",
     "@raseed/ai": "workspace:*",
     "@raseed/engines": "workspace:*",
     "@raseed/fixtures": "workspace:*",
@@ -24,7 +24,7 @@
     "@raseed/schema": "workspace:*",
     "@raseed/tokens": "workspace:*",
     "@shopify/react-native-skia": "2.6.2",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "expo": "~57.0.14",
     "expo-constants": "~57.0.12",
     "expo-crypto": "^57.0.1",
@@ -48,7 +48,7 @@
     "expo-text-extractor": "^2.0.0",
     "expo-web-browser": "~57.0.2",
     "expo-widgets": "~57.0.10",
-    "lucide-react-native": "^1.31.0",
+    "lucide-react-native": "^1.48.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.2",
@@ -62,7 +62,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
-    "drizzle-kit": "^0.31.10",
-    "eslint-config-expo": "^57.0.1"
+    "drizzle-kit": "^0.31.11",
+    "eslint-config-expo": "^57.0.2"
   }
 }
